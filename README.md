@@ -37,14 +37,18 @@ First let's examine the raw long reads carefully.
 ## Basics
 
 ```bash
-mkdir 01_QC
+qc_dir="01_QC"
+mkdir ${qc_dir}
 
 # 1. Run NanoPlot
 NanoPlot -t 128 \
          --fastq ${raw_data}/*.fastq.gz \
          --downsample 100000 \
-         -o 01_QC/01_NanoPlot_Raw \
+         -o ${qc_dir}/01_NanoPlot_Raw \
          --title "E_phylacis_Raw_ONT"
+
+***
+
 
 # 2. Long-read K-mer Counting
 mkdir -p kmc_long_reads
