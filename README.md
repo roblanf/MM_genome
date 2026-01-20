@@ -79,6 +79,8 @@ genomescope2 \
     -k 21 \
     -p 2
 
+rm -rf ${tmp_dir}
+
 ```
 
 Nanoplot basics
@@ -211,11 +213,11 @@ Let's filter the data with Chopper.
 
 ```bash
 # 1. Setup Directories
-filter_dir="03_filtering"
+filter_dir="02_filtering"
 mkdir -p ${filter_dir}/qc_filtered
 
 # let's not get ourselves in trouble
-echo "03_filtering/E_phylacis_filtered.fastq.gz" >> .gitignore
+echo "02_filtering/E_phylacis_filtered.fastq.gz" >> .gitignore
 
 
 # 2. Run Chopper
@@ -232,9 +234,24 @@ NanoPlot -t 128 \
          --downsample 100000 \
          -o ${filter_dir}/qc_filtered \
          --title "E_phylacis_Filtered_ONT"
-
-# 4. Quick Summary Stats
-echo "Generating final filtered stats..."
-seqkit stats -j 128 ${filter_dir}/E_phylacis_filtered.fastq.gz > ${filter_dir}/filtered_stats.txt
-cat ${filter_dir}/filtered_stats.txt
 ```
+
+Post filtering QC:
+
+| Metric | Pre-Filtering | Post-Filtering |
+| :--- | :--- | :--- |
+| **Total Yield** | 44.3 Gb | **34.0 Gb** |
+| **Number of Reads** | 3.06 M | **1.35 M** |
+| **Read Length N50** | 22.2 kb | **25.6 kb** |
+| **Mean Read Length** | 14.5 kb | **25.2 kb** |
+| **Median Read Length** | 12.3 kb | **22.8 kb** |
+| **Mean Read Quality** | Q17.2 | **Q17.8** |
+| **Median Read Quality** | Q19.6 (~99%) | **Q20.2** |
+| **> Q10** (90.0% accuracy) | 44.3 Gb | **34.0 Gb** |
+| **> Q15** (96.8% accuracy) | 38.2 Gb | **29.3 Gb** |
+| **> Q20** (99.0% accuracy) | 22.2 Gb | **17.2 Gb** |
+
+![Read Length vs Quality](02_filtering/qc_filtered/LengthvsQualityScatterPlot_kde.png)
+
+
+This is great. We still have >30x coverage per haplotype, median quality is >Q20, and average read length is well over 20KB. Over half the data is >Q20 reads too. 
