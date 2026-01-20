@@ -96,8 +96,7 @@ Nanoplot basics
 | **> Q15** (96.8% accuracy) | 38.2 Gb |
 | **> Q20** (99.0% accuracy) | 22.2 Gb |
 
-![Read Length vs Quality](01_QC/01_NanoPlot_Raw/Read_lengths_vs_Average_read_quality_kde_plot.png)
-
+![Read Length vs Quality](01_QC/01_NanoPlot_Raw/LengthvsQualityScatterPlot_kde.png)
 
 KMC basics output
 ```
