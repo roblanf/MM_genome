@@ -1,0 +1,20 @@
+name: eucalypt_asm
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python>=3.9
+  - hifiasm>=0.19.8
+  - chopper>=0.7.0
+  - fastp>=0.23.4
+  - kmc>=3.2.1
+  - genomescope2>=2.0
+  - compleasm>=0.2.2
+  - minimap2>=2.26
+  - samtools>=1.18
+  - gfatools>=0.5
+  - merqury>=1.3
+  - seqtk>=1.4
+  - bwa-mem2>=2.2.1
+  - qualimap>=2.2.2d
