@@ -67,18 +67,38 @@ kmc -k21 -t128 -m256 -ci1 -cs10000 \
     ${tmp_dir}/
 
 ## create histogram
-kmc_tools transform ${tmp_dir}/kmc_db \
-    dump -s ${qc_dir}/02_Kmer_distribution/long_read_histogram.txt
+# keep everything down to 1 occurrence; bunch up the stuff that occurrs >10K times
+kmc_tools transform ${tmp_dir}/kmc_db histogram ${qc_dir}/02_Kmer_distribution/long_read_histogram.txt -ci1 -cs1000000
 
 # Run GenomeScope2
-# -i : your KMC histogram file
-# -o : output directory for plots and stats
-# -k : k-mer length (matches your KMC run)
-# -p : ploidy (2 for your diploid hybrid)
+# -p : diploid
 genomescope2 \
     -i ${qc_dir}/02_Kmer_distribution/long_read_histogram.txt \
     -o ${qc_dir}/02_Kmer_distribution/genomescope_results \
     -k 21 \
-    -p 2```
+    -p 2
+
+```
+
+KMC basics output
+```
+Stats:
+   No. of k-mers below min. threshold :            0
+   No. of k-mers above max. threshold :            0
+   No. of unique k-mers               :   5216090955
+   No. of unique counted k-mers       :   5216090955
+   Total no. of k-mers                :  44265691027
+   Total no. of reads                 :      3064194
+   Total no. of super-k-mers          :   6430181221
+```
+
+Genomescope:
+
+```
+aa:95.7% ab:4.25%
+Model converged het:0.0425 kcov:36 err:0.00627 model fit:0.661 len:523018565
+```
+
+So we have about 4% heterozygosity, a genome size of ~523MB, and a low error rate of 0.6%. Quite nice!
 
 ## Contamaination checking
