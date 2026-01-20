@@ -94,11 +94,11 @@ Stats:
 
 Genomescope:
 
-```
-aa:95.7% ab:4.25%
-Model converged het:0.0425 kcov:36 err:0.00627 model fit:0.661 len:523018565
-```
+![GenomeScope K-mer Plot](01_QC/02_Kmer_distribution/genomescope_results/transformed_linear_plot.png)
+
 
 So we have about 4% heterozygosity, a genome size of ~523MB, and a low error rate of 0.6%. Quite nice!
+
+
 
 ## Contamaination checking
