@@ -47,33 +47,38 @@ NanoPlot -t 128 \
          -o ${qc_dir}/01_NanoPlot_Raw \
          --title "E_phylacis_Raw_ONT"
 
-***
-
-
 # 2. Long-read K-mer Counting
-mkdir -p kmc_long_reads
-mkdir -p tmp_kmc  # Ensure a local tmp directory exists
+## set up directories
+mkdir -p ${qc_dir}/02_Kmer_distribution
+tmp_dir="tmp_processing"
+mkdir -p ${tmp_dir}
 
-# Find files using the variable
-find ${raw_data} -name "*.fastq.gz" > files.txt
+## list the raw data files
+find ${raw_data} -name "*.fastq.gz" > ${tmp_dir}/files.txt
 
-# Execute KMC
-# Increased -m to 256 as requested to utilize your server's RAM
-kmc -k21 -t64 -m256 -ci1 -cs10000 @files.txt kmc_long_reads/ tmp_kmc/
+## run KMC
+# -k21: Standard k-mer length for GenomeScope 2.0
+# -t128: Using all 128 threads for speed
+# -m256: 256GB RAM limit
+# -ci1: Include k-mers that occur at least once
+kmc -k21 -t128 -m256 -ci1 -cs10000 \
+    @${tmp_dir}/files.txt \
+    ${tmp_dir}/kmc_db \
+    ${tmp_dir}/
 
-# 3. Generate Histogram for GenomeScope
-kmc_tools transform kmc_long_reads/ dump -s long_read_histogram.txt
-
-# 4. Run GenomeScope
-# Activate the environment first
-conda activate eucalypt_asm
+## create histogram
+kmc_tools transform ${tmp_dir}/kmc_db \
+    dump -s ${qc_dir}/02_Kmer_distribution/long_read_histogram.txt
 
 # Run GenomeScope2
 # -i : your KMC histogram file
 # -o : output directory for plots and stats
 # -k : k-mer length (matches your KMC run)
 # -p : ploidy (2 for your diploid hybrid)
-genomescope2 -i long_read_histogram.txt -o 02_GenomeScope_LongRead -k 21 -p 2
-```
+genomescope2 \
+    -i ${qc_dir}/02_Kmer_distribution/long_read_histogram.txt \
+    -o ${qc_dir}/02_Kmer_distribution/genomescope_results \
+    -k 21 \
+    -p 2```
 
 ## Contamaination checking
