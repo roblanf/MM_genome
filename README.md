@@ -267,8 +267,8 @@ mkdir -p 03_hifiasm_assembly
 # 1. Create a mount point
 sudo mkdir -p /mnt/ramdisk
 
-# 2. Mount 500GB of your 2.2TB RAM as a disk
-sudo mount -t tmpfs -o size=500G tmpfs /mnt/ramdisk
+# 2. Mount 1500GB of the 2.2TB RAM as a disk
+sudo mount -t tmpfs -o size=1500G tmpfs /mnt/ramdisk
 sudo chown $USER /mnt/ramdisk
 
 # 3. Copy your filtered data THERE
