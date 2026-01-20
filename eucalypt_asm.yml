@@ -17,5 +17,6 @@ dependencies:
   - gfatools>=0.5
   - merqury>=1.3
   - seqtk>=1.4
+  - seqkit
   - bwa-mem2>=2.2.1
   - qualimap>=2.2.2d
