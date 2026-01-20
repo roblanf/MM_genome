@@ -1,14 +1,15 @@
 # MM_genome
 An assembly of the Meelup Mallee genome.
 
-# Get the environment running
+<details>
+<summary><h1>Get the environment running</h1></summary>
 
 I'll try and do most things in one conda environment. The details of what that looks like are in the `environment.yml` file.
 
 ```bash
 conda env create environment.yml
 ```
-
+</details>
 # Raw Data
 
 The raw data are located here:
