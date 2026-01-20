@@ -1,0 +1,14 @@
+GenomeScope version 2.0
+input file = 01_QC/02_Kmer_distribution/long_read_histogram.txt
+output directory = 01_QC/02_Kmer_distribution/genomescope_results
+p = 2
+k = 21
+
+property                      min               max               
+Homozygous (aa)               95.7128%          95.7818%          
+Heterozygous (ab)             4.21815%          4.28717%          
+Genome Haploid Length         521,435,442 bp    523,018,565 bp    
+Genome Repeat Length          228,339,971 bp    229,033,231 bp    
+Genome Unique Length          293,095,471 bp    293,985,334 bp    
+Model Fit                     72.7355%          94.3297%          
+Read Error Rate               0.626996%         0.626996%         
