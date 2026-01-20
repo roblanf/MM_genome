@@ -24,7 +24,11 @@ seqkit stats -j 64 -T ${raw_data}/*.fastq.gz > raw_data_seqkit_stats.tsv
 grep -v "^file" raw_data_seqkit_stats.tsv | sed 's/,//g' | awk -F'\t' '{r+=$4; b+=$5} END {printf "Reads: %'\''d | Bases: %'\''d | Coverage: %.2fx\n", r, b, b/500000000}'
 ```
 
+* **Reads**: 3,064,194 
+* **Bases**: 44,326,974,907 
+* **Coverage**: 88.65x
 
+This shows that we have ~90x coverage (~45 of each haplotype) before QC and filtering, so a good place to start.
 
 # QC
 
