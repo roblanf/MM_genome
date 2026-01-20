@@ -81,6 +81,24 @@ genomescope2 \
 
 ```
 
+Nanoplot basics
+
+| Metric | Value |
+| :--- | :--- |
+| **Total Yield** | 44.3 Gb |
+| **Number of Reads** | 3.06 M |
+| **Read Length N50** | 22.2 kb |
+| **Mean Read Length** | 14.5 kb |
+| **Median Read Length** | 12.3 kb |
+| **Mean Read Quality** | Q17.2 |
+| **Median Read Quality** | Q19.6 (~99%) |
+| **> Q10** (90.0% accuracy) | 44.3 Gb |
+| **> Q15** (96.8% accuracy) | 38.2 Gb |
+| **> Q20** (99.0% accuracy) | 22.2 Gb |
+
+![Read Length vs Quality](01_QC/01_NanoPlot_Raw/Read_lengths_vs_Average_read_quality_kde_plot.png)
+
+
 KMC basics output
 ```
 Stats:
