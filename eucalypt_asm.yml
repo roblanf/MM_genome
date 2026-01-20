@@ -5,6 +5,7 @@ channels:
   - defaults
 dependencies:
   - python>=3.9
+  - nanoplot>=1.41.0
   - hifiasm>=0.19.8
   - chopper>=0.7.0
   - fastp>=0.23.4
