@@ -17,6 +17,12 @@ The raw data are located here:
 raw_data="/home/raw_data/MM/2025_long_reads/ONT_gDNA192_1071_RL/E_Phylacis/20251117_1227_2C_PBE85256_e040940c/fastq_pass"
 ```
 
+Let's get a first impression of how much data there is:
+
+```bash
+seqkit stats -j 128 ${raw_data}/*.fastq.gz
+```
+
 # QC
 
 First let's examine the raw long reads carefully.
@@ -26,7 +32,7 @@ First let's examine the raw long reads carefully.
 ```bash
 # 1. Run NanoPlot
 # Added --maxrows to keep the HTML report manageable given your high coverage
-NanoPlot -t 64 --fastq ${raw_data}/*.fastq.gz --downsample 1000 -o 01_NanoPlot_Output
+NanoPlot -t 64 --fastq ${raw_data}/*.fastq.gz --downsample 5000 -o 01_NanoPlot_Output
 
 # 2. Long-read K-mer Counting
 mkdir -p kmc_long_reads
