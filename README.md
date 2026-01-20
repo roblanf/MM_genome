@@ -9,8 +9,11 @@ I'll try and do most things in one conda environment. The details of what that l
 ```bash
 conda env create environment.yml
 ```
+
 </details>
-# Raw Data
+
+<details>
+<summary><h1>Raw Data</h1></summary>
 
 The raw data are located here:
 
@@ -30,6 +33,8 @@ grep -v "^file" raw_data_seqkit_stats.tsv | sed 's/,//g' | awk -F'\t' '{r+=$4; b
 * **Coverage**: 88.65x
 
 This shows that we have ~90x coverage (~45 of each haplotype) before QC and filtering, so a good place to start. This is based on an estiamted 500MB genome size.
+
+</details>
 
 # QC
 
