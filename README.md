@@ -255,3 +255,39 @@ Post filtering QC:
 
 
 This is great. We still have >30x coverage per haplotype, median quality is >Q20, and average read length is well over 20KB. Over half the data is >Q20 reads too. 
+
+# hifiasm assembly
+
+Now I'll assemble the filtered reads with hifiasm. to do this I'll make a Ramdisk to do everything in RAM. I have 2.2TB so this should work OK...
+
+
+```bash
+mkdir -p 03_hifiasm_assembly
+
+# 1. Create a mount point
+sudo mkdir -p /mnt/ramdisk
+
+# 2. Mount 500GB of your 2.2TB RAM as a disk
+sudo mount -t tmpfs -o size=500G tmpfs /mnt/ramdisk
+sudo chown $USER /mnt/ramdisk
+
+# 3. Copy your filtered data THERE
+cp 02_filtering/E_phylacis_filtered.fastq.gz /mnt/ramdisk/
+
+# 4. Run hifiasm inside the ramdisk
+cd /mnt/ramdisk
+
+hifiasm \
+    -o 03_hifiasm_assembly/E_phylacis_asm \
+    -t 128 \
+    --ont \
+    -l 3 \
+    --telo-m AAACCCT \
+    --dual-scaf \
+    E_phylacis_filtered.fastq.gz \
+    2>&1 | tee hifiasm.log
+
+# 5. VERY IMPORTANT: Move results back to /home before rebooting!
+cp * /home/rob/MM_genome/03_hifisam_assembly/
+
+```
