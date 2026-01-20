@@ -288,6 +288,80 @@ hifiasm \
     2>&1 | tee hifiasm_restart.log
 
 # 5. VERY IMPORTANT: Move results back to /home before rebooting!
-cp * /home/rob/MM_genome/03_hifisam_assembly/
+rsync -av --progress --exclude='*.fastq.gz' ./ ~/MM_genome/03_hifiasm_assembly/
 
+cd ~/MM_genome
+
+# ignore this stuff for git, mostly
+echo "03_hifiasm_assembly/" >> .gitignore
+
+# but keep these guys
+git add -f 03_hifiasm_assembly/hifiasm_restart.log
+git add -f 03_hifiasm_assembly/*.noseq.gfa
+git add -f 03_hifiasm_assembly/*.lowQ.bed
+git commit -m "Ignore raw assembly binaries but keep logs and noseq graphs"
+
+```
+
+
+## Assembly summary and QC
+
+Let's summarise the graphs with gfastats
+
+```bash
+mkdir -p 03_hifiasm_assembly/QC
+gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.hap1.p_ctg.gfa --discover-paths --segment-report > 03_hifiasm_assembly/QC/stats_hap1_segments.txt
+gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.hap1.p_ctg.gfa --discover-paths > 03_hifiasm_assembly/QC/stats_hap1.txt
+
+gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.hap2.p_ctg.gfa --discover-paths --segment-report > 03_hifiasm_assembly/QC/stats_hap2_segments.txt
+gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.hap2.p_ctg.gfa --discover-paths > 03_hifiasm_assembly/QC/stats_hap2.txt
+
+gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.p_utg.gfa --discover-paths --segment-report > 03_hifiasm_assembly/QC/stats_primary_segments.txt
+gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.p_utg.gfa --discover-paths > 03_hifiasm_assembly/QC/stats_primary.txt
+
+git add -f 03_hifiasm_assembly/QC/
+```
+
+Hap1:
+* Length: 579570136
+* N50: 39833816
+* Sum of top 11: 479,816,686 (82.7% of total)
+
+Hap2:
+* Length: 580987427
+* N50: 43786601
+* Sum of top 11: 466,703,285 (80.3% of total)
+
+
+Hap1 top 11 scaffolds:
+```
+Seq     Header  Comment Total segment length    A       C       G       T       GC content %    # soft-masked bases     Is circular: 
+1       h1tg000001l             51317275        15581784        10088548        10060793        15586150        39.26   0       N
+2       h1tg000002l             34632735        10403692        6918163 6905508 10405372        39.92   0       N
+3       h1tg000003l             59377836        18014668        11731310        11638807        17993051        39.36   0       N
+4       h1tg000004l             38027376        11524382        7473569 7506629 11522796        39.39   0       N
+5       h1tg000005l             39657523        11954888        7853657 7859159 11989819        39.62   0       N
+6       h1tg000006l             28751543        8692468 5642168 5679416 8737491 39.38   0       N
+7       h1tg000007l             41957522        12681753        8316763 8322106 12636900        39.66   0       N
+8       h1tg000008l             61728905        18653045        12184965        12191786        18699109        39.49   0       N
+9       h1tg000009l             39833816        12005760        7924497 7892044 12011515        39.71   0       N
+10      h1tg000010l             33387284        10075060        6608064 6625293 10078867        39.64   0       N
+11      h1tg000011l             51144871        15434505        10210279        10161001        15339086        39.83   0       N
+```
+
+Hap2 top 11 scaffolds:
+
+```
+Seq     Header  Comment Total segment length    A       C       G       T       GC content %    # soft-masked bases     Is circular: 
+1       h2tg000001l             54055996        16246510        10739895        10777096        16292495        39.81   0       N
+2       h2tg000002l             45187061        13709758        8862292 8891714 13723297        39.29   0       N
+3       h2tg000003l             65679588        19845392        12967282        12971991        19894923        39.49   0       N
+4       h2tg000004l             38512735        11580937        7688737 7644481 11598580        39.81   0       N
+5       h2tg000005l             18271583        5236722 3476365 3493002 5220136 39.99   0       N
+6       h2tg000006l             36524851        11017298        7238859 7254846 11013848        39.68   0       N
+7       h2tg000007l             42203136        12767072        8362376 8356582 12717106        39.62   0       N
+8       h2tg000008l             30255392        9129461 5979442 5996696 9149793 39.58   0       N
+9       h2tg000009l             56292537        17057888        11068887        11069636        17096126        39.33   0       N
+10      h2tg000010l             43786601        13237045        8685725 8676979 13186752        39.65   0       N
+11      h2tg000011l             35933805        10838134        7021993 7082002 10855327        39.40   0       N
 ```
