@@ -28,7 +28,7 @@ grep -v "^file" raw_data_seqkit_stats.tsv | sed 's/,//g' | awk -F'\t' '{r+=$4; b
 * **Bases**: 44,326,974,907 
 * **Coverage**: 88.65x
 
-This shows that we have ~90x coverage (~45 of each haplotype) before QC and filtering, so a good place to start.
+This shows that we have ~90x coverage (~45 of each haplotype) before QC and filtering, so a good place to start. This is based on an estiamted 500MB genome size.
 
 # QC
 
@@ -37,9 +37,14 @@ First let's examine the raw long reads carefully.
 ## Basics
 
 ```bash
+mkdir 01_QC
+
 # 1. Run NanoPlot
-# Added --maxrows to keep the HTML report manageable given your high coverage
-NanoPlot -t 64 --fastq ${raw_data}/*.fastq.gz --downsample 5000 -o 01_NanoPlot_Output
+NanoPlot -t 128 \
+         --fastq ${raw_data}/*.fastq.gz \
+         --downsample 100000 \
+         -o 01_QC/01_NanoPlot_Raw \
+         --title "E_phylacis_Raw_ONT"
 
 # 2. Long-read K-mer Counting
 mkdir -p kmc_long_reads
