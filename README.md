@@ -22,15 +22,21 @@ raw_data="/home/raw_data/MM/2025_long_reads/ONT_gDNA192_1071_RL/E_Phylacis/20251
 First let's examine the raw long reads carefully.
 
 ```bash
-# 1. Run NanoPlot, 64 threads
-NanoPlot -t 64 --fastq raw_data/*.fastq.gz -o 01_NanoPlot_Output
+# 1. Run NanoPlot
+# Added --maxrows to keep the HTML report manageable given your high coverage
+NanoPlot -t 64 --fastq ${raw_data}/*.fastq.gz --maxrows 1000000 -o 01_NanoPlot_Output
 
-# 2. Long-read K-mer Counting (using -ci1 -cs10000 to catch low frequency k-mers)
-mkdir kmc_long_reads
-find raw_data/ -name "*.fastq.gz" > files.txt
-kmc -k21 -t64 -m256 -ci1 -cs10000 @files.txt kmc_long_reads/ tmp/
+# 2. Long-read K-mer Counting
+mkdir -p kmc_long_reads
+mkdir -p tmp_kmc  # Ensure a local tmp directory exists
+
+# Find files using the variable
+find ${raw_data} -name "*.fastq.gz" > files.txt
+
+# Execute KMC
+# Increased -m to 256 as requested to utilize your server's RAM
+kmc -k21 -t64 -m256 -ci1 -cs10000 @files.txt kmc_long_reads/ tmp_kmc/
+
+# 3. Generate Histogram for GenomeScope
 kmc_tools transform kmc_long_reads/ dump -s long_read_histogram.txt
-
-# 3. GenomeScope 2.0 (Run this via R or the web tool)
-# genomescope2 -i long_read_histogram.txt -o 02_GenomeScope_LongRead -k 21
 ```
