@@ -278,14 +278,14 @@ cp 02_filtering/E_phylacis_filtered.fastq.gz /mnt/ramdisk/
 cd /mnt/ramdisk
 
 hifiasm \
-    -o 03_hifiasm_assembly/E_phylacis_asm \
-    -t 128 \
+    -o E_phylacis_asm \
+    -t 160 \
     --ont \
     -l 3 \
     --telo-m AAACCCT \
     --dual-scaf \
     E_phylacis_filtered.fastq.gz \
-    2>&1 | tee hifiasm.log
+    2>&1 | tee hifiasm_restart.log
 
 # 5. VERY IMPORTANT: Move results back to /home before rebooting!
 cp * /home/rob/MM_genome/03_hifisam_assembly/
