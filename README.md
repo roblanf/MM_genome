@@ -20,8 +20,11 @@ raw_data="/home/raw_data/MM/2025_long_reads/ONT_gDNA192_1071_RL/E_Phylacis/20251
 Let's get a first impression of how much data there is:
 
 ```bash
-seqkit stats -j 128 ${raw_data}/*.fastq.gz
+seqkit stats -j 64 -T ${raw_data}/*.fastq.gz > raw_data_seqkit_stats.tsv
+grep -v "^file" raw_data_seqkit_stats.tsv | sed 's/,//g' | awk -F'\t' '{r+=$4; b+=$5} END {printf "Reads: %'\''d | Bases: %'\''d | Coverage: %.2fx\n", r, b, b/500000000}'
 ```
+
+
 
 # QC
 
