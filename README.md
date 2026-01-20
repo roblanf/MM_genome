@@ -1,8 +1,7 @@
 # MM_genome
 An assembly of the Meelup Mallee genome.
 
-<details>
-<summary><h1>Get the environment running</h1></summary>
+# Get the environment running
 
 I'll try and do most things in one conda environment. The details of what that looks like are in the `environment.yml` file.
 
@@ -10,10 +9,8 @@ I'll try and do most things in one conda environment. The details of what that l
 conda env create environment.yml
 ```
 
-</details>
 
-<details>
-<summary><h1>Raw Data</h1></summary>
+# Raw Data
 
 The raw data are located here:
 
@@ -34,13 +31,11 @@ grep -v "^file" raw_data_seqkit_stats.tsv | sed 's/,//g' | awk -F'\t' '{r+=$4; b
 
 This shows that we have ~90x coverage (~45 of each haplotype) before QC and filtering, so a good place to start. This is based on an estiamted 500MB genome size.
 
-</details>
-
-# QC
+# QC and read filtering
 
 First let's examine the raw long reads carefully.
 
-## Basics
+## Basic QC
 
 ```bash
 qc_dir="01_QC"
@@ -106,6 +101,7 @@ Genomescope:
 So we have about 4% heterozygosity, a genome size of ~523MB, and a low error rate of 0.6%. Quite nice!
 
 ## Contamaination checking
+
 A quick check of the GC content suggests no serious contamination. 
 
 ```bash
@@ -207,18 +203,13 @@ echo "03_filtering/E_phylacis_filtered.fastq.gz" >> .gitignore
 
 # 2. Run Chopper
 # Pipe pigz (decompression) -> chopper (filtering) -> bgzip (compression)
-# This is the fastest way to handle 44GB of data without hitting disk limits.
 echo "Starting Chopper: Filtering for Length > 15kb and Quality > Q10..."
-
 pigz -dc -p 128 ${raw_data}/*.fastq.gz | \
 chopper -q 10 -l 15000 | \
 bgzip -@ 128 > ${filter_dir}/E_phylacis_filtered.fastq.gz
-
 echo "Filtering complete. Output saved to: ${filter_dir}/E_phylacis_filtered.fastq.gz"
 
 # 3. Post-Filter QC (NanoPlot)
-# We run this on the NEW file to confirm our filters worked
-echo "Running Post-Filter NanoPlot..."
 NanoPlot -t 128 \
          --fastq ${filter_dir}/E_phylacis_filtered.fastq.gz \
          --downsample 100000 \
