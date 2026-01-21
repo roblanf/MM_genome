@@ -464,7 +464,7 @@ Let's look at the three assemblies completeness with BUSCOs. We'll do general an
 ```bash
 # Configuration
 OUT_BASE="03_hifiasm_assembly/QC/compleasm_results"
-THREADS=64
+THREADS=128
 
 mkdir -p "$OUT_DIR"
 
