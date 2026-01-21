@@ -455,6 +455,36 @@ done
 * **Green (AAAAAAG):** Transposon-associated / Poly-A repeats.
 * **Purple (AAGACTC):** Secondary satellite motif.
 * Black points represent raw 10kb window counts (alpha 0.5); colored lines indicate smoothed trends.
+* 
+
+## BUSCO with Compleasm
+
+Let's look at the three assemblies completeness with BUSCOs. We'll do general and specific, using embryophyta_odb12 and eudicots_odb12 respectively.
+
+```bash
+# Configuration
+OUT_BASE="03_hifiasm_assembly/QC/compleasm_results"
+THREADS=64
+
+mkdir -p "$OUT_DIR"
+
+# Download the databases (compleasm handles the URLs automatically)
+compleasm download embryophyta
+compleasm download eudicotyledons
+
+# --- PRIMARY ASSEMBLY ---
+compleasm run -a 03_hifiasm_assembly/E_phylacis_asm.bp.p_ctg.fa -o ${OUT_BASE}/p_ctg_embryo -l embryophyta -t $THREADS
+compleasm run -a 03_hifiasm_assembly/E_phylacis_asm.bp.p_ctg.fa -o ${OUT_BASE}/p_ctg_eudicot -l eudicotyledons -t $THREADS
+
+# --- HAPLOTYPE 1 ---
+compleasm run -a 03_hifiasm_assembly/E_phylacis_asm.bp.hap1.p_ctg.fa -o ${OUT_BASE}/hap1_embryo -l embryophyta -t $THREADS
+compleasm run -a 03_hifiasm_assembly/E_phylacis_asm.bp.hap1.p_ctg.fa -o ${OUT_BASE}/hap1_eudicot -l eudicotyledons -t $THREADS
+
+# --- HAPLOTYPE 2 ---
+compleasm run -a 03_hifiasm_assembly/E_phylacis_asm.bp.hap2.p_ctg.fa -o ${OUT_BASE}/hap2_embryo -l embryophyta -t $THREADS
+compleasm run -a 03_hifiasm_assembly/E_phylacis_asm.bp.hap2.p_ctg.fa -o ${OUT_BASE}/hap2_eudicot -l eudicotseudicotyledons -t $THREADS
+
+```
 
 
 This is great. All three assemblies are mostly T2T.
