@@ -304,7 +304,7 @@ git commit -m "Ignore raw assembly binaries but keep logs and noseq graphs"
 ```
 
 
-## Assembly summary and QC
+## Assembly summary
 
 Let's summarise the graphs with gfastats
 
@@ -316,8 +316,8 @@ gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.hap1.p_ctg.gfa --discover-paths >
 gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.hap2.p_ctg.gfa --discover-paths --segment-report > 03_hifiasm_assembly/QC/stats_hap2_segments.txt
 gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.hap2.p_ctg.gfa --discover-paths > 03_hifiasm_assembly/QC/stats_hap2.txt
 
-gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.p_utg.gfa --discover-paths --segment-report > 03_hifiasm_assembly/QC/stats_primary_segments.txt
-gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.p_utg.gfa --discover-paths > 03_hifiasm_assembly/QC/stats_primary.txt
+gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.p_ctg.gfa --discover-paths --segment-report > 03_hifiasm_assembly/QC/stats_primary_segments.txt
+gfastats 03_hifiasm_assembly/E_phylacis_asm.bp.p_ctg.gfa --discover-paths > 03_hifiasm_assembly/QC/stats_primary.txt
 
 git add -f 03_hifiasm_assembly/QC/
 ```
@@ -332,6 +332,9 @@ Hap2:
 * N50: 43786601
 * Sum of top 11: 466,703,285 (80.3% of total)
 
+Primary contig assembly:
+* Length: 545423967
+* N50: 45651274
 
 Hap1 top 11 scaffolds:
 ```
@@ -364,4 +367,20 @@ Seq     Header  Comment Total segment length    A       C       G       T       
 9       h2tg000009l             56292537        17057888        11068887        11069636        17096126        39.33   0       N
 10      h2tg000010l             43786601        13237045        8685725 8676979 13186752        39.65   0       N
 11      h2tg000011l             35933805        10838134        7021993 7082002 10855327        39.40   0       N
+```
+
+Primary contig (bp.p_ctg) top 11 scaffolds
+```
+Seq     Header  Comment Total segment length    A       C       G       T       GC content %    # soft-masked bases     Is circular: 
+1       ptg000001l              45651274        13837378        8968599 8979051 13866246        39.31   0       N
+2       ptg000002l              54055996        16246510        10739895        10777096        16292495        39.81   0       N
+3       ptg000003l              59271212        17985060        11714462        11612997        17958693        39.36   0       N
+4       ptg000004l              38027376        11524382        7473569 7506629 11522796        39.39   0       N
+5       ptg000005l              61704420        18645782        12179659        12186397        18692582        39.49   0       N
+6       ptg000006l              38521672        11582632        7689359 7647684 11601997        39.81   0       N
+7       ptg000007l              42285308        12737509        8368553 8385101 12794145        39.62   0       N
+8       ptg000008l              41957522        12681753        8316763 8322106 12636900        39.66   0       N
+9       ptg000009l              57093733        17310108        11249947        11235059        17298619        39.38   0       N
+10      ptg000010l              39824047        12001580        7920315 7892040 12010112        39.71   0       N
+11      ptg000011l              33788408        10173370        6719776 6724548 10170714        39.79   0       N
 ```
