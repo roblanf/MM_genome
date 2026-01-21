@@ -444,3 +444,14 @@ for f in "${FILES[@]}"; do
 done
 ```
 
+| Primary Assembly | Haplotype 1 | Haplotype 2 |
+| :---: | :---: | :---: |
+| [![Primary](03_hifiasm_assembly/QC/telomere_results/p_ctg_repeat_fingerprint.png)](03_hifiasm_assembly/QC/telomere_results/p_ctg_repeat_fingerprint.png) | [![Hap1](03_hifiasm_assembly/QC/telomere_results/hap1_repeat_fingerprint.png)](03_hifiasm_assembly/QC/telomere_results/hap1_repeat_fingerprint.png) | [![Hap2](03_hifiasm_assembly/QC/telomere_results/hap2_repeat_fingerprint.png)](03_hifiasm_assembly/QC/telomere_results/hap2_repeat_fingerprint.png) |
+| *Click to enlarge* | *Click to enlarge* | *Click to enlarge* |
+
+**Legend:**
+* **Red (AAACCCT):** Canonical plant telomere motif.
+* **Sky Blue (ACCCGTC):** Putative centromeric satellite.
+* **Green (AAAAAAG):** Transposon-associated / Poly-A repeats.
+* **Purple (AAGACTC):** Secondary satellite motif.
+* **Note:** Black points represent raw 10kb window counts (alpha 0.5); colored lines indicate smoothed trends.
