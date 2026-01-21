@@ -493,6 +493,7 @@ for FASTA in "${ASSEMBLIES[@]}"; do
     samtools faidx 03_hifiasm_assembly/$FASTA \
         -r ${BASE}_top11_list.txt > 03_hifiasm_assembly/E_phylacis_${BASE}_top11.fa
 
+    rm ${BASE}_top11_list.txt
 done
 ```
 
