@@ -385,3 +385,61 @@ Seq     Header  Comment Total segment length    A       C       G       T       
 10      ptg000010l              39824047        12001580        7920315 7892040 12010112        39.71   0       N
 11      ptg000011l              33788408        10173370        6719776 6724548 10170714        39.79   0       N
 ```
+
+## Telomere checks
+
+Let's check for common repeats, and see where they are.
+
+First we explore for common repeats:
+
+```bash
+tidk explore --length 7 --minimum 5 --maximum 12 03_hifiasm_assembly/E_phylacis_asm.bp.p_ctg.fa
+tidk explore --length 7 --minimum 5 --maximum 12 03_hifiasm_assembly/E_phylacis_asm.bp.hap1.p_ctg.fa
+tidk explore --length 7 --minimum 5 --maximum 12 03_hifiasm_assembly/E_phylacis_asm.bp.hap1.p_ctg.fa
+```
+
+All looks good:
+
+```
+canonical_repeat_unit   count_repeat_runs_gt_100
+AAACCCT 8816
+ACCCGTC 2829
+[+]     Exploring genome for potential telomeric repeats of length: 7
+[+]     Finished searching genome
+[+]     Generating output
+canonical_repeat_unit   count_repeat_runs_gt_100
+AAACCCT 8816
+AAAAAAG 1157
+AAGACTC 635
+[+]     Exploring genome for potential telomeric repeats of length: 7
+[+]     Finished searching genome
+[+]     Generating output
+canonical_repeat_unit   count_repeat_runs_gt_100
+AAACCCT 8816
+AAAAAAG 1157
+AAGACTC 635
+```
+
+This is good! Exactly what we expect. The AAACCCT is the telomere. The others are likely centromeres, LINEs, or similar. Let's see where they are on the scaffolds (I'll focus on the first 11 scaffolds of each assembly, becuase that's most of it). 
+
+
+First we'll use `tidk search` to figure out where they are in each of the three assemblies:
+
+```bash
+# Define motifs and assemblies
+MOTIFS=("AAACCCT" "ACCCGTC" "AAAAAAG" "AAGACTC")
+FILES=("p_ctg" "hap1.p_ctg" "hap2.p_ctg")
+
+mkdir -p 03_hifiasm_assembly/QC/tidk_plots
+
+for f in "${FILES[@]}"; do
+  for m in "${MOTIFS[@]}"; do
+    echo "Searching for $m in $f..."
+    tidk search --string $m \
+      --dir 03_hifiasm_assembly/QC/tidk_plots \
+      --output "${f}_${m}" \
+      --extension tsv \
+      "03_hifiasm_assembly/E_phylacis_asm.bp.${f}.fa"
+  done
+done
+```
