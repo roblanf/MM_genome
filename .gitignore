@@ -1,1 +1,6 @@
-03_filtering/E_phylacis_filtered.fastq.gz
+02_filtering/E_phylacis_filtered.fastq.gz
+03_hifiasm_assembly/*.bin
+03_hifiasm_assembly/*.fa
+03_hifiasm_assembly/*.gfa
+03_hifiasm_assembly/*.bed
+03_hifiasm_assembly/*.log

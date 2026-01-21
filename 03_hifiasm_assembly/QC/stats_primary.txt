@@ -1,20 +1,20 @@
 +++Assembly summary+++: 
-# scaffolds: 8353
-Total scaffold length: 1366901379
-Average scaffold length: 163641.97
-Scaffold N50: 654116
-Scaffold auN: 1426099.96
-Scaffold L50: 418
-Largest scaffold: 12820476
-Smallest scaffold: 15173
-# contigs: 8353
-Total contig length: 1366901379
-Average contig length: 163641.97
-Contig N50: 654116
-Contig auN: 1426099.96
-Contig L50: 418
-Largest contig: 12820476
-Smallest contig: 15173
+# scaffolds: 56
+Total scaffold length: 545423967
+Average scaffold length: 9739713.70
+Scaffold N50: 45651274
+Scaffold auN: 46300981.88
+Scaffold L50: 5
+Largest scaffold: 61704420
+Smallest scaffold: 30917
+# contigs: 56
+Total contig length: 545423967
+Average contig length: 9739713.70
+Contig N50: 45651274
+Contig auN: 46300981.88
+Contig L50: 5
+Largest contig: 61704420
+Smallest contig: 30917
 # gaps in scaffolds: 0
 Total gap length in scaffolds: 0
 Average gap length in scaffolds: 0.00
@@ -23,22 +23,22 @@ Gap auN in scaffolds: 0.00
 Gap L50 in scaffolds: 0
 Largest gap in scaffolds: 0
 Smallest gap in scaffolds: 0
-Base composition (A:C:G:T): 412350598:271112562:271114186:412324033
-GC content %: 39.67
+Base composition (A:C:G:T): 164458166:108123815:108191039:164650947
+GC content %: 39.66
 # soft-masked bases: 0
-# segments: 8353
-Total segment length: 1366901379
-Average segment length: 163641.97
+# segments: 56
+Total segment length: 545423967
+Average segment length: 9739713.70
 # gaps: 0
-# paths: 8353
-# edges: 23332
-Average degree: 2.79
-# connected components: 3
-Largest connected component length: 1359017439
-# dead ends: 188
-# disconnected components: 48
-Total length disconnected components: 2000160
+# paths: 56
+# edges: 20
+Average degree: 0.36
+# connected components: 4
+Largest connected component length: 591014
+# dead ends: 96
+# disconnected components: 47
+Total length disconnected components: 544314059
 # separated components: 51
-# bubbles: 923
-# circular segments: 0
-# circular paths: 0
+# bubbles: 1
+# circular segments: 3
+# circular paths: 3
