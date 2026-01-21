@@ -24,10 +24,10 @@ motifs = ['AAACCCT', 'ACCCGTC', 'AAAAAAG', 'AAGACTC']
 for label, assm_file in assemblies.items():
     print(f"Generating high-contrast plot (v3) for {label}...")
     
-    fig, axes = plt.subplots(11, 4, figsize=(16, 10), sharey='col')
+    fig, axes = plt.subplots(11, 4, figsize=(16, 12), sharey='col')
     
     # Adjusting top margin to accommodate title and subtitle
-    plt.subplots_adjust(hspace=0.05, wspace=0.15, left=0.05, right=0.98, top=0.88, bottom=0.05)
+    plt.subplots_adjust(hspace=0.4, wspace=0.15, left=0.05, right=0.98, top=0.88, bottom=0.05)
     
     # Main Title and Subtitle
     fig.suptitle(f"Repeat distribution for {assm_file}", fontsize=16, fontweight='bold', y=0.96)
@@ -65,10 +65,7 @@ for label, assm_file in assemblies.items():
             ax.spines['right'].set_visible(False)
             ax.tick_params(axis='both', which='major', labelsize=6, pad=0.5, length=2)
             
-            if col_idx == 0:
-                ax.set_ylabel(f"C{row_idx+1}", fontsize=8, fontweight='bold', rotation=0, labelpad=15, verticalalignment='center')
-            else:
-                ax.set_yticklabels([])
+            ax.set_ylabel(f"C{row_idx+1}", fontsize=8, fontweight='bold', rotation=0, labelpad=15, verticalalignment='center')
 
             if row_idx == 0:
                 ax.set_title(motif, fontsize=10, fontweight='bold', pad=2, color=color)
