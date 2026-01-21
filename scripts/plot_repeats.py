@@ -73,10 +73,7 @@ for label, assm_file in assemblies.items():
             if row_idx == 0:
                 ax.set_title(motif, fontsize=10, fontweight='bold', pad=2, color=color)
             
-            if row_idx != 10:
-                ax.set_xticklabels([])
-            else:
-                ax.set_xlabel("Mb", fontsize=7, labelpad=0.5)
+            ax.set_xlabel("Mb", fontsize=7, labelpad=0.5)
 
     output_path = f"{data_dir}/{label}_repeat_fingerprint.png"
     plt.savefig(output_path, dpi=300)
