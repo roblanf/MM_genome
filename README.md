@@ -335,6 +335,7 @@ Hap2:
 Primary contig assembly:
 * Length: 545423967
 * N50: 45651274
+* Sum of top 11: 512,180,968 (93.9% of total)
 
 Hap1 top 11 scaffolds:
 ```
