@@ -454,4 +454,7 @@ done
 * **Sky Blue (ACCCGTC):** Putative centromeric satellite.
 * **Green (AAAAAAG):** Transposon-associated / Poly-A repeats.
 * **Purple (AAGACTC):** Secondary satellite motif.
-* **Note:** Black points represent raw 10kb window counts (alpha 0.5); colored lines indicate smoothed trends.
+* Black points represent raw 10kb window counts (alpha 0.5); colored lines indicate smoothed trends.
+
+
+This is great. All three assemblies are mostly T2T.
