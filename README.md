@@ -533,4 +533,9 @@ compleasm run -a 03_hifiasm_assembly/E_phylacis_hap2_top11.fa -o ${OUT_BASE}/hap
 
 ```
 
+Once that's done, we can get the table below using
+
+```bash
+python scripts/summarise_compleasm.py
+```
 
