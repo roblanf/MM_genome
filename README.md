@@ -455,11 +455,49 @@ done
 * **Green (AAAAAAG):** Transposon-associated / Poly-A repeats.
 * **Purple (AAGACTC):** Secondary satellite motif.
 * Black points represent raw 10kb window counts (alpha 0.5); colored lines indicate smoothed trends.
-* 
+
+This is pretty good. Most of the 11 big scaffolds are T2T in the primary and the two haplotype assemblies.
 
 ## BUSCO with Compleasm
 
-Let's look at the three assemblies completeness with BUSCOs. We'll do general and specific, using embryophyta_odb12 and eudicots_odb12 respectively.
+First I'll make versions of the assemblies with just the 11 longest contigs, since the telomere analysis suggests that this might be quite complete.
+
+```bash
+# Define your assemblies
+ASSEMBLIES=(
+    "E_phylacis_asm.bp.p_ctg.fa"
+    "E_phylacis_asm.bp.hap1.p_ctg.fa"
+    "E_phylacis_asm.bp.hap2.p_ctg.fa"
+)
+
+THREADS=64
+
+for FASTA in "${ASSEMBLIES[@]}"; do
+    # Create a base name (e.g., p_ctg, hap1, hap2)
+    BASE=$(echo "$FASTA" | sed 's/E_phylacis_asm.bp.//; s/.p_ctg.fa//; s/.fa//')
+    
+    echo "-------------------------------------------------------"
+    echo "Processing: $BASE"
+    echo "-------------------------------------------------------"
+
+    # 1. Index the file
+    samtools faidx 03_hifiasm_assembly/$FASTA
+
+    # 2. Get the names of the top 11 longest contigs
+    cut -f1,2 03_hifiasm_assembly/${FASTA}.fai | \
+        sort -k2,2rn | \
+        head -n 11 | \
+        cut -f1 > ${BASE}_top11_list.txt
+
+    # 3. Extract these contigs
+    samtools faidx 03_hifiasm_assembly/$FASTA \
+        -r ${BASE}_top11_list.txt > 03_hifiasm_assembly/E_phylacis_${BASE}_top11.fa
+
+done
+```
+
+
+Let's look at the three assemblies completeness with BUSCOs. We'll do general and specific, using embryophyta_odb12 and eudicots_odb12 respectively. We'll repeat it for the full assembly and the 11 biggest contigs.
 
 ```bash
 # Configuration
@@ -476,15 +514,23 @@ compleasm download eudicotyledons
 compleasm run -a 03_hifiasm_assembly/E_phylacis_asm.bp.p_ctg.fa -o ${OUT_BASE}/p_ctg_embryo -l embryophyta -t $THREADS
 compleasm run -a 03_hifiasm_assembly/E_phylacis_asm.bp.p_ctg.fa -o ${OUT_BASE}/p_ctg_eudicot -l eudicotyledons -t $THREADS
 
+compleasm run -a 03_hifiasm_assembly/E_phylacis_p_ctg_top11.fa -o ${OUT_BASE}/p_ctg_top11_embryo -l embryophyta -t $THREADS
+compleasm run -a 03_hifiasm_assembly/E_phylacis_p_ctg_top11.fa -o ${OUT_BASE}/p_ctg_top11_eudicot -l eudicotyledons -t $THREADS
+
 # --- HAPLOTYPE 1 ---
 compleasm run -a 03_hifiasm_assembly/E_phylacis_asm.bp.hap1.p_ctg.fa -o ${OUT_BASE}/hap1_embryo -l embryophyta -t $THREADS
 compleasm run -a 03_hifiasm_assembly/E_phylacis_asm.bp.hap1.p_ctg.fa -o ${OUT_BASE}/hap1_eudicot -l eudicotyledons -t $THREADS
+
+compleasm run -a 03_hifiasm_assembly/E_phylacis_hap1_top11.fa -o ${OUT_BASE}/hap1_top11_embryo -l embryophyta -t $THREADS
+compleasm run -a 03_hifiasm_assembly/E_phylacis_hap1_top11.fa -o ${OUT_BASE}/hap1_top11_eudicot -l eudicotyledons -t $THREADS
 
 # --- HAPLOTYPE 2 ---
 compleasm run -a 03_hifiasm_assembly/E_phylacis_asm.bp.hap2.p_ctg.fa -o ${OUT_BASE}/hap2_embryo -l embryophyta -t $THREADS
 compleasm run -a 03_hifiasm_assembly/E_phylacis_asm.bp.hap2.p_ctg.fa -o ${OUT_BASE}/hap2_eudicot -l eudicotseudicotyledons -t $THREADS
 
+compleasm run -a 03_hifiasm_assembly/E_phylacis_hap2_top11.fa -o ${OUT_BASE}/hap2_top11_embryo -l embryophyta -t $THREADS
+compleasm run -a 03_hifiasm_assembly/E_phylacis_hap2_top11.fa -o ${OUT_BASE}/hap2_top11_eudicot -l eudicotseudicotyledons -t $THREADS
+
 ```
 
 
-This is great. All three assemblies are mostly T2T.
