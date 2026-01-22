@@ -751,4 +751,21 @@ In the following tables - I ran the above twice for each of h1 and h2 (vs the tw
 | h2tg000001l | CM024614.1 |  CM024519.1 | 32535393 | 18373938 | **53.72%** | 32.72% | **97.35%** |   94.38% |
 
 
-Based on these results, the identity looks a bit confusing, and maybe has a bug. Generously, one would say that it doesn't help distinguish much between the two parents. But the coverage tells a different story.
+Based on these results, the identity looks a bit confusing, and maybe has a bug. Generously, one would say that it doesn't help distinguish much between the two parents. But the coverage tells a different story. We get perfect assignment between the two parents - h1 prefers one parent, h2 always prefers the other. You can read these off. In the following table I rearranged them into order based on the E decipiens genome from NCBI.
+
+
+| Chr# | decipiens-original | virginea-original | decipiens-parent | virginea-parent |
+| :--- | :---             | :---     	     | :---      		| :---            |
+| Chr1 | CM024609.1 |  CM024514.1 | h2tg000010l | h1tg000007l |
+| Chr2 | CM024610.1 |  CM024515.1 | h2tg000008l | h1tg000010l |
+| Chr3 | CM024611.1 |  CM024516.1 | h1tg000006l | h2tg000009l |
+| Chr4 | CM024612.1 |  CM024517.1 | h1tg000004l | h2tg000011l |
+| Chr5 | CM024613.1 |  CM024518.1 | h2tg000307l | h1tg000003l |
+| Chr6 | CM024614.1 |  CM024519.1 | h2tg000001l | h1tg000011l |
+| Chr7 | CM024615.1 |  CM024520.1 | h1tg000001l | h2tg000002l |
+| Chr8 | CM024616.1 |  CM024521.1 | h2tg000003l | h1tg000008l |
+| Chr9 | CM024617.1 |  CM024522.1 | h1tg000009l | h2tg000006l |
+| Chr10 | CM024618.1 |  CM024523.1 | h2tg000004l | h1tg000002l |
+| Chr11 | CM024619.1 |  CM024524.1 | h2tg000007l | h1tg000005l |
+
+Todo: dot plots for h1 and h2 vs decip and virginea to confirm these; then an anlysis of switching 
