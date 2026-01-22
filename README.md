@@ -572,21 +572,24 @@ This is good, showing we can stick with these assemblies from here.
 First let's figure out which contigs are which in the haplotypes. We'll align it and dot-plot it.
 
 ```bash
+mkdir 03_hifiasm_assembly/compare_h1h2
+
 # Align Hap1 to Hap2
-minimap2 -x asm5 -t 128 -N 100 --secondary=no \
+minimap2 -x asm5 -t 128 -N 1000 --secondary=no \
     03_hifiasm_assembly/E_phylacis_hap1_top11.fa \
     03_hifiasm_assembly/E_phylacis_hap2_top11.fa \
-    > 04_parental_assignment/hap1_vs_hap2.paf
+    > 03_hifiasm_assembly/compare_h1h2/hap1_vs_hap2.paf
 
-Rscript scripts/pafCoordsDotPlotly.R   -i 04_parental_assignment/hap1_vs_hap2.paf   -o hap1_vs_hap2_dotplot2 -s -t -m 2000 -q 500000
-mv hap1_vs_hap2_dotplot2.* 04_parental_assignment/.
+Rscript scripts/pafCoordsDotPlotly.R   -i 03_hifiasm_assembly/compare_h1h2/hap1_vs_hap2.paf   -o hap1_vs_hap2_dotplot2 -s -t -m 2000 -q 500000
+
+mv hap1_vs_hap2_dotplot2.* 03_hifiasm_assembly/compare_h1h2/.
 ```
 
 ### Static Dotplot
-![Hap1 vs Hap2 Dotplot](04_parental_assignment/hap1_vs_hap2_dotplot2.png)
+![Hap1 vs Hap2 Dotplot](03_hifiasm_assembly/compare_h1h2/hap1_vs_hap2_dotplot2.png)
 
 ### Interactive Visualization
-[Click here to view the interactive HTML Dotplot](04_parental_assignment/hap1_vs_hap2_dotplot2.html)
+[Click here to view the interactive HTML Dotplot](03_hifiasm_assembly/compare_h1h2/hap1_vs_hap2_dotplot2.html)
 *Note: You may need to download the HTML file and open it in a local browser to use the hover and zoom features.*
 
 
