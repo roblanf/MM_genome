@@ -720,7 +720,7 @@ END {
 ### Haplotype 1 Assignment
 
 | S1 ID | decip ID | virgin ID | decip Matches | virgin Matches | decip Coverage | virgin Coverage | decip Identity | virgin Identity |
-| :--- | :--- | :--- | :--- | :--- |
+| :---  | :---     | :---      | :---          | :---           | :---           | :---            | :---           | :---            |
 | h1tg000001l | CM024615.1 |  CM024520.1 | 24507427 |  14259343 | 40.71% | 24.90% | 97.35% |  92.96% |
 | h1tg000002l | CM024618.1 |  CM024523.1 | 12497885 |  21930450 | 32.71% | 59.56% | 97.35% |  91.27% |
 | h1tg000003l | CM024613.1 |  CM024518.1 | 15221461 |  26814450 | 24.60% | 47.00% | 93.86% |  97.35% |
@@ -732,6 +732,9 @@ END {
 | h1tg000009l | CM024617.1 |  CM024522.1 | 22115718 |  11535835 | 49.93% | 35.01% | 95.64% |  97.35% |
 | h1tg000010l | CM024610.1 |  CM024515.1 | 11611686 |  18607522 | 22.00% | 39.55% | 97.35% |  96.42% |
 | h1tg000011l | CM024614.1 |  CM024519.1 | 18324338 |  33323862 | 30.25% | 59.35% | 96.42% |  95.64% |
+
+
+
 
 ### Haplotype 2 Assignment
 | Hybrid Chrom | Length (Mb) | Match E. decipiens (%) | Match E. virginea (%) | Assignment | Coverage |
