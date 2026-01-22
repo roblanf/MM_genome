@@ -31,7 +31,7 @@ grep -v "^file" raw_data_seqkit_stats.tsv | sed 's/,//g' | awk -F'\t' '{r+=$4; b
 
 This shows that we have ~90x coverage (~45 of each haplotype) before QC and filtering, so a good place to start. This is based on an estiamted 500MB genome size.
 
-# QC and read filtering
+# 01 QC
 
 First let's examine the raw long reads carefully.
 
@@ -207,7 +207,7 @@ This shows a unimodal distribution around 38-41% GC, so it's best to just assemb
 
 
 
-## Read filtering
+# 02 Read filtering
 
 Let's filter the data with Chopper.
 
@@ -256,7 +256,7 @@ Post filtering QC:
 
 This is great. We still have >30x coverage per haplotype, median quality is >Q20, and average read length is well over 20KB. Over half the data is >Q20 reads too. 
 
-# hifiasm assembly
+# 03 basic hifiasm assembly
 
 Now I'll assemble the filtered reads with hifiasm. to do this I'll make a Ramdisk to do everything in RAM. I have 2.2TB so this should work OK...
 
@@ -567,3 +567,105 @@ In terms of the top11 assemblies which have just the 11 'chromosome' contigs, co
 
 This is good, showing we can stick with these assemblies from here. 
 
+## Comparing hap1 and hap2
+
+First let's figure out which contigs are which in the haplotypes. We'll align it and dot-plot it.
+
+```bash
+# Align Hap1 to Hap2
+minimap2 -x asm5 -t 128 -N 100 --secondary=no \
+    03_hifiasm_assembly/E_phylacis_hap1_top11.fa \
+    03_hifiasm_assembly/E_phylacis_hap2_top11.fa \
+    > 04_parental_assignment/hap1_vs_hap2.paf
+
+Rscript scripts/pafCoordsDotPlotly.R   -i 04_parental_assignment/hap1_vs_hap2.paf   -o hap1_vs_hap2_dotplot2 -s -t -m 2000 -q 500000
+mv hap1_vs_hap2_dotplot2.* 04_parental_assignment/.
+```
+
+### Static Dotplot
+![Hap1 vs Hap2 Dotplot](04_parental_assignment/hap1_vs_hap2_dotplot2.png)
+
+### Interactive Visualization
+[Click here to view the interactive HTML Dotplot](04_parental_assignment/hap1_vs_hap2_dotplot2.html)
+*Note: You may need to download the HTML file and open it in a local browser to use the hover and zoom features.*
+
+
+# 04 Comparison with decipiens and virginea
+
+Next we want to compare the new genomes to those of the putative parental species (not individuals, we don't have the individual parents). These are E. decipiens and E. virginea.
+
+First we get the genomes:
+
+```bash
+# Create the root folder
+mkdir -p parental_spp_genomes
+cd parental_spp_genomes
+
+# Download E. decipiens (GCA_014182575.1)
+datasets download genome accession GCA_014182575.1 --filename e_decipiens.zip
+unzip e_decipiens.zip -d e_decipiens_dir
+mv e_decipiens_dir/ncbi_dataset/data/GCA_014182575.1/*.fna E_decipiens.fa
+
+# Download E. virginea (GCA_014182375.1)
+datasets download genome accession GCA_014182375.1 --filename e_virginea.zip
+unzip e_virginea.zip -d e_virginea_dir
+mv e_virginea_dir/ncbi_dataset/data/GCA_014182375.1/*.fna E_virginea.fa
+
+# Cleanup
+rm -rf *_dir *.zip
+cd ..
+```
+## Via genome alignment
+
+Now we align them all to the two parents. I'll cut out secondary alignments for now.
+
+```bash
+# Create output directory for alignments
+mkdir -p 04_parental_assignment
+
+# Alignment of Hap1 vs both parents
+minimap2 -x asm5 -N 1000 --secondary=no -t 128 parental_spp_genomes/E_decipiens.fa 03_hifiasm_assembly/E_phylacis_hap1_top11.fa > 04_parental_assignment/hap1_vs_decipiens.paf
+minimap2 -x asm5 -N 1000 --secondary=no -t 128 parental_spp_genomes/E_virginea.fa 03_hifiasm_assembly/E_phylacis_hap1_top11.fa > 04_parental_assignment/hap1_vs_virginea.paf
+
+# Alignment of Hap2 vs both parents
+minimap2 -x asm5 -N 1000 --secondary=no -t 128 parental_spp_genomes/E_decipiens.fa 03_hifiasm_assembly/E_phylacis_hap2_top11.fa > 04_parental_assignment/hap2_vs_decipiens.paf
+minimap2 -x asm5 -N 1000 --secondary=no -t 128 parental_spp_genomes/E_virginea.fa 03_hifiasm_assembly/E_phylacis_hap2_top11.fa > 04_parental_assignment/hap2_vs_virginea.paf
+```
+
+A rough look at these alignments is to get the identity to decipiens and virginea across the whole chromosomes of hap1 and hap2:
+
+```bash
+python scripts/process_paf.py 
+```
+
+### Haplotype 1 Assignment
+| Hybrid Chrom | Length (Mb) | Match E. decipiens (%) | Match E. virginea (%) | Assignment | Coverage |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| h1tg000001l | 51.3 | 97.97% | 96.37% | **E. decipiens** | 104.8% |
+| h1tg000002l | 34.6 | 97.32% | 99.02% | **E. virginea** | 100.9% |
+| h1tg000003l | 59.4 | 96.16% | 98.13% | **E. virginea** | 102.4% |
+| h1tg000004l | 38.0 | 98.35% | 96.91% | **E. decipiens** | 104.6% |
+| h1tg000005l | 39.7 | 97.19% | 98.88% | **E. virginea** | 104.2% |
+| h1tg000006l | 28.8 | 98.09% | 96.43% | **E. decipiens** | 104.7% |
+| h1tg000007l | 42.0 | 96.74% | 98.84% | **E. virginea** | 104.5% |
+| h1tg000008l | 61.7 | 96.75% | 98.59% | **E. virginea** | 103.1% |
+| h1tg000009l | 39.8 | 98.47% | 96.84% | **E. decipiens** | 103.1% |
+| h1tg000010l | 33.4 | 97.15% | 98.72% | **E. virginea** | 101.1% |
+| h1tg000011l | 51.1 | 97.22% | 98.88% | **E. virginea** | 102.0% |
+
+### Haplotype 2 Assignment
+| Hybrid Chrom | Length (Mb) | Match E. decipiens (%) | Match E. virginea (%) | Assignment | Coverage |
+|:---|:---:|:---:|:---:|:---:|:---:|
+| h2tg000001l | 54.1 | 98.66% | 96.93% | **E. decipiens** | 102.9% |
+| h2tg000002l | 45.2 | 96.42% | 98.26% | **E. virginea** | 104.2% |
+| h2tg000003l | 65.7 | 98.27% | 96.51% | **E. decipiens** | 102.3% |
+| h2tg000004l | 38.5 | 98.53% | 97.02% | **E. decipiens** | 101.9% |
+| h2tg000006l | 36.5 | 97.14% | 98.86% | **E. virginea** | 101.8% |
+| h2tg000007l | 42.2 | 98.74% | 96.97% | **E. decipiens** | 103.1% |
+| h2tg000008l | 30.3 | 98.57% | 96.86% | **E. decipiens** | 101.6% |
+| h2tg000009l | 56.3 | 96.27% | 98.25% | **E. virginea** | 102.7% |
+| h2tg000010l | 43.8 | 98.25% | 96.66% | **E. decipiens** | 105.3% |
+| h2tg000011l | 35.9 | 96.85% | 98.76% | **E. virginea** | 104.2% |
+| h2tg000307l | 61.1 | 97.69% | 95.94% | **E. decipiens** | 102.9% |
+
+This reveals that it's a bit of a mess - rather inconsitent and the matches aren't as different as you might like. So I suspect some phase switching here (or these aren't the parental species, or perhaps there's just too much within species variation for this approach to work well).
