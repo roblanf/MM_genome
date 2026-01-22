@@ -585,12 +585,60 @@ Rscript scripts/pafCoordsDotPlotly.R   -i 03_hifiasm_assembly/compare_h1h2/hap1_
 mv hap1_vs_hap2_dotplot2.* 03_hifiasm_assembly/compare_h1h2/.
 ```
 
-### Static Dotplot
+The dotplot shows good contiguity between them, but the % identity is low (gaps and repeats??)
 ![Hap1 vs Hap2 Dotplot](03_hifiasm_assembly/compare_h1h2/hap1_vs_hap2_dotplot2.png)
 
-### Interactive Visualization
-[Click here to view the interactive HTML Dotplot](03_hifiasm_assembly/compare_h1h2/hap1_vs_hap2_dotplot2.html)
-*Note: You may need to download the HTML file and open it in a local browser to use the hover and zoom features.*
+We can look at coverage vs. identity using the `dv` column of the PAF, which is similar to P distance.
+
+
+```bash
+awk 'BEGIN {
+    print "| H2 ID | H1 ID | Total Matches | H2 Coverage | Identity (1-dv) |";
+    print "| :--- | :--- | :--- | :--- | :--- |";
+}
+{
+    # Extract dv tag
+    dv=0; for(i=13;i<=NF;i++) if($i ~ /^dv:f:/) dv=substr($i,6);
+    
+    # Key is Query + Target pair
+    key=$1"|"$6;
+    matches[key]+=$10;
+    # Store target length (Col 7) to calculate coverage later
+    t_lengths[key]=$7;
+    # Store the dv for the pair
+    dvs[key]=dv; 
+}
+END {
+    for (k in matches) {
+        split(k, names, "|");
+        coverage = (matches[k] / t_lengths[k]) * 100;
+        identity = (1 - dvs[k]) * 100;
+        
+        # Filter for significant matches only (optional, e.g., > 1% coverage)
+        # to avoid printing the repetitive noise again
+        if (coverage > 1) {
+            printf "| %s | %s | %d | %.2f%% | %.2f%% |\n", \
+            names[1], names[2], matches[k], coverage, identity;
+        }
+    }
+}' 03_hifiasm_assembly/compare_h1h2/hap1_vs_hap2.paf | sort -t'|' -k2,2 -k4,4nr | awk -F'|' '!seen[$2]++'
+```
+
+| H2 ID | H1 ID | Total Matches | H2 Coverage | Identity (1-dv) |
+| :--- | :--- | :--- | :--- | :--- |
+| h2tg000001l | h1tg000011l | 18993427 | 37.14% | 97.35% |
+| h2tg000002l | h1tg000001l | 13955987 | 27.20% | 94.97% |
+| h2tg000003l | h1tg000008l | 20029949 | 32.45% | 96.42% |
+| h2tg000004l | h1tg000002l | 13101698 | 37.83% | 89.83% |
+| h2tg000006l | h1tg000009l | 12991176 | 32.61% | 92.96% |
+| h2tg000007l | h1tg000005l | 14464822 | 36.47% | 96.42% |
+| h2tg000008l | h1tg000010l | 10033092 | 30.05% | 93.99% |
+| h2tg000009l | h1tg000006l | 8494638 | 29.54% | 97.89% |
+| h2tg000010l | h1tg000007l | 14004298 | 33.38% | 92.96% |
+| h2tg000011l | h1tg000004l | 11697283 | 30.76% | 94.38% |
+| h2tg000307l | h1tg000003l | 15749157 | 26.52% | 94.97% |
+
+This table gives the correspondence between the chromosomes in h1 and h2. It shows that the coverage is low (as shown in the dotplot) due to indels and structural variants. But where the sequences align, they are very similar (89-98% identity). Chr 4l from h2 and 2l from h1 is interesting - they match by the lowest amount of 89%, but the dotplot for these looks the cleanest! So they are highly sytenic, but with high sequence divergence. 
 
 
 # 04 Comparison with decipiens and virginea
@@ -635,26 +683,55 @@ minimap2 -x asm5 -N 1000 --secondary=no -t 128 parental_spp_genomes/E_decipiens.
 minimap2 -x asm5 -N 1000 --secondary=no -t 128 parental_spp_genomes/E_virginea.fa 03_hifiasm_assembly/E_phylacis_hap2_top11.fa > 04_parental_assignment/hap2_vs_virginea.paf
 ```
 
-A rough look at these alignments is to get the identity to decipiens and virginea across the whole chromosomes of hap1 and hap2:
+A rough look at these alignments is to get the identity to decipiens and virginea across the whole chromosomes of hap1 and hap2, using the approach we did above for the hap1 v hap2 paf. 
 
 ```bash
-python scripts/process_paf.py 
+awk 'BEGIN {
+    print "| S1 ID | S2 ID | Total Matches | S1 Coverage | Identity |";
+    print "| :--- | :--- | :--- | :--- | :--- |";
+}
+{
+    # Extract dv tag
+    dv=0; for(i=13;i<=NF;i++) if($i ~ /^dv:f:/) dv=substr($i,6);
+    
+    # Key is Query + Target pair
+    key=$1"|"$6;
+    matches[key]+=$10;
+    # Store target length (Col 7) to calculate coverage later
+    t_lengths[key]=$7;
+    # Store the dv for the pair
+    dvs[key]=dv; 
+}
+END {
+    for (k in matches) {
+        split(k, names, "|");
+        coverage = (matches[k] / t_lengths[k]) * 100;
+        identity = (1 - dvs[k]) * 100;
+        
+        # Filter for significant matches only (optional, e.g., > 1% coverage)
+        # to avoid printing the repetitive noise again
+        if (coverage > 1) {
+            printf "| %s | %s | %d | %.2f%% | %.2f%% |\n", \
+            names[1], names[2], matches[k], coverage, identity;
+        }
+    }
+}' 03_hifiasm_assembly/compare_h1h2/hap1_vs_hap2.paf | sort -t'|' -k2,2 -k4,4nr | awk -F'|' '!seen[$2]++'
 ```
-
 ### Haplotype 1 Assignment
-| Hybrid Chrom | Length (Mb) | Match E. decipiens (%) | Match E. virginea (%) | Assignment | Coverage |
-|:---|:---:|:---:|:---:|:---:|:---:|
-| h1tg000001l | 51.3 | 97.97% | 96.37% | **E. decipiens** | 104.8% |
-| h1tg000002l | 34.6 | 97.32% | 99.02% | **E. virginea** | 100.9% |
-| h1tg000003l | 59.4 | 96.16% | 98.13% | **E. virginea** | 102.4% |
-| h1tg000004l | 38.0 | 98.35% | 96.91% | **E. decipiens** | 104.6% |
-| h1tg000005l | 39.7 | 97.19% | 98.88% | **E. virginea** | 104.2% |
-| h1tg000006l | 28.8 | 98.09% | 96.43% | **E. decipiens** | 104.7% |
-| h1tg000007l | 42.0 | 96.74% | 98.84% | **E. virginea** | 104.5% |
-| h1tg000008l | 61.7 | 96.75% | 98.59% | **E. virginea** | 103.1% |
-| h1tg000009l | 39.8 | 98.47% | 96.84% | **E. decipiens** | 103.1% |
-| h1tg000010l | 33.4 | 97.15% | 98.72% | **E. virginea** | 101.1% |
-| h1tg000011l | 51.1 | 97.22% | 98.88% | **E. virginea** | 102.0% |
+
+| S1 ID | decip ID | virgin ID | decip Matches | virgin Matches | decip Coverage | virgin Coverage | decip Identity | virgin Identity |
+| :--- | :--- | :--- | :--- | :--- |
+| h1tg000001l | CM024615.1 |  CM024520.1 | 24507427 |  14259343 | 40.71% | 24.90% | 97.35% |  92.96% |
+| h1tg000002l | CM024618.1 |  CM024523.1 | 12497885 |  21930450 | 32.71% | 59.56% | 97.35% |  91.27% |
+| h1tg000003l | CM024613.1 |  CM024518.1 | 15221461 |  26814450 | 24.60% | 47.00% | 93.86% |  97.35% |
+| h1tg000004l | CM024612.1 |  CM024517.1 | 21161217 |  10238986 | 49.09% | 31.61% | 88.95% |  93.39% |
+| h1tg000005l | CM024619.1 |  CM024524.1 | 14717449 |  25884302 | 31.37% | 54.94% | 97.35% |  97.89% |
+| h1tg000006l | CM024611.1 |  CM024516.1 | 14070625 |  7971233 |  21.01% | 13.35% | 97.35% |  94.97% |
+| h1tg000007l | CM024609.1 |  CM024514.1 | 14192176 |  25459023 | 29.80% | 61.75% | 97.35% |  96.42% |
+| h1tg000008l | CM024616.1 |  CM024521.1 | 19421761 |  32622160 | 29.67% | 50.27% | 97.35% |  97.35% |
+| h1tg000009l | CM024617.1 |  CM024522.1 | 22115718 |  11535835 | 49.93% | 35.01% | 95.64% |  97.35% |
+| h1tg000010l | CM024610.1 |  CM024515.1 | 11611686 |  18607522 | 22.00% | 39.55% | 97.35% |  96.42% |
+| h1tg000011l | CM024614.1 |  CM024519.1 | 18324338 |  33323862 | 30.25% | 59.35% | 96.42% |  95.64% |
 
 ### Haplotype 2 Assignment
 | Hybrid Chrom | Length (Mb) | Match E. decipiens (%) | Match E. virginea (%) | Assignment | Coverage |
