@@ -827,27 +827,7 @@ PAIRS=(
     "$DEC,$VIR,dec_vs_vir"
 )
 
-for PAIR in "${PAIRS[@]}"; do
-    # Split the string into variables
-    IFS=',' read -r REF QUERY NAME <<< "$PAIR"
-    
-    echo "------------------------------------------------------"
-    echo "Processing: $NAME"
-    echo "------------------------------------------------------"
-
-    # 1. Run Alignment
-    minimap2 -x asm5 -t 128 -N 1000000 --secondary=no "$REF" "$QUERY" > "$OUT_DIR/${NAME}.paf"
-
-    # 2. Generate Plot
-    Rscript scripts/pafCoordsDotPlotly.R \
-        -i "$OUT_DIR/${NAME}.paf" \
-        -o "${NAME}_plot" \
-        -s -t -m 2000 -q 500000
-
-    # Move plot files to the output directory
-    mv ${NAME}_plot.* "$OUT_DIR/"
-done
-
+          
 echo "Done! All 6 comparisons are in $OUT_DIR"
 ```
 
@@ -866,4 +846,15 @@ This table provides a comprehensive overview of the synteny and divergence betwe
 ---
 *Note: Click on any thumbnail to view the full-resolution interactive/static dotplot.*
 
-Todo: dot plots for h1 and h2 vs decip and virginea to confirm these; then an anlysis of switching 
+Visual analysis of the dotplots suggest the following.
+
+First, it looks to me like there could be a bit of phase switching. E.g. chr3 for h1 maps well to the start of virginea, but to the middle of decipiens. Merqury should help to sort out if this is real.
+
+Second, we can try to allocate chromosomes to parents. However, doing this reveals that there's often not a clear distinction, and even if there is, one would often assign both H1 and H2 to the same parents on visual inspection (e.g. Chr 5 looks to be best aligned to decipiens for both H1 and H2). This could just be because the particular accumulation of structural variants (which are common) in the particular samples we have access to for virginea and decipiens. 
+
+Everyone here is clearly closely related, and there are clearly a lot of structural variants between all comparisons. 
+
+Another notable difference is that mapping E. decipiens vs. E. virginea looks a lot more contiguous than H1 vs H2, or either haplotypes vs decipiens OR virginea. This could well be because the two parental genomes were scaffolded against E. grandis, while H1 and H2 were not. This is important, because this is likely to reduce apparent variation between decipiens and virginea, as both will be affected by reference bias. Of course, my assembly may be full of errors as well!
+
+All of this suggests that Merqury might be a useful approach to paint chromosomes. 
+
