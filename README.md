@@ -768,4 +768,102 @@ Based on these results, the identity looks a bit confusing, and maybe has a bug.
 | Chr10 | CM024618.1 |  CM024523.1 | h2tg000004l | h1tg000002l |
 | Chr11 | CM024619.1 |  CM024524.1 | h2tg000007l | h1tg000005l |
 
+
+## Dotplots vs. putative parents
+
+Let's further examine the putative assignments above with dotplots.
+
+First we'll get the 11 main chromosomes from the two parental genomes. This script also names the chromosomes in the parental genomes with the chromosome numbers, e.g. `CM024609.1_Chr1`
+
+```bash
+# ---------------------------------------------------------
+# 1. Process E. decipiens
+# ---------------------------------------------------------
+# IDs: CM024609.1 (Chr 1) through CM024619.1 (Chr 11)
+for i in {0..10}; do
+    # Calculate the ID (09, 10, 11...) and the Chr number (1, 2, 3...)
+    ACC=$(printf "CM0246%02d.1" $((9 + i)))
+    CHR="Chr$((1 + i))"
+    
+    # Extract and rename on the fly
+    samtools faidx parental_spp_genomes/E_decipiens.fa $ACC | \
+    sed "s/>$ACC/>${ACC}_${CHR}/" >> parental_spp_genomes/E_decipiens_top11.fa
+done
+
+# ---------------------------------------------------------
+# 2. Process E. virginea
+# ---------------------------------------------------------
+# IDs: CM024514.1 (Chr 1) through CM024524.1 (Chr 11)
+for i in {0..10}; do
+    ACC=$(printf "CM0245%02d.1" $((14 + i)))
+    CHR="Chr$((1 + i))"
+    
+    samtools faidx parental_spp_genomes/E_virginea.fa $ACC | \
+    sed "s/>$ACC/>${ACC}_${CHR}/" >> parental_spp_genomes/E_virginea_top11.fa
+done
+```
+
+Now we can make the dot plots:
+
+```bash
+#!/bin/bash
+
+# --- File and Directory Names ---
+H1="03_hifiasm_assembly/E_phylacis_hap1_top11.fa"
+H2="03_hifiasm_assembly/E_phylacis_hap2_top11.fa"
+DEC="parental_spp_genomes/E_decipiens_top11_named.fa"
+VIR="parental_spp_genomes/E_virginea_top11_named.fa"
+OUT_DIR="04_parental_assignment/all_vs_all_dotplots"
+
+mkdir -p $OUT_DIR
+
+# Define the pairs to compare: "Reference,Query,OutputName"
+PAIRS=(
+    "$H1,$H2,h1_vs_h2"
+    "$DEC,$H1,h1_vs_dec"
+    "$VIR,$H1,h1_vs_vir"
+    "$DEC,$H2,h2_vs_dec"
+    "$VIR,$H2,h2_vs_vir"
+    "$DEC,$VIR,dec_vs_vir"
+)
+
+for PAIR in "${PAIRS[@]}"; do
+    # Split the string into variables
+    IFS=',' read -r REF QUERY NAME <<< "$PAIR"
+    
+    echo "------------------------------------------------------"
+    echo "Processing: $NAME"
+    echo "------------------------------------------------------"
+
+    # 1. Run Alignment
+    minimap2 -x asm5 -t 128 -N 1000000 --secondary=no "$REF" "$QUERY" > "$OUT_DIR/${NAME}.paf"
+
+    # 2. Generate Plot
+    Rscript scripts/pafCoordsDotPlotly.R \
+        -i "$OUT_DIR/${NAME}.paf" \
+        -o "${NAME}_plot" \
+        -s -t -m 2000 -q 500000
+
+    # Move plot files to the output directory
+    mv ${NAME}_plot.* "$OUT_DIR/"
+done
+
+echo "Done! All 6 comparisons are in $OUT_DIR"
+```
+
+
+## All-vs-All Haplotype & Parental Comparison
+
+This table provides a comprehensive overview of the synteny and divergence between the assembled haplotypes (H1, H2) and the two parental reference genomes (*E. decipiens* and *E. virginea*). 
+
+| | **Haplotype 1 (H1)** | **Haplotype 2 (H2)** | **E. decipiens (Ref)** | **E. virginea (Ref)** |
+| :--- | :---: | :---: | :---: | :---: |
+| **H1** | — | — | — | — |
+| **H2** | [![H2 vs H1](04_parental_assignment/all_vs_all_dotplots/h1_vs_h2_plot.png)](04_parental_assignment/all_vs_all_dotplots/h1_vs_h2_plot.png) | — | — | — |
+| **Decipiens** | [![Dec vs H1](04_parental_assignment/all_vs_all_dotplots/h1_vs_dec_plot.png)](04_parental_assignment/all_vs_all_dotplots/h1_vs_dec_plot.png) | [![Dec vs H2](04_parental_assignment/all_vs_all_dotplots/h2_vs_dec_plot.png)](04_parental_assignment/all_vs_all_dotplots/h2_vs_dec_plot.png) | — | — |
+| **Virginea** | [![Vir vs H1](04_parental_assignment/all_vs_all_dotplots/h1_vs_vir_plot.png)](04_parental_assignment/all_vs_all_dotplots/h1_vs_vir_plot.png) | [![Vir vs H2](04_parental_assignment/all_vs_all_dotplots/h2_vs_vir_plot.png)](04_parental_assignment/all_vs_all_dotplots/h2_vs_vir_plot.png) | [![Vir vs Dec](04_parental_assignment/all_vs_all_dotplots/dec_vs_vir_plot.png)](04_parental_assignment/all_vs_all_dotplots/dec_vs_vir_plot.png) | — |
+
+---
+*Note: Click on any thumbnail to view the full-resolution interactive/static dotplot.*
+
 Todo: dot plots for h1 and h2 vs decip and virginea to confirm these; then an anlysis of switching 
