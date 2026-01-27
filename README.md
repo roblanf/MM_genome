@@ -1113,12 +1113,31 @@ Let's map the kmers with meryl:
 
 ```bash
 # For Hap1
-meryl-lookup -exist -sequence E_phylacis_hap1_top11.fasta -db E_virginea.final_probes.meryl -bed > hap1_virginea.bed
-meryl-lookup -exist -sequence E_phylacis_hap1_top11.fasta -db E_decipiens.final_probes.meryl -bed > hap1_decipiens.bed
+# Virginea k-mers on Hap1
+meryl-lookup -bed \
+  -sequence E_phylacis_hap1_top11.fasta \
+  -mers E_virginea.final_probes.meryl \
+  -output hap1_virginea.bed
+
+# Decipiens k-mers on Hap1
+meryl-lookup -bed \
+  -sequence E_phylacis_hap1_top11.fasta \
+  -mers E_decipiens.final_probes.meryl \
+  -output hap1_decipiens.bed
 
 # For Hap2
-meryl-lookup -exist -sequence E_phylacis_hap2_top11.fasta -db E_virginea.final_probes.meryl -bed > hap2_virginea.bed
-meryl-lookup -exist -sequence E_phylacis_hap2_top11.fasta -db E_decipiens.final_probes.meryl -bed > hap2_decipiens.bed
+# Virginea k-mers on Hap2
+meryl-lookup -bed \
+  -sequence E_phylacis_hap2_top11.fasta \
+  -mers E_virginea.final_probes.meryl \
+  -output hap2_virginea.bed
+
+# Decipiens k-mers on Hap2
+meryl-lookup -bed \
+  -sequence E_phylacis_hap2_top11.fasta \
+  -mers E_decipiens.final_probes.meryl \
+  -output hap2_decipiens.bed
+
 ```
 
 
