@@ -858,3 +858,202 @@ Another notable difference is that mapping E. decipiens vs. E. virginea looks a 
 
 All of this suggests that Merqury might be a useful approach to paint chromosomes. 
 
+## Merqury
+
+First let's download the short reads for the two parent species. They are here: 
+
+* decipiens: https://trace.ncbi.nlm.nih.gov/Traces/?run=SRR25119757
+* virginea: https://trace.ncbi.nlm.nih.gov/Traces/?run=SRR25119786
+
+```bash
+cd parental_spp_genomes
+
+# decipiens
+wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos9/sra-pub-zq-922/SRR025/25119/SRR25119757/SRR25119757.lite.1
+fasterq-dump SRR25119757.lite.1 --split-files --threads 16 --progress && pigz -p 16 *.fastq
+mv SRR25119757.lite.1_1.fastq.gz E_decipiens_R1.fastq.gz
+mv SRR25119757.lite.1_2.fastq.gz E_decipiens_R2.fastq.gz
+
+# virginea
+wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos9/sra-pub-zq-922/SRR025/25119/SRR25119786/SRR25119786.lite.1
+fasterq-dump SRR25119786.lite.1 --split-files --threads 16 --progress && pigz -p 16 *.fastq
+mv SRR25119786.lite.1_1.fastq.gz E_virginea_R1.fastq.gz
+mv SRR25119786.lite.1_2.fastq.gz E_virginea_R2.fastq.gz
+```
+
+Now we'll build the kmer databases. note that these are not actual parents, but parental species, so I won't bother using the kmers to check the assembly itself. I'm only intersted in mapping parental species kmers to the assembly to look for switching.
+
+```bash
+export k=31
+cd parental_spp_genomes/
+
+# E virginea
+meryl k=$k count threads=128 memory=1200G \
+    output E_virginea.meryl \
+    E_virginea_R1.fastq.gz E_virginea_R2.fastq.gz
+
+# E decipiens
+meryl k=$k count threads=128 memory=1200G \
+    output E_decipiens.meryl \
+    E_decipiens_R1.fastq.gz E_decipiens_R2.fastq.gz
+
+meryl statistics E_virginea.meryl
+meryl statistics E_decipiens.meryl
+
+```
+
+```
+decipiens
+Found 1 command tree.
+Number of 31-mers that are:
+  unique             1290874493  (exactly one instance of the kmer is in the input)
+  distinct           2030909683  (non-redundant kmer sequences in the input)
+  present           18810934773  (...)
+  missing   4611686016396478221  (non-redundant kmer sequences not in the input)
+
+             number of   cumulative   cumulative     presence
+              distinct     fraction     fraction   in dataset
+frequency        kmers     distinct        total       (1e-6)
+--------- ------------ ------------ ------------ ------------
+        1   1290874493       0.6356       0.0686     0.000053
+        2     89038578       0.6795       0.0781     0.000106
+        3     34417617       0.6964       0.0836     0.000159
+        4     24398445       0.7084       0.0888     0.000213
+        5     21071260       0.7188       0.0944     0.000266
+        6     20750383       0.7290       0.1010     0.000319
+        7     21256492       0.7395       0.1089     0.000372
+        8     21951538       0.7503       0.1182     0.000425
+        9     22547668       0.7614       0.1290     0.000478
+       10     22978776       0.7727       0.1412     0.000532
+
+virginea
+Found 1 command tree.
+Number of 31-mers that are:
+  unique             1225112802  (exactly one instance of the kmer is in the input)
+  distinct           1897334044  (non-redundant kmer sequences in the input)
+  present           17081200798  (...)
+  missing   4611686016530053860  (non-redundant kmer sequences not in the input)
+
+             number of   cumulative   cumulative     presence
+              distinct     fraction     fraction   in dataset
+frequency        kmers     distinct        total       (1e-6)
+--------- ------------ ------------ ------------ ------------
+        1   1225112802       0.6457       0.0717     0.000059
+        2     94219756       0.6954       0.0828     0.000117
+        3     32918583       0.7127       0.0885     0.000176
+        4     21986254       0.7243       0.0937     0.000234
+        5     18523886       0.7341       0.0991     0.000293
+        6     18102892       0.7436       0.1055     0.000351
+        7     18383380       0.7533       0.1130     0.000410
+        8     18817127       0.7632       0.1218     0.000468
+        9     19189702       0.7733       0.1319     0.000527
+       10     19389542       0.7835       0.1433     0.000585
+```
+
+The trough in both of these distributions is at 6. So we'll get unique 31mers by filtering out everything that appears <6 times.
+
+```bash
+meryl threads=128 greater-than 5 \
+    output E_virginea.filtered.meryl \
+    E_virginea.meryl
+
+meryl threads=128 greater-than 5 \
+    output E_decipiens.filtered.meryl \
+    E_decipiens.meryl
+```
+
+Now we can create species-spefic 31mers via subtraction
+
+```bash
+meryl threads=128 subtract \
+    output E_virginea.only.meryl \
+    E_virginea.filtered.meryl E_decipiens.filtered.meryl
+
+meryl threads=128 subtract \
+    output E_decipiens.only.meryl \
+    E_decipiens.filtered.meryl E_virginea.filtered.meryl
+
+meryl statistics E_virginea.only.meryl | head -n 20
+meryl statistics E_decipiens.only.meryl | head -n 20
+```
+
+Both of these have a similar distribution:
+
+```
+decipiens
+Found 1 command tree.
+Number of 31-mers that are:
+  unique                4979883  (exactly one instance of the kmer is in the input)
+  distinct            486744832  (non-redundant kmer sequences in the input)
+  present           10560074052  (...)
+  missing   4611686017940643072  (non-redundant kmer sequences not in the input)
+
+             number of   cumulative   cumulative     presence
+              distinct     fraction     fraction   in dataset
+frequency        kmers     distinct        total       (1e-6)
+--------- ------------ ------------ ------------ ------------
+        1      4979883       0.0102       0.0005     0.000095
+        2      4832476       0.0202       0.0014     0.000189
+        3      4666418       0.0297       0.0027     0.000284
+        4      4474050       0.0389       0.0044     0.000379
+        5      4263121       0.0477       0.0064     0.000473
+        6     22101931       0.0931       0.0190     0.000568
+        7     22034781       0.1384       0.0336     0.000663
+        8     22173871       0.1839       0.0504     0.000758
+        9     22250304       0.2296       0.0694     0.000852
+       10     22199813       0.2753       0.0904     0.000947
+
+virginea
+Found 1 command tree.
+Number of 31-mers that are:
+  unique                4954189  (exactly one instance of the kmer is in the input)
+  distinct            414255629  (non-redundant kmer sequences in the input)
+  present            8912622148  (...)
+  missing   4611686018013132275  (non-redundant kmer sequences not in the input)
+
+             number of   cumulative   cumulative     presence
+              distinct     fraction     fraction   in dataset
+frequency        kmers     distinct        total       (1e-6)
+--------- ------------ ------------ ------------ ------------
+        1      4954189       0.0120       0.0006     0.000112
+        2      4770616       0.0235       0.0016     0.000224
+        3      4571300       0.0345       0.0032     0.000337
+        4      4346218       0.0450       0.0051     0.000449
+        5      4116279       0.0549       0.0074     0.000561
+        6     19090626       0.1010       0.0203     0.000673
+        7     18795727       0.1464       0.0350     0.000785
+        8     18693943       0.1915       0.0518     0.000898
+        9     18568529       0.2363       0.0706     0.001010
+       10     18318337       0.2806       0.0911     0.001122
+
+```
+
+Now we filter out the rare unique kmers again, and use merqury to map these to the two haplotypes.
+
+```bash
+
+meryl threads=128 greater-than 5 \
+    output E_virginea.final_probes.meryl \
+    E_virginea.only.meryl
+
+meryl threads=128 greater-than 5 \
+    output E_decipiens.final_probes.meryl \
+    E_decipiens.only.meryl
+```
+
+Now we run Merqury. I generate a dummy child db (I don't have short reads for the child, and regardless it's not actually a child...)
+
+```bash
+# 1. Create a placeholder 'read-db' by merging the two probe sets
+meryl threads=128 union-sum \
+    output species_union.meryl \
+    E_virginea.final_probes.meryl E_decipiens.final_probes.meryl
+
+merqury.sh \
+    species_union.meryl \
+    E_virginea.final_probes.meryl \
+    E_decipiens.final_probes.meryl \
+    E_phylacis_hap1_top11.fa \
+    E_phylacis_hap2_top11.fa \
+    E_phylacis_species_map
+```
