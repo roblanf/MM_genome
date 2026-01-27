@@ -1061,3 +1061,64 @@ merqury.sh \
     E_phylacis_hap2_top11.fasta \
     E_phylacis_species_map
 ```
+
+
+Frustratingly, this fails at the last steps, likely because using parental species not individuals leads to a lot of noise and ~infinite switching, so no blocks long enough to call a real block by merqury's approach. Instead, let's map the kmers directly and plot them out. 
+
+Of note, the blob plot and the histogram (same data) show a consistent 2-3x preference for one parent spp over the other:
+
+| Assembly | Contig | E_virginea Probes | E_decipiens Probes | Size (bp) | Dominant Parent | Dominant Ratio |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| E_phylacis_hap1_top11 | h1tg000008l | 29,574,230 | 11,485,726 | 61,728,875 | Virginea | 2.57x |
+| E_phylacis_hap1_top11 | h1tg000003l | 24,166,149 | 12,032,714 | 59,377,806 | Virginea | 2.01x |
+| E_phylacis_hap1_top11 | h1tg000001l | 7,233,487 | 25,796,697 | 51,317,245 | Decipiens | 3.57x |
+| E_phylacis_hap1_top11 | h1tg000011l | 26,173,487 | 9,579,941 | 51,144,841 | Virginea | 2.73x |
+| E_phylacis_hap1_top11 | h1tg000007l | 21,214,760 | 7,752,565 | 41,957,492 | Virginea | 2.74x |
+| E_phylacis_hap1_top11 | h1tg000009l | 5,729,451 | 20,405,351 | 39,833,786 | Decipiens | 3.56x |
+| E_phylacis_hap1_top11 | h1tg000005l | 20,178,769 | 7,482,591 | 39,657,493 | Virginea | 2.70x |
+| E_phylacis_hap1_top11 | h1tg000004l | 5,222,786 | 19,422,560 | 38,027,346 | Decipiens | 3.72x |
+| E_phylacis_hap1_top11 | h1tg000002l | 17,617,635 | 6,408,337 | 34,632,705 | Virginea | 2.75x |
+| E_phylacis_hap1_top11 | h1tg000010l | 15,674,330 | 6,474,976 | 33,387,254 | Virginea | 2.42x |
+| E_phylacis_hap1_top11 | h1tg000006l | 4,178,238 | 13,450,401 | 28,751,513 | Decipiens | 3.22x |
+| E_phylacis_hap2_top11 | h2tg000003l | 10,174,689 | 33,286,426 | 65,679,558 | Decipiens | 3.27x |
+| E_phylacis_hap2_top11 | h2tg000307l | 8,408,538 | 28,955,231 | 59,218,057 | Decipiens | 3.44x |
+| E_phylacis_hap2_top11 | h2tg000009l | 23,820,241 | 11,758,129 | 56,292,507 | Virginea | 2.03x |
+| E_phylacis_hap2_top11 | h2tg000001l | 7,696,497 | 29,401,315 | 54,055,966 | Decipiens | 3.82x |
+| E_phylacis_hap2_top11 | h2tg000002l | 18,573,496 | 10,028,448 | 45,187,031 | Virginea | 1.85x |
+| E_phylacis_hap2_top11 | h2tg000010l | 6,147,171 | 23,104,469 | 43,786,441 | Decipiens | 3.76x |
+| E_phylacis_hap2_top11 | h2tg000007l | 5,967,530 | 23,348,547 | 42,203,106 | Decipiens | 3.91x |
+| E_phylacis_hap2_top11 | h2tg000004l | 5,520,519 | 19,783,505 | 38,512,705 | Decipiens | 3.58x |
+| E_phylacis_hap2_top11 | h2tg000006l | 17,538,735 | 7,250,381 | 36,524,821 | Virginea | 2.42x |
+| E_phylacis_hap2_top11 | h2tg000011l | 17,323,908 | 6,663,693 | 35,797,366 | Virginea | 2.60x |
+| E_phylacis_hap2_top11 | h2tg000008l | 5,139,230 | 14,287,990 | 30,255,362 | Decipiens | 2.78x |
+
+[link to blob plot]
+
+There are two explanations for this:
+
+1. Frequent phase switching - seems unlikely because the ratio is so consistent, and there's always a clear dominant parent
+2. Background noise - these are three individuals that are very different from one another, so it's feasible that the final probes (e.g. those uniquely in E. virginea that are also in the Meelup mallee) have a fair degree of noise, insofar as some proportion of them are also likely to hit E. decipiens chromosomes.
+
+One way to distinguish these is to map the two final probe sets directly to the chromosomes, and look at the distribution. If 1 is correct, then we expect clear blocks that prefer one parent over the other (even with noise). If 2 is correct, then we expect a consistent signal along a chromosome where one parent is preferred compared to the other in a sliding window. The evidence from merqury failing suggests the window could be quite small, since it looks like there weren't runs of >100 unique kmers for any of the parents. So we could look at windows of ~1000 and if 2 is correct it should be a stable signal of ~2-3x preference for the dominant parent. 
+
+### Mapping kmers to chromosomes
+
+Let's map the kmers to the chromosomes with meryl, and do a sliding window to visualise it. I'll aim for two visualisations
+
+1. a visualisation of the physical chromosome, with the proportion of the EACH parent in a sliding window plotted, just in different colours. We'll write the script so that we can play around with the sliding window size. In this plot we expect to see consistent preference for one parent over the other on each chromosome if there's no phase switching.
+
+2. The same data, but just plotting the distribution of the proportion for each parent in each window across the chromosome. In this plot, a single unimodal distribution for each parent is what we expect if there's no phase switching.
+
+Let's map the kmers with meryl:
+
+```bash
+# For Hap1
+meryl-lookup -exist -sequence E_phylacis_hap1_top11.fasta -db E_virginea.final_probes.meryl -bed > hap1_virginea.bed
+meryl-lookup -exist -sequence E_phylacis_hap1_top11.fasta -db E_decipiens.final_probes.meryl -bed > hap1_decipiens.bed
+
+# For Hap2
+meryl-lookup -exist -sequence E_phylacis_hap2_top11.fasta -db E_virginea.final_probes.meryl -bed > hap2_virginea.bed
+meryl-lookup -exist -sequence E_phylacis_hap2_top11.fasta -db E_decipiens.final_probes.meryl -bed > hap2_decipiens.bed
+```
+
+
