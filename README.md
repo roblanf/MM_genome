@@ -1140,4 +1140,48 @@ meryl-lookup -bed \
 
 ```
 
+Define boundaries:
 
+```bash
+# Create chromosome index files
+samtools faidx E_phylacis_hap1_top11.fasta
+samtools faidx E_phylacis_hap2_top11.fasta
+
+# Extract contig names and lengths
+cut -f 1,2 E_phylacis_hap1_top11.fasta.fai > hap1.genome
+cut -f 1,2 E_phylacis_hap2_top11.fasta.fai > hap2.genome
+```
+
+make windows, I'll do 10K, and 100K to start with.
+
+```bash
+# Windows for Hap1
+bedtools makewindows -g hap1.genome -w 10000 > hap1_10k.bed
+bedtools makewindows -g hap1.genome -w 100000 > hap1_100k.bed
+
+# Windows for Hap2
+bedtools makewindows -g hap2.genome -w 10000 > hap2_10k.bed
+bedtools makewindows -g hap2.genome -w 100000 > hap2_100k.bed
+```
+
+Now I'll get kmer coverage:
+
+```bash
+# Hap1 #
+# 100k Windows
+bedtools coverage -a hap1_100k.bed -b hap1_virginea.bed > h1_v_100k.txt
+bedtools coverage -a hap1_100k.bed -b hap1_decipiens.bed > h1_d_100k.txt
+
+# 10k Windows
+bedtools coverage -a hap1_10k.bed -b hap1_virginea.bed > h1_v_10k.txt
+bedtools coverage -a hap1_10k.bed -b hap1_decipiens.bed > h1_d_10k.txt
+
+# Hap2 #
+# 100k Windows
+bedtools coverage -a hap2_100k.bed -b hap2_virginea.bed > h2_v_100k.txt
+bedtools coverage -a hap2_100k.bed -b hap2_decipiens.bed > h2_d_100k.txt
+
+# 10k Windows
+bedtools coverage -a hap2_10k.bed -b hap2_virginea.bed > h2_v_10k.txt
+bedtools coverage -a hap2_10k.bed -b hap2_decipiens.bed > h2_d_10k.txt
+```
