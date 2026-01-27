@@ -1049,11 +1049,15 @@ meryl threads=128 union-sum \
     output species_union.meryl \
     E_virginea.final_probes.meryl E_decipiens.final_probes.meryl
 
+# copy the files with a .fasta extension, because merqury seems to reall want that
+cp ../03_hifiasm_assembly/E_phylacis_hap1_top11.fa E_phylacis_hap1_top11.fasta
+cp ../03_hifiasm_assembly/E_phylacis_hap2_top11.fa E_phylacis_hap2_top11.fasta
+
 merqury.sh \
     species_union.meryl \
     E_virginea.final_probes.meryl \
     E_decipiens.final_probes.meryl \
-    E_phylacis_hap1_top11.fa \
-    E_phylacis_hap2_top11.fa \
+    E_phylacis_hap1_top11.fasta \
+    E_phylacis_hap2_top11.fasta \
     E_phylacis_species_map
 ```
