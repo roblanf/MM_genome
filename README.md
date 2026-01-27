@@ -1185,3 +1185,12 @@ bedtools coverage -a hap2_100k.bed -b hap2_decipiens.bed > h2_d_100k.txt
 bedtools coverage -a hap2_10k.bed -b hap2_virginea.bed > h2_v_10k.txt
 bedtools coverage -a hap2_10k.bed -b hap2_decipiens.bed > h2_d_10k.txt
 ```
+
+Now we plot those out along the genomes with an R script:
+
+```bash
+Rscript ../scripts/parental_kmer_plots.R . parental_kmer_plots
+```
+
+Next, it's time to tidy everything up. All the big files I will leave (rather messily) in the `parental_spp_genomes` folder, because that's git ignored already. The smaller stuff I want to keep tabs on I'll organise better.
+
