@@ -1452,3 +1452,15 @@ Rscript ../scripts/pafCoordsDotPlotly.R \
 | Comparison: *E. phylacis* vs. *E. virginea* | Comparison: *E. phylacis* vs. *E. decipiens* |
 | :---: | :---: |
 | ![Phylacis vs Virginea](04_parental_assignment/cp_phylacis_vs_virginea.png) | ![Phylacis vs Decipiens](04_parental_assignment/cp_phylacis_vs_decipiens.png) |
+
+
+The dotplots reveal nothing amiss. 
+
+The mother is clearly E virginea.
+
+# 05 Organellar genome assembly
+
+
+# 06 final haplotype validation
+
+Including mapping raw reads back to look for coverage issues.
