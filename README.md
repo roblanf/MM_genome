@@ -1460,6 +1460,69 @@ The mother is clearly E virginea.
 
 # 05 Organellar genome assembly
 
+```bash
+# Setup Directories
+source_file="02_filtering/E_phylacis_filtered.fastq.gz"
+temp_fq="05_organelle_genomes/temp_unzipped.fastq"
+organelle_reads_dir="05_organelle_genomes/organelle_subset"
+mkdir -p ${organelle_reads_dir}
+
+# 1. Decompress once to save CPU/IO
+echo "Decompressing source file..."
+pigz -dc -p 64 $source_file > $temp_fq
+
+# 2. Run the sweep
+for Q in 15 20; do
+    echo "--- Filtering for Q${Q} ---"
+    
+    # Process from the temp unzipped file
+    chopper -q $Q < $temp_fq | bgzip -@ 64 > ${organelle_reads_dir}/E_phylacis_Q${Q}.fastq.gz
+    
+    # Report results
+    echo "Stats for Q${Q}:"
+    seqkit stats ${organelle_reads_dir}/E_phylacis_Q${Q}.fastq.gz
+done
+
+# shows that I have a lot of Q20 or greater data (see below) so now let's try read lengths:
+
+# Sweep for Length while keeping Quality constant at Q20
+for L in 20000 30000 40000 50000; do
+    # Convert length to 'k' format for filename
+    L_kb=$(($L / 1000))
+    echo "--- Filtering for Q20 and Length > ${L_kb}kb ---"
+    
+    # Process: filter for Q20 AND length L
+    chopper -q 20 -l $L < $temp_fq | bgzip -@ 64 > ${organelle_reads_dir}/E_phylacis_Q20_L${L_kb}k.fastq.gz
+    
+    # Report results
+    echo "Stats for Q20_L${L_kb}k:"
+    seqkit stats ${organelle_reads_dir}/E_phylacis_Q20_L${L_kb}k.fastq.gz
+done
+
+# 3. Cleanup
+rm $temp_fq
+echo "All subsets created in ${organelle_reads_dir} and temp file removed."
+
+```
+
+
+
+This gives:
+
+```
+--- Filtering for Q15 ---
+Kept 1165231 reads out of 1345923 reads
+Stats for Q15:
+file                                                           format  type   num_seqs         sum_len  min_len   avg_len  max_len
+05_organelle_genomes/organelle_subset/E_phylacis_Q15.fastq.gz  FASTQ   DNA   1,165,231  29,326,043,409   15,000  25,167.6  147,172
+--- Filtering for Q20 ---
+Kept 696853 reads out of 1345923 reads
+Stats for Q20:
+file                                                           format  type  num_seqs         sum_len  min_len   avg_len  max_len
+05_organelle_genomes/organelle_subset/E_phylacis_Q20.fastq.gz  FASTQ   DNA    696,853  17,203,549,475   15,000  24,687.5  134,734
+```
+
+
 
 # 06 final haplotype validation
 
