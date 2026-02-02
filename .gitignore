@@ -9,3 +9,4 @@ mb_downloads/
 03_hifiasm_assembly/*.log
 04_parental_assignment/species_map/
 04_parental_assignment/*.fa 
+04_parental_assignment/e_phylacis_db.*
