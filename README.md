@@ -1636,18 +1636,19 @@ I'll try a few and name the output files differently...
 * c280, k1001: run completed, plastid assembled well, mt didn't assemble
 * c140, k1001: run has zero coverage arcs, mt genome has 1 contig of 10kb (linear)
 * c70, k1001: run has zero coverage arcs, mt genome is in 3 contigs totalling 450kb (one circular, two linear)
-* c50, k1001:  
+* c50, k1001:  run has zero coverage arcs, mt genome is in 3 contigs totalling 450kb (one circular, two linear) basically idential to c70, with an extra 450bp
+* c40, k1001:  run has zero coverage arcs, mt genome is in 3 contigs totalling 450kb (one circular, two linear) basically idential to c70, with an extra 450bp
 
 ```bash
 # Define paths
 PT_FAM="05_organelle_genomes/db/magnoliopsida_pltd.fam"
 MT_FAM="05_organelle_genomes/db/magnoliopsida_mito.fam"
-out_dir="05_organelle_genomes/oatk_results_c50k1001"
+out_dir="05_organelle_genomes/oatk_results_c40k1001"
 mkdir -p $out_dir
 
 # Run OatK
 oatk -k 1001 \
-     -c 50 \
+     -c 40 \
      -t 64 \
      -p $PT_FAM \
      -m $MT_FAM \
