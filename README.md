@@ -1460,6 +1460,8 @@ The mother is clearly E virginea.
 
 # 05 Organellar genome assembly
 
+## Read filtering
+
 ```bash
 # Setup Directories
 source_file="02_filtering/E_phylacis_filtered.fastq.gz"
@@ -1520,8 +1522,139 @@ Kept 696853 reads out of 1345923 reads
 Stats for Q20:
 file                                                           format  type  num_seqs         sum_len  min_len   avg_len  max_len
 05_organelle_genomes/organelle_subset/E_phylacis_Q20.fastq.gz  FASTQ   DNA    696,853  17,203,549,475   15,000  24,687.5  134,734
+
+
+--- Filtering for Q20 and Length > 20kb ---
+Kept 463140 reads out of 1345923 reads
+Stats for Q20_L20k:
+file                                                                format  type  num_seqs         sum_len  min_len   avg_len  max_len
+05_organelle_genomes/organelle_subset/E_phylacis_Q20_L20k.fastq.gz  FASTQ   DNA    463,140  13,056,995,216   20,000  28,192.3  134,734
+--- Filtering for Q20 and Length > 30kb ---
+Kept 144088 reads out of 1345923 reads
+Stats for Q20_L30k:
+file                                                                format  type  num_seqs        sum_len  min_len   avg_len  max_len
+05_organelle_genomes/organelle_subset/E_phylacis_Q20_L30k.fastq.gz  FASTQ   DNA    144,088  5,333,865,113   30,000  37,018.1  134,734
+--- Filtering for Q20 and Length > 40kb ---
+Kept 34958 reads out of 1345923 reads
+Stats for Q20_L40k:
+file                                                                format  type  num_seqs        sum_len  min_len   avg_len  max_len
+05_organelle_genomes/organelle_subset/E_phylacis_Q20_L40k.fastq.gz  FASTQ   DNA     34,958  1,627,555,827   40,000  46,557.5  134,734
+--- Filtering for Q20 and Length > 50kb ---
+Kept 7428 reads out of 1345923 reads
+Stats for Q20_L50k:
+file                                                                format  type  num_seqs      sum_len  min_len   avg_len  max_len
+05_organelle_genomes/organelle_subset/E_phylacis_Q20_L50k.fastq.gz  FASTQ   DNA      7,428  421,042,149   50,000  56,683.1  134,734
+
 ```
 
+I'll try starting with the Q20 40KB subset: `E_phylacis_Q20_L40k.fastq.gz`
+
+## oatk fails with raw reads
+
+Let's try oatk...
+
+First we get the databases:
+
+```bash
+db_dir="05_organelle_genomes/db"
+mkdir -p ${db_dir}
+
+# Base URL for the raw files
+base_url="https://raw.githubusercontent.com/c-zhou/OatkDB/main/v20230921"
+
+# List of files to download
+files=(
+    "magnoliopsida_mito.fam"
+    "magnoliopsida_mito.fam.h3f"
+    "magnoliopsida_mito.fam.h3i"
+    "magnoliopsida_mito.fam.h3m"
+    "magnoliopsida_mito.fam.h3p"
+    "magnoliopsida_pltd.fam"
+    "magnoliopsida_pltd.fam.h3f"
+    "magnoliopsida_pltd.fam.h3i"
+    "magnoliopsida_pltd.fam.h3m"
+    "magnoliopsida_pltd.fam.h3p"
+)
+
+echo "Downloading Magnoliopsida HMM profiles..."
+
+for file in "${files[@]}"; do
+    wget -q "${base_url}/${file}" -O "${db_dir}/${file}"
+    echo "  Downloaded: ${file}"
+done
+
+echo "Done. Databases are in ${db_dir}"
+```
+
+Some trial and error with oatk shows that raw nanopore reads don't work. So I'll need to error correct them with hifiasm first.
+
+Various iterations of this approach with different k and c all failed. Just to much noise (homopolymer errors) in the reads I suppose.
+
+```bash
+# Define paths
+PT_FAM="05_organelle_genomes/db/magnoliopsida_pltd.fam"
+MT_FAM="05_organelle_genomes/db/magnoliopsida_mito.fam"
+out_dir="05_organelle_genomes/oatk_results"
+mkdir -p $out_dir
+
+# Run OatK
+# We use the Q20_L40k subset which has 1.6GB of high-quality long reads
+oatk -k 1001 \
+     -c 3 \
+     -t 64 \
+     -p $PT_FAM \
+     -m $MT_FAM \
+     -o ${out_dir}/e_phylacis \
+     05_organelle_genomes/organelle_subset/E_phylacis_Q20_L30k.fastq.gz
+```
+
+## oatk with hifiasm corrected reads
+
+Let's retry the above with hifiasm corrected reads
+
+First we get the corrected reads
+
+```bash
+cd 03_hifiasm_assembly/
+hifiasm -o E_phylacis_asm -t 124 --write-ec /dev/null
+seqkit stats -T E_phylacis_asm.ec.fa
+```
+
+```
+file    format  type    num_seqs        sum_len min_len avg_len max_len
+E_phylacis_asm.ec.fa    FASTA   DNA     1345923 33991131314     14202   25254.9 147315
+```
+
+That's about 28x coverage in these reads (of the haploid genome).
+
+Let's try oatk with c set to ~10x the nuclear coverage to start with (280).
+
+If this fails (too much noise...) then I might need to drop c and/or k
+
+I'll try a few and name the output files differently...
+
+* c280, k1001: run completed, plastid assembled well, mt didn't assemble
+* c140, k1001: run has zero coverage arcs, mt genome has 1 contig of 10kb (linear)
+* c70, k1001: run has zero coverage arcs, mt genome is in 3 contigs totalling 450kb (one circular, two linear)
+* c50, k1001:  
+
+```bash
+# Define paths
+PT_FAM="05_organelle_genomes/db/magnoliopsida_pltd.fam"
+MT_FAM="05_organelle_genomes/db/magnoliopsida_mito.fam"
+out_dir="05_organelle_genomes/oatk_results_c50k1001"
+mkdir -p $out_dir
+
+# Run OatK
+oatk -k 1001 \
+     -c 50 \
+     -t 64 \
+     -p $PT_FAM \
+     -m $MT_FAM \
+     -o ${out_dir}/e_phylacis \
+     03_hifiasm_assembly/E_phylacis_asm.ec.fa
+
+```
 
 
 # 06 final haplotype validation
