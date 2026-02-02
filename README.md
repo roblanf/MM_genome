@@ -827,27 +827,7 @@ PAIRS=(
     "$DEC,$VIR,dec_vs_vir"
 )
 
-for PAIR in "${PAIRS[@]}"; do
-    # Split the string into variables
-    IFS=',' read -r REF QUERY NAME <<< "$PAIR"
-    
-    echo "------------------------------------------------------"
-    echo "Processing: $NAME"
-    echo "------------------------------------------------------"
-
-    # 1. Run Alignment
-    minimap2 -x asm5 -t 128 -N 1000000 --secondary=no "$REF" "$QUERY" > "$OUT_DIR/${NAME}.paf"
-
-    # 2. Generate Plot
-    Rscript scripts/pafCoordsDotPlotly.R \
-        -i "$OUT_DIR/${NAME}.paf" \
-        -o "${NAME}_plot" \
-        -s -t -m 2000 -q 500000
-
-    # Move plot files to the output directory
-    mv ${NAME}_plot.* "$OUT_DIR/"
-done
-
+          
 echo "Done! All 6 comparisons are in $OUT_DIR"
 ```
 
@@ -866,4 +846,351 @@ This table provides a comprehensive overview of the synteny and divergence betwe
 ---
 *Note: Click on any thumbnail to view the full-resolution interactive/static dotplot.*
 
-Todo: dot plots for h1 and h2 vs decip and virginea to confirm these; then an anlysis of switching 
+Visual analysis of the dotplots suggest the following.
+
+First, it looks to me like there could be a bit of phase switching. E.g. chr3 for h1 maps well to the start of virginea, but to the middle of decipiens. Merqury should help to sort out if this is real.
+
+Second, we can try to allocate chromosomes to parents. However, doing this reveals that there's often not a clear distinction, and even if there is, one would often assign both H1 and H2 to the same parents on visual inspection (e.g. Chr 5 looks to be best aligned to decipiens for both H1 and H2). This could just be because the particular accumulation of structural variants (which are common) in the particular samples we have access to for virginea and decipiens. 
+
+Everyone here is clearly closely related, and there are clearly a lot of structural variants between all comparisons. 
+
+Another notable difference is that mapping E. decipiens vs. E. virginea looks a lot more contiguous than H1 vs H2, or either haplotypes vs decipiens OR virginea. This could well be because the two parental genomes were scaffolded against E. grandis, while H1 and H2 were not. This is important, because this is likely to reduce apparent variation between decipiens and virginea, as both will be affected by reference bias. Of course, my assembly may be full of errors as well!
+
+All of this suggests that Merqury might be a useful approach to paint chromosomes. 
+
+## Merqury
+
+First let's download the short reads for the two parent species. They are here: 
+
+* decipiens: https://trace.ncbi.nlm.nih.gov/Traces/?run=SRR25119757
+* virginea: https://trace.ncbi.nlm.nih.gov/Traces/?run=SRR25119786
+
+```bash
+cd parental_spp_genomes
+
+# decipiens
+wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos9/sra-pub-zq-922/SRR025/25119/SRR25119757/SRR25119757.lite.1
+fasterq-dump SRR25119757.lite.1 --split-files --threads 16 --progress && pigz -p 16 *.fastq
+mv SRR25119757.lite.1_1.fastq.gz E_decipiens_R1.fastq.gz
+mv SRR25119757.lite.1_2.fastq.gz E_decipiens_R2.fastq.gz
+
+# virginea
+wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos9/sra-pub-zq-922/SRR025/25119/SRR25119786/SRR25119786.lite.1
+fasterq-dump SRR25119786.lite.1 --split-files --threads 16 --progress && pigz -p 16 *.fastq
+mv SRR25119786.lite.1_1.fastq.gz E_virginea_R1.fastq.gz
+mv SRR25119786.lite.1_2.fastq.gz E_virginea_R2.fastq.gz
+```
+
+Now we'll build the kmer databases. note that these are not actual parents, but parental species, so I won't bother using the kmers to check the assembly itself. I'm only intersted in mapping parental species kmers to the assembly to look for switching.
+
+```bash
+export k=31
+cd parental_spp_genomes/
+
+# E virginea
+meryl k=$k count threads=128 memory=1200G \
+    output E_virginea.meryl \
+    E_virginea_R1.fastq.gz E_virginea_R2.fastq.gz
+
+# E decipiens
+meryl k=$k count threads=128 memory=1200G \
+    output E_decipiens.meryl \
+    E_decipiens_R1.fastq.gz E_decipiens_R2.fastq.gz
+
+meryl statistics E_virginea.meryl
+meryl statistics E_decipiens.meryl
+
+```
+
+```
+decipiens
+Found 1 command tree.
+Number of 31-mers that are:
+  unique             1290874493  (exactly one instance of the kmer is in the input)
+  distinct           2030909683  (non-redundant kmer sequences in the input)
+  present           18810934773  (...)
+  missing   4611686016396478221  (non-redundant kmer sequences not in the input)
+
+             number of   cumulative   cumulative     presence
+              distinct     fraction     fraction   in dataset
+frequency        kmers     distinct        total       (1e-6)
+--------- ------------ ------------ ------------ ------------
+        1   1290874493       0.6356       0.0686     0.000053
+        2     89038578       0.6795       0.0781     0.000106
+        3     34417617       0.6964       0.0836     0.000159
+        4     24398445       0.7084       0.0888     0.000213
+        5     21071260       0.7188       0.0944     0.000266
+        6     20750383       0.7290       0.1010     0.000319
+        7     21256492       0.7395       0.1089     0.000372
+        8     21951538       0.7503       0.1182     0.000425
+        9     22547668       0.7614       0.1290     0.000478
+       10     22978776       0.7727       0.1412     0.000532
+
+virginea
+Found 1 command tree.
+Number of 31-mers that are:
+  unique             1225112802  (exactly one instance of the kmer is in the input)
+  distinct           1897334044  (non-redundant kmer sequences in the input)
+  present           17081200798  (...)
+  missing   4611686016530053860  (non-redundant kmer sequences not in the input)
+
+             number of   cumulative   cumulative     presence
+              distinct     fraction     fraction   in dataset
+frequency        kmers     distinct        total       (1e-6)
+--------- ------------ ------------ ------------ ------------
+        1   1225112802       0.6457       0.0717     0.000059
+        2     94219756       0.6954       0.0828     0.000117
+        3     32918583       0.7127       0.0885     0.000176
+        4     21986254       0.7243       0.0937     0.000234
+        5     18523886       0.7341       0.0991     0.000293
+        6     18102892       0.7436       0.1055     0.000351
+        7     18383380       0.7533       0.1130     0.000410
+        8     18817127       0.7632       0.1218     0.000468
+        9     19189702       0.7733       0.1319     0.000527
+       10     19389542       0.7835       0.1433     0.000585
+```
+
+The trough in both of these distributions is at 6. So we'll get unique 31mers by filtering out everything that appears <6 times.
+
+```bash
+meryl threads=128 greater-than 5 \
+    output E_virginea.filtered.meryl \
+    E_virginea.meryl
+
+meryl threads=128 greater-than 5 \
+    output E_decipiens.filtered.meryl \
+    E_decipiens.meryl
+```
+
+Now we can create species-spefic 31mers via subtraction
+
+```bash
+meryl threads=128 subtract \
+    output E_virginea.only.meryl \
+    E_virginea.filtered.meryl E_decipiens.filtered.meryl
+
+meryl threads=128 subtract \
+    output E_decipiens.only.meryl \
+    E_decipiens.filtered.meryl E_virginea.filtered.meryl
+
+meryl statistics E_virginea.only.meryl | head -n 20
+meryl statistics E_decipiens.only.meryl | head -n 20
+```
+
+Both of these have a similar distribution:
+
+```
+decipiens
+Found 1 command tree.
+Number of 31-mers that are:
+  unique                4979883  (exactly one instance of the kmer is in the input)
+  distinct            486744832  (non-redundant kmer sequences in the input)
+  present           10560074052  (...)
+  missing   4611686017940643072  (non-redundant kmer sequences not in the input)
+
+             number of   cumulative   cumulative     presence
+              distinct     fraction     fraction   in dataset
+frequency        kmers     distinct        total       (1e-6)
+--------- ------------ ------------ ------------ ------------
+        1      4979883       0.0102       0.0005     0.000095
+        2      4832476       0.0202       0.0014     0.000189
+        3      4666418       0.0297       0.0027     0.000284
+        4      4474050       0.0389       0.0044     0.000379
+        5      4263121       0.0477       0.0064     0.000473
+        6     22101931       0.0931       0.0190     0.000568
+        7     22034781       0.1384       0.0336     0.000663
+        8     22173871       0.1839       0.0504     0.000758
+        9     22250304       0.2296       0.0694     0.000852
+       10     22199813       0.2753       0.0904     0.000947
+
+virginea
+Found 1 command tree.
+Number of 31-mers that are:
+  unique                4954189  (exactly one instance of the kmer is in the input)
+  distinct            414255629  (non-redundant kmer sequences in the input)
+  present            8912622148  (...)
+  missing   4611686018013132275  (non-redundant kmer sequences not in the input)
+
+             number of   cumulative   cumulative     presence
+              distinct     fraction     fraction   in dataset
+frequency        kmers     distinct        total       (1e-6)
+--------- ------------ ------------ ------------ ------------
+        1      4954189       0.0120       0.0006     0.000112
+        2      4770616       0.0235       0.0016     0.000224
+        3      4571300       0.0345       0.0032     0.000337
+        4      4346218       0.0450       0.0051     0.000449
+        5      4116279       0.0549       0.0074     0.000561
+        6     19090626       0.1010       0.0203     0.000673
+        7     18795727       0.1464       0.0350     0.000785
+        8     18693943       0.1915       0.0518     0.000898
+        9     18568529       0.2363       0.0706     0.001010
+       10     18318337       0.2806       0.0911     0.001122
+
+```
+
+Now we filter out the rare unique kmers again, and use merqury to map these to the two haplotypes.
+
+```bash
+
+meryl threads=128 greater-than 5 \
+    output E_virginea.final_probes.meryl \
+    E_virginea.only.meryl
+
+meryl threads=128 greater-than 5 \
+    output E_decipiens.final_probes.meryl \
+    E_decipiens.only.meryl
+```
+
+Now we run Merqury. I generate a dummy child db (I don't have short reads for the child, and regardless it's not actually a child...)
+
+```bash
+# 1. Create a placeholder 'read-db' by merging the two probe sets
+meryl threads=128 union-sum \
+    output species_union.meryl \
+    E_virginea.final_probes.meryl E_decipiens.final_probes.meryl
+
+# copy the files with a .fasta extension, because merqury seems to reall want that
+cp ../03_hifiasm_assembly/E_phylacis_hap1_top11.fa E_phylacis_hap1_top11.fasta
+cp ../03_hifiasm_assembly/E_phylacis_hap2_top11.fa E_phylacis_hap2_top11.fasta
+
+merqury.sh \
+    species_union.meryl \
+    E_virginea.final_probes.meryl \
+    E_decipiens.final_probes.meryl \
+    E_phylacis_hap1_top11.fasta \
+    E_phylacis_hap2_top11.fasta \
+    E_phylacis_species_map
+```
+
+
+Frustratingly, this fails at the last steps, likely because using parental species not individuals leads to a lot of noise and ~infinite switching, so no blocks long enough to call a real block by merqury's approach. Instead, let's map the kmers directly and plot them out. 
+
+Of note, the blob plot and the histogram (same data) show a consistent 2-3x preference for one parent spp over the other:
+
+| Assembly | Contig | E_virginea Probes | E_decipiens Probes | Size (bp) | Dominant Parent | Dominant Ratio |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| E_phylacis_hap1_top11 | h1tg000008l | 29,574,230 | 11,485,726 | 61,728,875 | Virginea | 2.57x |
+| E_phylacis_hap1_top11 | h1tg000003l | 24,166,149 | 12,032,714 | 59,377,806 | Virginea | 2.01x |
+| E_phylacis_hap1_top11 | h1tg000001l | 7,233,487 | 25,796,697 | 51,317,245 | Decipiens | 3.57x |
+| E_phylacis_hap1_top11 | h1tg000011l | 26,173,487 | 9,579,941 | 51,144,841 | Virginea | 2.73x |
+| E_phylacis_hap1_top11 | h1tg000007l | 21,214,760 | 7,752,565 | 41,957,492 | Virginea | 2.74x |
+| E_phylacis_hap1_top11 | h1tg000009l | 5,729,451 | 20,405,351 | 39,833,786 | Decipiens | 3.56x |
+| E_phylacis_hap1_top11 | h1tg000005l | 20,178,769 | 7,482,591 | 39,657,493 | Virginea | 2.70x |
+| E_phylacis_hap1_top11 | h1tg000004l | 5,222,786 | 19,422,560 | 38,027,346 | Decipiens | 3.72x |
+| E_phylacis_hap1_top11 | h1tg000002l | 17,617,635 | 6,408,337 | 34,632,705 | Virginea | 2.75x |
+| E_phylacis_hap1_top11 | h1tg000010l | 15,674,330 | 6,474,976 | 33,387,254 | Virginea | 2.42x |
+| E_phylacis_hap1_top11 | h1tg000006l | 4,178,238 | 13,450,401 | 28,751,513 | Decipiens | 3.22x |
+| E_phylacis_hap2_top11 | h2tg000003l | 10,174,689 | 33,286,426 | 65,679,558 | Decipiens | 3.27x |
+| E_phylacis_hap2_top11 | h2tg000307l | 8,408,538 | 28,955,231 | 59,218,057 | Decipiens | 3.44x |
+| E_phylacis_hap2_top11 | h2tg000009l | 23,820,241 | 11,758,129 | 56,292,507 | Virginea | 2.03x |
+| E_phylacis_hap2_top11 | h2tg000001l | 7,696,497 | 29,401,315 | 54,055,966 | Decipiens | 3.82x |
+| E_phylacis_hap2_top11 | h2tg000002l | 18,573,496 | 10,028,448 | 45,187,031 | Virginea | 1.85x |
+| E_phylacis_hap2_top11 | h2tg000010l | 6,147,171 | 23,104,469 | 43,786,441 | Decipiens | 3.76x |
+| E_phylacis_hap2_top11 | h2tg000007l | 5,967,530 | 23,348,547 | 42,203,106 | Decipiens | 3.91x |
+| E_phylacis_hap2_top11 | h2tg000004l | 5,520,519 | 19,783,505 | 38,512,705 | Decipiens | 3.58x |
+| E_phylacis_hap2_top11 | h2tg000006l | 17,538,735 | 7,250,381 | 36,524,821 | Virginea | 2.42x |
+| E_phylacis_hap2_top11 | h2tg000011l | 17,323,908 | 6,663,693 | 35,797,366 | Virginea | 2.60x |
+| E_phylacis_hap2_top11 | h2tg000008l | 5,139,230 | 14,287,990 | 30,255,362 | Decipiens | 2.78x |
+
+[link to blob plot]
+
+There are two explanations for this:
+
+1. Frequent phase switching - seems unlikely because the ratio is so consistent, and there's always a clear dominant parent
+2. Background noise - these are three individuals that are very different from one another, so it's feasible that the final probes (e.g. those uniquely in E. virginea that are also in the Meelup mallee) have a fair degree of noise, insofar as some proportion of them are also likely to hit E. decipiens chromosomes.
+
+One way to distinguish these is to map the two final probe sets directly to the chromosomes, and look at the distribution. If 1 is correct, then we expect clear blocks that prefer one parent over the other (even with noise). If 2 is correct, then we expect a consistent signal along a chromosome where one parent is preferred compared to the other in a sliding window. The evidence from merqury failing suggests the window could be quite small, since it looks like there weren't runs of >100 unique kmers for any of the parents. So we could look at windows of ~1000 and if 2 is correct it should be a stable signal of ~2-3x preference for the dominant parent. 
+
+### Mapping kmers to chromosomes
+
+Let's map the kmers to the chromosomes with meryl, and do a sliding window to visualise it. I'll aim for two visualisations
+
+1. a visualisation of the physical chromosome, with the proportion of the EACH parent in a sliding window plotted, just in different colours. We'll write the script so that we can play around with the sliding window size. In this plot we expect to see consistent preference for one parent over the other on each chromosome if there's no phase switching.
+
+2. The same data, but just plotting the distribution of the proportion for each parent in each window across the chromosome. In this plot, a single unimodal distribution for each parent is what we expect if there's no phase switching.
+
+Let's map the kmers with meryl:
+
+```bash
+# For Hap1
+# Virginea k-mers on Hap1
+meryl-lookup -bed \
+  -sequence E_phylacis_hap1_top11.fasta \
+  -mers E_virginea.final_probes.meryl \
+  -output hap1_virginea.bed
+
+# Decipiens k-mers on Hap1
+meryl-lookup -bed \
+  -sequence E_phylacis_hap1_top11.fasta \
+  -mers E_decipiens.final_probes.meryl \
+  -output hap1_decipiens.bed
+
+# For Hap2
+# Virginea k-mers on Hap2
+meryl-lookup -bed \
+  -sequence E_phylacis_hap2_top11.fasta \
+  -mers E_virginea.final_probes.meryl \
+  -output hap2_virginea.bed
+
+# Decipiens k-mers on Hap2
+meryl-lookup -bed \
+  -sequence E_phylacis_hap2_top11.fasta \
+  -mers E_decipiens.final_probes.meryl \
+  -output hap2_decipiens.bed
+
+```
+
+Define boundaries:
+
+```bash
+# Create chromosome index files
+samtools faidx E_phylacis_hap1_top11.fasta
+samtools faidx E_phylacis_hap2_top11.fasta
+
+# Extract contig names and lengths
+cut -f 1,2 E_phylacis_hap1_top11.fasta.fai > hap1.genome
+cut -f 1,2 E_phylacis_hap2_top11.fasta.fai > hap2.genome
+```
+
+make windows, I'll do 10K, and 100K to start with.
+
+```bash
+# Windows for Hap1
+bedtools makewindows -g hap1.genome -w 10000 > hap1_10k.bed
+bedtools makewindows -g hap1.genome -w 100000 > hap1_100k.bed
+
+# Windows for Hap2
+bedtools makewindows -g hap2.genome -w 10000 > hap2_10k.bed
+bedtools makewindows -g hap2.genome -w 100000 > hap2_100k.bed
+```
+
+Now I'll get kmer coverage:
+
+```bash
+# Hap1 #
+# 100k Windows
+bedtools coverage -a hap1_100k.bed -b hap1_virginea.bed > h1_v_100k.txt
+bedtools coverage -a hap1_100k.bed -b hap1_decipiens.bed > h1_d_100k.txt
+
+# 10k Windows
+bedtools coverage -a hap1_10k.bed -b hap1_virginea.bed > h1_v_10k.txt
+bedtools coverage -a hap1_10k.bed -b hap1_decipiens.bed > h1_d_10k.txt
+
+# Hap2 #
+# 100k Windows
+bedtools coverage -a hap2_100k.bed -b hap2_virginea.bed > h2_v_100k.txt
+bedtools coverage -a hap2_100k.bed -b hap2_decipiens.bed > h2_d_100k.txt
+
+# 10k Windows
+bedtools coverage -a hap2_10k.bed -b hap2_virginea.bed > h2_v_10k.txt
+bedtools coverage -a hap2_10k.bed -b hap2_decipiens.bed > h2_d_10k.txt
+```
+
+Now we plot those out along the genomes with an R script:
+
+```bash
+Rscript ../scripts/parental_kmer_plots.R . parental_kmer_plots
+```
+
+Next, it's time to tidy everything up. All the big files I will leave (rather messily) in the `parental_spp_genomes` folder, because that's git ignored already. The smaller stuff I want to keep tabs on I'll organise better.
+
