@@ -1105,11 +1105,7 @@ One way to distinguish these is to map the two final probe sets directly to the 
 
 Let's map the kmers to the chromosomes with meryl, and do a sliding window to visualise it. I'll aim for two visualisations
 
-1. a visualisation of the physical chromosome, with the proportion of the EACH parent in a sliding window plotted, just in different colours. We'll write the script so that we can play around with the sliding window size. In this plot we expect to see consistent preference for one parent over the other on each chromosome if there's no phase switching.
-
-2. The same data, but just plotting the distribution of the proportion for each parent in each window across the chromosome. In this plot, a single unimodal distribution for each parent is what we expect if there's no phase switching.
-
-Let's map the kmers with meryl:
+First let's map the kmers with meryl:
 
 ```bash
 # For Hap1
@@ -1192,5 +1188,28 @@ Now we plot those out along the genomes with an R script:
 Rscript ../scripts/parental_kmer_plots.R . parental_kmer_plots
 ```
 
-Next, it's time to tidy everything up. All the big files I will leave (rather messily) in the `parental_spp_genomes` folder, because that's git ignored already. The smaller stuff I want to keep tabs on I'll organise better.
+The plots below validate the assembly phasing and investigate parental inheritance patterns by mapping species-specific k-mer probes (derived from *E. virginea* and *E. decipiens* SRA data) across both haplotypes. 
+
+The plots below compare raw k-mer density (counts per window) and the relative proportion of parental signal. Note that reciprocal crossovers in the proportion plots would indicate potential phase switches, while asymmetric "flickers" suggest complex ancestry or introgression. The former are very rare, suggesting that the phasing is good.
+
+| Raw K-mer Density | Parental Proportions (Mirror Plots) |
+| :---: | :---: |
+| **100K Windows** | **100K Windows** |
+| <img src="./04_parental_assignment/parental_kmer_plots/raw_density_100k.png" width="400"> | <img src="./04_parental_assignment/parental_kmer_plots/proportion_100k.png" width="400"> |
+| **10K Windows** | **10K Windows** |
+| <img src="./04_parental_assignment/parental_kmer_plots/raw_density_10k.png" width="400"> | <img src="./04_parental_assignment/parental_kmer_plots/proportion_10k.png" width="400"> |
+
+
+Next, it's time to tidy everything up. 
+
+```bash
+cd ../04_parental_assignment
+mkdir species_map
+mv ../parental_spp_genomes/E_phylacis_* species_map/
+mv ../parental_spp_genomes/completeness.stats species_map/
+mv ../parental_spp_genomes/h* species_map/
+mv ../parental_spp_genomes/parental_kmer_plots .
+```
+
+I added the species map file to the gitignore
 
