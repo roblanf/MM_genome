@@ -1213,3 +1213,25 @@ mv ../parental_spp_genomes/parental_kmer_plots .
 
 I added the species map file to the gitignore
 
+
+## Parental assignment of the 11 major chromosomes
+
+To summarise all of the above, we can now clearly assign the haplotypes into two parental groups.
+
+### Phasing Validation: Alignment Coverage vs. K-mer Probes
+
+This table summarizes the evidence used to assign the `h1` and `h2` contigs to their parental identities. Ratios in brackets indicate the strength of the signal (Dominant Parent / Secondary Parent).
+
+| Chr# | decipiens-original | virginea-original | h1 ID | h2 ID | h1 decip cov | h1 virg cov | h2 decip cov | h2 virg cov | h1 decip probes | h1 virg probes | h2 decip probes | h2 virg probes | h1 coverage parent | h1 probe parent | h2 coverage parent | h2 probe parent |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Chr1** | CM024609.1 | CM024514.1 | h1tg000007l | h2tg000010l | 29.8% | 61.8% | 52.0% | 32.1% | 7.7M | 21.2M | 23.1M | 6.1M | virginea (2.07x) | virginea (2.74x) | decipiens (1.62x) | decipiens (3.76x) |
+| **Chr2** | CM024610.1 | CM024515.1 | h1tg000010l | h2tg000008l | 22.0% | 39.6% | 31.3% | 19.7% | 6.5M | 15.7M | 14.3M | 5.1M | virginea (1.80x) | virginea (2.42x) | decipiens (1.59x) | decipiens (2.78x) |
+| **Chr3** | CM024611.1 | CM024516.1 | h1tg000006l | h2tg000009l | 21.0% | 13.4% | 24.2% | 44.0% | 13.5M | 4.2M | 11.8M | 23.8M | decipiens (1.57x) | decipiens (3.22x) | virginea (1.82x) | virginea (2.03x) |
+| **Chr4** | CM024612.1 | CM024517.1 | h1tg000004l | h2tg000011l | 49.1% | 31.6% | 28.7% | 59.2% | 19.4M | 5.2M | 6.7M | 17.3M | decipiens (1.55x) | decipiens (3.72x) | virginea (2.07x) | virginea (2.60x) |
+| **Chr5** | CM024613.1 | CM024518.1 | h1tg000003l | h2tg000307l | 24.6% | 47.0% | 42.0% | 26.2% | 12.0M | 24.2M | 29.0M | 8.4M | virginea (1.91x) | virginea (2.01x) | decipiens (1.60x) | decipiens (3.44x) |
+| **Chr6** | CM024614.1 | CM024519.1 | h1tg000011l | h2tg000001l | 30.3% | 59.4% | 53.7% | 32.7% | 9.6M | 26.2M | 29.4M | 7.7M | virginea (1.96x) | virginea (2.73x) | decipiens (1.64x) | decipiens (3.82x) |
+| **Chr7** | CM024615.1 | CM024520.1 | h1tg000001l | h2tg000002l | 40.7% | 24.9% | 22.5% | 40.7% | 25.8M | 7.2M | 10.0M | 18.6M | decipiens (1.63x) | decipiens (3.57x) | virginea (1.81x) | virginea (1.85x) |
+| **Chr8** | CM024616.1 | CM024521.1 | h1tg000008l | h2tg000003l | 29.7% | 50.3% | 52.8% | 29.6% | 11.5M | 29.6M | 33.3M | 10.2M | virginea (1.69x) | virginea (2.57x) | decipiens (1.79x) | decipiens (3.27x) |
+| **Chr9** | CM024617.1 | CM024522.1 | h1tg000009l | h2tg000006l | 49.9% | 35.0% | 28.8% | 62.6% | 20.4M | 5.7M | 7.3M | 17.5M | decipiens (1.43x) | decipiens (3.56x) | virginea (2.17x) | virginea (2.42x) |
+| **Chr10** | CM024618.1 | CM024523.1 | h1tg000002l | h2tg000004l | 32.7% | 59.6% | 57.5% | 33.4% | 6.4M | 17.6M | 19.8M | 5.5M | virginea (1.82x) | virginea (2.75x) | decipiens (1.72x) | decipiens (3.58x) |
+| **Chr11** | CM024619.1 | CM024524.1 | h1tg000005l | h2tg000007l | 31.4% | 54.9% | 57.3% | 29.5% | 7.5M | 20.2M | 23.3M | 6.0M | virginea (1.75x) | virginea (2.70x) | decipiens (1.94x) | decipiens (3.91x) |
