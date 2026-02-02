@@ -7,3 +7,4 @@ mb_downloads/
 03_hifiasm_assembly/*.gfa
 03_hifiasm_assembly/*.bed
 03_hifiasm_assembly/*.log
+04_parental_assignment/species_map/
