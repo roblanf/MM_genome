@@ -1218,9 +1218,9 @@ I added the species map file to the gitignore
 
 To summarise all of the above, we can now clearly assign the haplotypes into two parental groups.
 
-### Phasing Validation: Alignment Coverage vs. K-mer Probes
-
 This table summarizes the evidence used to assign the `h1` and `h2` contigs to their parental identities. Ratios in brackets indicate the strength of the signal (Dominant Parent / Secondary Parent).
+
+What's amazing (and comforting) is that genome-alignment and unique parental species kmers agree perfectly. 
 
 | Chr# | decipiens-original | virginea-original | h1 ID | h2 ID | h1 decip cov | h1 virg cov | h2 decip cov | h2 virg cov | h1 decip probes | h1 virg probes | h2 decip probes | h2 virg probes | h1 coverage parent | h1 probe parent | h2 coverage parent | h2 probe parent |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -1235,3 +1235,220 @@ This table summarizes the evidence used to assign the `h1` and `h2` contigs to t
 | **Chr9** | CM024617.1 | CM024522.1 | h1tg000009l | h2tg000006l | 49.9% | 35.0% | 28.8% | 62.6% | 20.4M | 5.7M | 7.3M | 17.5M | decipiens (1.43x) | decipiens (3.56x) | virginea (2.17x) | virginea (2.42x) |
 | **Chr10** | CM024618.1 | CM024523.1 | h1tg000002l | h2tg000004l | 32.7% | 59.6% | 57.5% | 33.4% | 6.4M | 17.6M | 19.8M | 5.5M | virginea (1.82x) | virginea (2.75x) | decipiens (1.72x) | decipiens (3.58x) |
 | **Chr11** | CM024619.1 | CM024524.1 | h1tg000005l | h2tg000007l | 31.4% | 54.9% | 57.3% | 29.5% | 7.5M | 20.2M | 23.3M | 6.0M | virginea (1.75x) | virginea (2.70x) | decipiens (1.94x) | decipiens (3.91x) |
+
+Let's rearrange the 11 chromosomes of the two haplotypes accordingly:
+
+```bash
+# Define paths
+ASSEMBLY_DIR="03_hifiasm_assembly"
+HAP1="$ASSEMBLY_DIR/E_phylacis_hap1_top11.fa"
+HAP2="$ASSEMBLY_DIR/E_phylacis_hap2_top11.fa"
+
+# Define output files
+VIRG_OUT="$ASSEMBLY_DIR/E_phylacis_virginea_parent_top11.fa"
+DECIP_OUT="$ASSEMBLY_DIR/E_phylacis_decipiens_parent_top11.fa"
+
+# Helper function to extract and rename
+# Usage: rename_chr <input_file> <contig_id> <chr_number>
+rename_chr() {
+    seqkit grep -p "$2" "$1" | \
+    seqkit replace -p "(.+)" -r "\$1 Eucalyptus phylacis chromosome $3"
+}
+
+echo "Sorting and renaming chromosomes..."
+
+# --- 1. Assemble Virginea Parent (E. virginea) ---
+# Chromosomes: 1(h1), 2(h1), 3(h2), 4(h2), 5(h1), 6(h1), 7(h2), 8(h1), 9(h2), 10(h1), 11(h1)
+{
+    rename_chr "$HAP1" "h1tg000007l" "1"
+    rename_chr "$HAP1" "h1tg000010l" "2"
+    rename_chr "$HAP2" "h2tg000009l" "3"
+    rename_chr "$HAP2" "h2tg000011l" "4"
+    rename_chr "$HAP1" "h1tg000003l" "5"
+    rename_chr "$HAP1" "h1tg000011l" "6"
+    rename_chr "$HAP2" "h2tg000002l" "7"
+    rename_chr "$HAP1" "h1tg000008l" "8"
+    rename_chr "$HAP2" "h2tg000006l" "9"
+    rename_chr "$HAP1" "h1tg000002l" "10"
+    rename_chr "$HAP1" "h1tg000005l" "11"
+} > "$VIRG_OUT"
+
+# --- 2. Assemble Decipiens Parent (E. decipiens) ---
+# Chromosomes: 1(h2), 2(h2), 3(h1), 4(h1), 5(h2), 6(h2), 7(h1), 8(h2), 9(h1), 10(h2), 11(h2)
+{
+    rename_chr "$HAP2" "h2tg000010l" "1"
+    rename_chr "$HAP2" "h2tg000008l" "2"
+    rename_chr "$HAP1" "h1tg000006l" "3"
+    rename_chr "$HAP1" "h1tg000004l" "4"
+    rename_chr "$HAP2" "h2tg000307l" "5"
+    rename_chr "$HAP2" "h2tg000001l" "6"
+    rename_chr "$HAP1" "h1tg000001l" "7"
+    rename_chr "$HAP2" "h2tg000003l" "8"
+    rename_chr "$HAP1" "h1tg000009l" "9"
+    rename_chr "$HAP2" "h2tg000004l" "10"
+    rename_chr "$HAP2" "h2tg000007l" "11"
+} > "$DECIP_OUT"
+
+echo "Done."
+echo "------------------------------------------"
+echo "VIRGINEA FILE: $VIRG_OUT"
+grep ">" "$VIRG_OUT"
+echo "------------------------------------------"
+echo "DECIPIENS FILE: $DECIP_OUT"
+grep ">" "$DECIP_OUT"
+
+mv 03_hifiasm_assembly/E_phylacis_virginea_parent_top11.fa 04_parental_assignment/
+mv 03_hifiasm_assembly/E_phylacis_decipiens_parent_top11.fa 04_parental_assignment/
+```
+
+## Who's the mother?
+
+Now let's use the cp genome to figure out who the mother is, then add that chromosome to the assembly.
+
+First let's get the two cp genomes of the parents:
+
+```bash
+seqkit grep -p CM024632.1 parental_spp_genomes/E_decipiens.fa > 04_parental_assignment/E_decipiens_cp_ref.fa
+seqkit grep -p CM024525.1 parental_spp_genomes/E_virginea.fa > 04_parental_assignment/E_virginea_cp_ref.fa
+```
+
+```bash
+cd 04_parental_assignment
+
+# Create blast database
+makeblastdb -in 03_hifiasm_assembly/E_phylacis_asm.bp.p_ctg.fa -dbtype nucl -out e_phylacis_db
+
+# Run BLAST
+blastn -query E_virginea_cp_ref.fa -db e_phylacis_db \
+       -outfmt "7 sseqid pident length qlen slen qcovs evalue" \
+       -out cp_blast_results_virginea.txt
+
+blastn -query E_decipiens_cp_ref.fa -db e_phylacis_db \
+       -outfmt "7 sseqid pident length qlen slen qcovs evalue" \
+       -out cp_blast_results_decipiens.txt
+
+# Look at the top hit
+head -n 25 cp_blast_results_decipiens.txt
+head -n 25 cp_blast_results_virginea.txt
+```
+
+This clearly pulls out `ptg000022l` as the chloroplast contig:
+
+```
+(eucalypt_asm) rob@nova:~/MM_genome/04_parental_assignment$ head -n 35 cp_blast_results_decipiens.txt
+# BLASTN 2.16.0+
+# Query: CM024632.1 Eucalyptus decipiens isolate CCA4570 chloroplast, complete sequence, whole genome shotgun sequence
+# Database: e_phylacis_db
+# Fields: subject id, % identity, alignment length, query length, subject length, % query coverage per subject, evalue
+# 4924 hits found
+ptg000022l      99.357  49925   163268  198530  99      0.0
+ptg000022l      99.674  35302   163268  198530  99      0.0
+ptg000022l      99.095  34265   163268  198530  99      0.0
+ptg000022l      99.281  31705   163268  198530  99      0.0
+ptg000022l      99.641  29785   163268  198530  99      0.0
+ptg000022l      99.788  26402   163268  198530  99      0.0
+ptg000022l      99.739  26429   163268  198530  99      0.0
+ptg000022l      99.790  26138   163268  198530  99      0.0
+ptg000022l      99.346  7037    163268  198530  99      0.0
+ptg000022l      99.033  6825    163268  198530  99      0.0
+ptg000022l      98.860  4123    163268  198530  99      0.0
+ptg000022l      99.384  3086    163268  198530  99      0.0
+ptg000022l      98.182  55      163268  198530  99      5.08e-16
+ptg000022l      100.000 39      163268  198530  99      8.56e-09
+ptg000022l      97.619  42      163268  198530  99      8.56e-09
+ptg000022l      97.500  40      163268  198530  99      1.11e-07
+ptg000022l      97.500  40      163268  198530  99      1.11e-07
+ptg000022l      97.500  40      163268  198530  99      1.11e-07
+ptg000022l      97.500  40      163268  198530  99      1.11e-07
+ptg000022l      97.500  40      163268  198530  99      1.11e-07
+ptg000022l      79.121  91      163268  198530  99      2.40e-04
+ptg000022l      100.000 30      163268  198530  99      8.62e-04
+ptg000022l      100.000 30      163268  198530  99      8.62e-04
+ptg000022l      100.000 30      163268  198530  99      8.62e-04
+ptg000022l      100.000 28      163268  198530  99      0.011
+ptg000033l      99.291  38084   163268  79721   53      0.0
+ptg000033l      99.674  35566   163268  79721   53      0.0
+ptg000033l      99.638  27101   163268  79721   53      0.0
+ptg000033l      99.788  26402   163268  79721   53      0.0
+ptg000033l      98.836  4124    163268  79721   53      0.0
+(eucalypt_asm) rob@nova:~/MM_genome/04_parental_assignment$ head -n 35 cp_blast_results_virginea.txt
+# BLASTN 2.16.0+
+# Query: CM024525.1 Eucalyptus virginea isolate CCA4170 chloroplast, complete sequence, whole genome shotgun sequence
+# Database: e_phylacis_db
+# Fields: subject id, % identity, alignment length, query length, subject length, % query coverage per subject, evalue
+# 4829 hits found
+ptg000022l      99.794  80388   160251  198530  99      0.0
+ptg000022l      99.699  79985   160251  198530  99      0.0
+ptg000022l      99.892  35265   160251  198530  99      0.0
+ptg000022l      99.883  26413   160251  198530  99      0.0
+ptg000022l      99.788  26415   160251  198530  99      0.0
+ptg000022l      99.786  26151   160251  198530  99      0.0
+ptg000022l      99.935  3086    160251  198530  99      0.0
+ptg000022l      100.000 39      160251  198530  99      8.40e-09
+ptg000022l      97.619  42      160251  198530  99      8.40e-09
+ptg000022l      97.500  40      160251  198530  99      1.09e-07
+ptg000022l      97.500  40      160251  198530  99      1.09e-07
+ptg000022l      97.500  40      160251  198530  99      1.09e-07
+ptg000022l      97.500  40      160251  198530  99      1.09e-07
+ptg000022l      97.500  40      160251  198530  99      1.09e-07
+ptg000022l      79.121  91      160251  198530  99      2.35e-04
+ptg000022l      100.000 30      160251  198530  99      8.46e-04
+ptg000022l      100.000 30      160251  198530  99      8.46e-04
+ptg000022l      100.000 30      160251  198530  99      8.46e-04
+ptg000022l      100.000 28      160251  198530  99      0.011
+ptg000021l      99.699  79985   160251  272542  77      0.0
+ptg000021l      99.902  15309   160251  272542  77      0.0
+ptg000021l      99.726  15312   160251  272542  77      0.0
+ptg000021l      99.763  10966   160251  272542  77      0.0
+ptg000021l      99.838  1851    160251  272542  77      0.0
+ptg000021l      99.838  1849    160251  272542  77      0.0
+ptg000021l      99.028  1851    160251  272542  77      0.0
+ptg000021l      74.016  889     160251  272542  77      1.63e-80
+ptg000021l      73.903  889     160251  272542  77      7.61e-79
+ptg000021l      74.943  435     160251  272542  77      6.18e-45
+ptg000021l      100.000 39      160251  272542  77      8.40e-09
+```
+
+Now let's align the three cp genomes and see what we see:
+
+```bash
+seqkit grep -p ptg000022l ../03_hifiasm_assembly/E_phylacis_asm.bp.p_ctg.fa > E_phylacis_cp_ref.fa
+
+minimap2 -x asm5 E_decipiens_cp_ref.fa E_phylacis_cp_ref.fa > cp_phylacis_vs_decipiens.paf
+minimap2 -x asm5 E_virginea_cp_ref.fa E_phylacis_cp_ref.fa > cp_phylacis_vs_virginea.paf
+```
+
+Comparing cols 10 (matching bases) and 11 (alignment length) makes it look a lot like virginea is the winner. It has 113749/115277 = 98.7% matching, while decipiens has 110447/115514 = 95.6% matching: 
+
+```
+(eucalypt_asm) rob@nova:~/MM_genome/04_parental_assignment$ more cp_phylacis_vs_decipiens.paf 
+ptg000022l      198530  83434   198526  +       CM024632.1      163268  18      114838  110447  115514  60      tp:A:P  cm:i:10934      s1:i:110216     s2:i:25721      dv:f:0.0004     rl:i:0
+ptg000022l      198530  12      83388   +       CM024632.1      163268  76475   163265  80252   86911   60      tp:A:P  cm:i:7928       s1:i:79660      s2:i:54296      dv:f:0.0010     rl:i:0
+ptg000022l      198530  172420  198526  -       CM024632.1      163268  137154  163265  25733   26131   0       tp:A:S  cm:i:2560       s1:i:25721      dv:f:0.0009     rl:i:0
+
+(eucalypt_asm) rob@nova:~/MM_genome/04_parental_assignment$ more cp_phylacis_vs_virginea.paf 
+ptg000022l      198530  83434   198526  -       CM024525.1      160251  45056   160234  113749  115277  60      tp:A:P  cm:i:11365      s1:i:113681     s2:i:25669      dv:f:0.0002     rl:i:0
+ptg000022l      198530  12      83415   -       CM024525.1      160251  2       83403   82339   83489   60      tp:A:P  cm:i:8222       s1:i:82305      s2:i:52099      dv:f:0.0007     rl:i:0
+ptg000022l      198530  172393  198526  +       CM024525.1      160251  2       26106   25677   26144   0       tp:A:S  cm:i:2552       s1:i:25669      dv:f:0.0015     rl:i:0
+
+```
+
+Let's also do dotplots to visualise it:
+
+```bash
+# Dot plot vs. Virginea
+Rscript ../scripts/pafCoordsDotPlotly.R \
+    -i cp_phylacis_vs_virginea.paf \
+    -o cp_phylacis_vs_virginea \
+    -s -t -m 500 -q 100000
+
+# Dot plot vs. Decipiens
+Rscript ../scripts/pafCoordsDotPlotly.R \
+    -i cp_phylacis_vs_decipiens.paf \
+    -o cp_phylacis_vs_decipiens \
+    -s -t -m 500 -q 100000
+```
+
+| Comparison: *E. phylacis* vs. *E. virginea* | Comparison: *E. phylacis* vs. *E. decipiens* |
+| :---: | :---: |
+| ![Phylacis vs Virginea](04_parental_assignment/cp_phylacis_vs_virginea.png) | ![Phylacis vs Decipiens](04_parental_assignment/cp_phylacis_vs_decipiens.png) |
