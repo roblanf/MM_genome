@@ -1681,10 +1681,68 @@ NB, with a higher c value of 140 or 280 which are the recommended values in the 
 
 All of the above confirms that the genome is of high quality, that coverage from genome alignment and mapping parental species probes provide useful ways to sort contigs into parental groups, and that the organelle genomes assemble very well. We also know that the maternal haplotype is closer to virginea than decipiens.
 
-Now we need to put this all together, and include more than just the 11 longest contigs.
+Now we need to put this all together, to get the best assembly. A key limitation of most of the above is that I just looked at the biggest 11 contigs, but of course there were plenty of additional big contigs in the haplotype files. The main challenges are to address that, and then do the parental assignment. 
+
+## 1. Re-run hifiasm
+
+Ash Jones helpfully pointed out that hifiasm got a bit confused about the data because it's so heterozygous. Specifically  ```[M::ha_pt_gen] peak_hom: 29; peak_het: -1``` shows it didn't find the het peak, because it thought the hom peak was 29. Actually the homozygous peak is ~60x, and the heterozygous peak is 29x. The kmer distribution just looks odd because the heterozygosity is SO high. 
+
+To see if I can improve the assembly, I'll run three new assemblies, all with `--hom-cov 60` and at all value of `-l [0, 1, 2, 3]`. I can then compare the assemblies, and look at the BUSCO completeness of the two haplotypes in each, as well as the cumulative distribution of contig sizes, and the BUSCO completeness of the major contigs (crossing my fingers that there are only 11 big contigs this time). 
+
+
+```bash
+mkdir -p 06_1_hifiasm_assemblies
+
+# 1. Create a mount point
+sudo mkdir -p /mnt/ramdisk
+
+# 2. Mount 1500GB of the 2.2TB RAM as a disk
+sudo mount -t tmpfs -o size=1500G tmpfs /mnt/ramdisk
+sudo chown $USER /mnt/ramdisk
+
+# 3. Copy your filtered data THERE
+cp 02_filtering/E_phylacis_filtered.fastq.gz /mnt/ramdisk/
+
+# 4. Run hifiasm inside the ramdisk
+cd /mnt/ramdisk
+
+
+mkdir l0
+mkdir l1
+mkdir l2
+mkdir l3
+
+hifiasm -o l0/E_phylacis -t 160 --ont --hom-cov 60 -l 0 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l0/hifiasm.log
+hifiasm -o l1/E_phylacis -t 160 --ont --hom-cov 60 -l 1 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l1/hifiasm.log
+hifiasm -o l2/E_phylacis -t 160 --ont --hom-cov 60 -l 2 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l2/hifiasm.log
+hifiasm -o l3/E_phylacis -t 160 --ont --hom-cov 60 -l 3 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l3/hifiasm.log
+
+# 5. VERY IMPORTANT: Move results back to /home before rebooting!
+rsync -avh --progress --exclude='*.fastq.gz' /mnt/ramdisk/ ~/MM_genome/06_1_hifiasm_assemblies/
+
+cd ~/MM_genome
+
+# 6. Unmount (only after you've verified the files are safe!)
+# cd ~
+# sudo umount /mnt/ramdisk
+
+# ignore this stuff for git, mostly
+echo "06_1_hifiasm_assemblies/" >> .gitignore
+
+```
+
+
+
+
+
+
 
 
 Here's the plan
+
+0. Rerun hifiasm.
+
+Ash jones 
 
 
 1. Parental binning
