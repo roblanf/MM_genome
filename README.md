@@ -1740,7 +1740,7 @@ First we convert the gfa files to fasta, and build the meryl database, then run 
 
 
 
-```{bash}
+```bash
 # Build the read k-mer database once
 meryl count k=21 threads=160 memory=100G \
     E_phylacis_filtered.fastq.gz output reads.meryl
@@ -1790,7 +1790,15 @@ cd ../../../
 
 ```
 
+Get assembly basic stats and organise them:
 
+```bash
+# get all the .fasta except those in the compleasm folders, and get lots of stats
+find . -name "*.fasta" | grep -E "hap1|hap2|union|p_ctg" | grep -v "compleasm" | xargs seqkit stats -a -j 160 -N 50,90,95,99 | column -t
+
+
+
+```
 
 
 
