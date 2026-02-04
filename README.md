@@ -1689,7 +1689,7 @@ Here's the plan
 
 1. Parental binning
 1.1. Remove organelles
-We're doing organelles separately, and we already have them perfect thanks to oatk. So the first job is to align the haplotypes to the two organelle genomes I now have, and remove all contigs that are ~perfectly covered by the organelle genomes. Then we're dealing with the nuclear genome only. (We might lose some small nuclear contigs that are copies of the cp and mt genomes, but that's OK). 
+We're doing organelles separately, and we already have them perfect thanks to oatk. So the first job is to align the haplotypes to the two organelle genomes I now have, and remove all contigs that are ~perfectly covered by the organelle genomes. Then we're dealing with the nuclear genome only. (We might lose some small nuclear contigs that are copies of the cp and mt genomes, but that's OK). Remove any contig that is >=95% covered by organellar genomes is probably a good start, but the best thing is to look at the coverage and see.
 
 this gives hap1_nuclear.fa and hap2_nuclear.fa
 
@@ -1706,6 +1706,22 @@ This tells us which contigs are ~interchangeable and align to each other. Import
 * Contigs get one of three determinants: decipiens, virginea, unknown
 
 Then combine kmer dominance with coverage table to see how far we can get in sorting the contigs into groups. For example, if two contigs are clearly homologues, and the hap1 contig is BELOW the ratio, but the hap2 homologue is ABOVE it (but the assignment is reciprocal) we can still sort it into parents. Each contig now ends up assigned to one of three groups: decipiens-parent, virginea-parent, unknown-parent
+
+This can be done with a table like this:
+
+
+contig1_ID
+contig2_ID
+contig1_length
+contig2_length
+length_ratio (1 / 2)
+1v2_coverage
+2v1_coverage
+recip_best_hit (TRUE/FALSE)
+kmer_ratio (highest / lowest coverage, noting which parent is highest, e.g. "2.5x decipiens")
+parental_complementarity (TRUE if contig1 assigns to one parent, and contig2 assigns to the other)
+contig1_final_assignment
+
 
 1.4. Parental haplotypes
 Create paternal (decipiens parent) and maternal (virginea parent; we know this from the organelles) haplotype assemblies.
