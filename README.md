@@ -1791,51 +1791,6 @@ cd ../../../
 ```
 
 
-for DIR in "${ASSEMBLIES[@]}"; do
-    echo "----------------------------------------------------------"
-    echo "Processing QC for Assembly: $DIR"
-    echo "----------------------------------------------------------"
-    
-    QC_DIR="${DIR}/qc_results"
-    mkdir -p $QC_DIR
-    
-    # 1. Prepare FASTA files from GFAs
-    # For l-series, we have hap1 and hap2. For h0, we just have p_ctg.
-    if [ -f "${DIR}/E_phylacis.bp.hap1.p_ctg.gfa" ]; then
-        gfatools gfa2fa ${DIR}/E_phylacis.bp.hap1.p_ctg.gfa > ${QC_DIR}/hap1.fasta
-        gfatools gfa2fa ${DIR}/E_phylacis.bp.hap2.p_ctg.gfa > ${QC_DIR}/hap2.fasta
-        cat ${QC_DIR}/hap1.fa ${QC_DIR}/hap2.fa > ${QC_DIR}/union.fasta
-        
-        MODES=("hap1" "hap2" "union")
-    else
-        # Fallback for h0
-        gfatools gfa2fa ${DIR}/E_phylacis.bp.p_ctg.gfa > ${QC_DIR}/p_ctg.fasta
-        MODES=("p_ctg")
-    fi
-
-    # 2. Loop through the modes (Hap1, Hap2, Union)
-    for MODE in "${MODES[@]}"; do
-        FASTA="${QC_DIR}/${MODE}.fasta"
-        echo "Running QC for $DIR - $MODE..."
-
-        # --- RUN COMPLEASM ---
-        compleasm run \
-            -a $FASTA \
-            -o ${QC_DIR}/compleasm_${MODE} \
-            -l $LINEAGE \
-            -t $THREADS
-
-        # --- RUN MERQURY ---
-        # We run merqury from within its own subdir to avoid file name collisions
-        mkdir -p ${QC_DIR}/merqury_${MODE}
-        cd ${QC_DIR}/merqury_${MODE}
-        
-        merqury.sh ../../../$READS_MERYL ../${MODE}.fa ${MODE}_merq
-        
-        cd ../../../
-    done
-done
-```
 
 
 
