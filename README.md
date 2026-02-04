@@ -1711,11 +1711,14 @@ mkdir l0
 mkdir l1
 mkdir l2
 mkdir l3
+mkdir h0 # what happens if we pretend it's haploid...
 
-hifiasm -o l0/E_phylacis -t 160 --ont --hom-cov 60 -l 0 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l0/hifiasm.log
-hifiasm -o l1/E_phylacis -t 160 --ont --hom-cov 60 -l 1 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l1/hifiasm.log
-hifiasm -o l2/E_phylacis -t 160 --ont --hom-cov 60 -l 2 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l2/hifiasm.log
-hifiasm -o l3/E_phylacis -t 160 --ont --hom-cov 60 -l 3 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l3/hifiasm.log
+hifiasm -o l0/E_phylacis -t 160 --ont --hom-cov 60 --hg-size 520m -l 0 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l0/hifiasm.log
+hifiasm -o l1/E_phylacis -t 160 --ont --hom-cov 60 --hg-size 520m -l 1 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l1/hifiasm.log
+hifiasm -o l2/E_phylacis -t 160 --ont --hom-cov 60 --hg-size 520m -l 2 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l2/hifiasm.log
+hifiasm -o l3/E_phylacis -t 160 --ont --hom-cov 60 --hg-size 520m -l 3 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l3/hifiasm.log
+hifiasm -o h0/E_phylacis -t 160 --ont --hom-cov 30 --hg-size 1040m --telo-m AAACCCT E_phylacis_filtered.fastq.gz 2>&1 | tee h0/hifiasm.log
+
 
 # 5. VERY IMPORTANT: Move results back to /home before rebooting!
 rsync -avh --progress --exclude='*.fastq.gz' /mnt/ramdisk/ ~/MM_genome/06_1_hifiasm_assemblies/
