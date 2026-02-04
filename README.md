@@ -1757,8 +1757,8 @@ DIR="l0" # for this one, there's only the p_ctg.fa
 mkdir -p ${DIR}/qc_results
 gfatools gfa2fa ${DIR}/E_phylacis.bp.p_ctg.gfa > ${DIR}/qc_results/p_ctg.fasta
 compleasm run -t $THREADS -l $LINEAGE -a ${DIR}/qc_results/p_ctg.fasta -o ${DIR}/qc_results/compleasm_p_ctg
-mkdir -p ${DIR}/qc_results/kat_p_ctg
-kat comp -t $THREADS -o ${DIR}/qc_results/kat_p_ctg/l0_comp 'E_phylacis_filtered.fastq.gz' ${DIR}/qc_results/p_ctg.fasta
+mkdir -p ${DIR}/qc_results/merq_p_ctg && cd ${DIR}/qc_results/merq_p_ctg
+merqury.sh $READS_MERYL ../p_ctg.fasta p_ctg_merq
 
 ## l1, 2, and 3, and h0 change dir sequentially and re-run it
 DIR="l1" # now we have two haplotypes, which we analyse separately and together
