@@ -1638,17 +1638,23 @@ I'll try a few and name the output files differently...
 * c70, k1001: run has zero coverage arcs, mt genome is in 3 contigs totalling 450kb (one circular, two linear)
 * c50, k1001:  run has zero coverage arcs, mt genome is in 3 contigs totalling 450kb (one circular, two linear) basically idential to c70, with an extra 450bp
 * c40, k1001:  run has zero coverage arcs, mt genome is in 3 contigs totalling 450kb (one circular, two linear) basically idential to c70, with an extra 450bp
+* c30, k1001: as above, but main contig of mt genome increases by 2.7kb
+* c25, k1001: this is getting into nuclear genome territory..., but the assembly is identical to c30
+
+Conclusion: c30 k1001 is the best we can probably do. I also tried a few lower values of k, but it made no difference initially, then down at k=601 the mt genome assembly broke, there were two ~identical 70kb linear fragments, and the nv for the main contig went from 11 to 13. 
+
+So we stick with c30 k1001 as the final organelle assemblies.
 
 ```bash
 # Define paths
 PT_FAM="05_organelle_genomes/db/magnoliopsida_pltd.fam"
 MT_FAM="05_organelle_genomes/db/magnoliopsida_mito.fam"
-out_dir="05_organelle_genomes/oatk_results_c40k1001"
+out_dir="05_organelle_genomes/oatk_results_c30k1001"
 mkdir -p $out_dir
 
 # Run OatK
 oatk -k 1001 \
-     -c 40 \
+     -c 30 \
      -t 64 \
      -p $PT_FAM \
      -m $MT_FAM \
@@ -1657,7 +1663,22 @@ oatk -k 1001 \
 
 ```
 
+## Final Organelle assemblies
 
-# 06 final haplotype validation
+The mitochondrial genome assembles into 3 pieces. One is circular, the other two are linear, but the gfa shows that it's probably a complex mixture of major and minor circles, with potentially some linear pieces in there.
 
-Including mapping raw reads back to look for coverage issues.
+>ctg000001l     length=355146 wlength=41066840.0 nv=11 circular=false path=u151-,u152+,u150-,u148-,u146-,u147+,u141-,u12277+,u139+,u146-,u138-
+>ctg000002l     length=23355 wlength=2312145.0 nv=1 circular=false path=u149+
+>ctg000003c     length=79427 wlength=7942700.0 nv=1 circular=true path=u12148-
+
+The cp genome assembles into a single circle, and is basically perfect as expected. The gfa shows the typical dumbell structure with LSC, SSC, and IR regions.
+
+>ctg000001c     length=160190 wlength=150009126.0 nv=12 circular=true path=u140+,u12277+,u137-,u7+,u12278-,u143-,u142+,u143+,u12278+,u7-,u137+,u12277-
+
+NB, with a higher c value of 140 or 280 which are the recommended values in the oatk docs of ~5-10x the nuclear coverage, the contig is identical but the graph structure is much simpler with an nv of 4 vs. 12 when c=30; this suggests that with more coverage or fresher samples we could probably do a better job of resolving the mt genome.
+
+# 06 Final Haplotype Assembly
+
+All of the above confirms that the genome is of high quality, that coverage from genome alignment and mapping parental species probes provide useful ways to sort contigs into parental groups, and that the organelle genomes assemble very well. 
+
+Now we need to put this all together, and include more than just the 11 longest contigs.
