@@ -1679,6 +1679,51 @@ NB, with a higher c value of 140 or 280 which are the recommended values in the 
 
 # 06 Final Haplotype Assembly
 
-All of the above confirms that the genome is of high quality, that coverage from genome alignment and mapping parental species probes provide useful ways to sort contigs into parental groups, and that the organelle genomes assemble very well. 
+All of the above confirms that the genome is of high quality, that coverage from genome alignment and mapping parental species probes provide useful ways to sort contigs into parental groups, and that the organelle genomes assemble very well. We also know that the maternal haplotype is closer to virginea than decipiens.
 
 Now we need to put this all together, and include more than just the 11 longest contigs.
+
+
+Here's the plan
+
+
+1. Parental binning
+1.1. Remove organelles
+We're doing organelles separately, and we already have them perfect thanks to oatk. So the first job is to align the haplotypes to the two organelle genomes I now have, and remove all contigs that are ~perfectly covered by the organelle genomes. Then we're dealing with the nuclear genome only. (We might lose some small nuclear contigs that are copies of the cp and mt genomes, but that's OK). 
+
+this gives hap1_nuclear.fa and hap2_nuclear.fa
+
+1.2. Alignment:
+* align hap1 to hap2
+* dotplot of all contigs from hap1 vs all from hap2
+* get coverage table of all pairs, with H2 AND H1 coverage
+
+This tells us which contigs are ~interchangeable and align to each other. Important for helping with parental assignment because we can expect homologues to be reciprocally assigned.
+
+1.3. Kmer assignment
+* Use the unique kmers we got for decipiens and virginea to get the dominant parent and dominant ratio for every contig in hap1 and hap2. 
+* Decide on a cutoff ratio. With the top 11 contigs, the LOWEST dominant ratio was 1.85x, but the cutoff should be determined empirically by looking at the table.
+* Contigs get one of three determinants: decipiens, virginea, unknown
+
+Then combine kmer dominance with coverage table to see how far we can get in sorting the contigs into groups. For example, if two contigs are clearly homologues, and the hap1 contig is BELOW the ratio, but the hap2 homologue is ABOVE it (but the assignment is reciprocal) we can still sort it into parents. Each contig now ends up assigned to one of three groups: decipiens-parent, virginea-parent, unknown-parent
+
+1.4. Parental haplotypes
+Create paternal (decipiens parent) and maternal (virginea parent; we know this from the organelles) haplotype assemblies.
+Add organelle genome to maternal parent genome.
+
+This gives us e_phylacis_paternal_contigs.fa and e_phylacis_maternal_contigs.fa
+
+2. Scaffolding
+Use ragtag to scaffold paternal against decipiens and maternal against virginea. This gives e_phylacis_paternal_scaffolds.fa and e_phylacis_maternal_scaffolds.fa
+
+3. QC
+
+For all four assemblies (paternal contigs, maternal contigs, paternal scaffolds, maternal scaffolds) QC including:
+* compleasm
+* Basic stats (N50 etc)
+* map the reads back and check coverage
+* ?
+
+4. Annotation
+The organelles are already assembled, but a basic annotation will be useful. 
+
