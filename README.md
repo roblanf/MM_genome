@@ -1734,7 +1734,108 @@ echo "06_1_hifiasm_assemblies/" >> .gitignore
 
 ```
 
+Now to pick a winner we can run compleasm and merqury on all of those assemblies. Note that I'll do this either for the primary assembly (for l0 and h0, which don't have haplotype files), or on the h1 and h2 files separately AND together (i.e. cat of the hap1 and hap2 files). This is because there's no guarantee that h1 and h2 will be balanced and sorted correctly. However, their union should have a genome size of ~1040MB, perfect kmer coverage, and 100% BUSCO duplication rate. If I can find a primary assembly or cat'ted h1 and h2 assembly with these characteristics, it's a good one. 
 
+First we convert the gfa files to fasta, and build the meryl database, then run the QC.
+
+
+
+```{bash}
+# Build the read k-mer database once
+meryl count k=21 threads=160 memory=100G \
+    E_phylacis_filtered.fastq.gz output reads.meryl
+
+THREADS=160
+LINEAGE="eudicotyledons"
+READS_MERYL="/mnt/ramdisk/reads.meryl"
+
+## l0
+# Make FASTA; compleasm; merqury
+DIR="l0" # for this one, there's only the p_ctg.fa
+mkdir -p ${DIR}/qc_results
+gfatools gfa2fa ${DIR}/E_phylacis.bp.p_ctg.gfa > ${DIR}/qc_results/p_ctg.fasta
+compleasm run -t $THREADS -l $LINEAGE -a ${DIR}/qc_results/p_ctg.fasta -o ${DIR}/qc_results/compleasm_p_ctg
+mkdir -p ${DIR}/qc_results/merq_p_ctg && cd ${DIR}/qc_results/merq_p_ctg
+merqury.sh $READS_MERYL ../p_ctg.fasta p_ctg_merq
+cd ../../../
+
+## l1, 2, and 3, and h0 change dir sequentially and re-run it
+DIR="l1" # now we have two haplotypes, which we analyse separately and together
+
+# 1. Prepare FASTAs
+mkdir -p ${DIR}/qc_results
+gfatools gfa2fa ${DIR}/E_phylacis.bp.hap1.p_ctg.gfa > ${DIR}/qc_results/hap1.fasta
+gfatools gfa2fa ${DIR}/E_phylacis.bp.hap2.p_ctg.gfa > ${DIR}/qc_results/hap2.fasta
+cat ${DIR}/qc_results/hap1.fasta ${DIR}/qc_results/hap2.fasta > ${DIR}/qc_results/union.fasta
+
+# 2. Compleasm (Hap1, Hap2, then Union)
+compleasm run -t $THREADS -l $LINEAGE -a ${DIR}/qc_results/hap1.fasta -o ${DIR}/qc_results/compleasm_hap1
+compleasm run -t $THREADS -l $LINEAGE -a ${DIR}/qc_results/hap2.fasta -o ${DIR}/qc_results/compleasm_hap2
+compleasm run -t $THREADS -l $LINEAGE -a ${DIR}/qc_results/union.fasta -o ${DIR}/qc_results/compleasm_union
+
+# 3. Merqury (Hap1, Hap2, then Union)
+mkdir -p ${DIR}/qc_results/merq_hap1 && cd ${DIR}/qc_results/merq_hap1
+merqury.sh $READS_MERYL ../hap1.fasta hap1_merq
+cd ../../../
+
+mkdir -p ${DIR}/qc_results/merq_hap2 && cd ${DIR}/qc_results/merq_hap2
+merqury.sh $READS_MERYL ../hap2.fasta hap2_merq
+cd ../../../
+
+mkdir -p ${DIR}/qc_results/merq_union && cd ${DIR}/qc_results/merq_union
+merqury.sh $READS_MERYL ../union.fasta union_merq
+cd ../../../
+
+# Then repeat the above for h0, l2, and l3
+
+```
+
+
+for DIR in "${ASSEMBLIES[@]}"; do
+    echo "----------------------------------------------------------"
+    echo "Processing QC for Assembly: $DIR"
+    echo "----------------------------------------------------------"
+    
+    QC_DIR="${DIR}/qc_results"
+    mkdir -p $QC_DIR
+    
+    # 1. Prepare FASTA files from GFAs
+    # For l-series, we have hap1 and hap2. For h0, we just have p_ctg.
+    if [ -f "${DIR}/E_phylacis.bp.hap1.p_ctg.gfa" ]; then
+        gfatools gfa2fa ${DIR}/E_phylacis.bp.hap1.p_ctg.gfa > ${QC_DIR}/hap1.fasta
+        gfatools gfa2fa ${DIR}/E_phylacis.bp.hap2.p_ctg.gfa > ${QC_DIR}/hap2.fasta
+        cat ${QC_DIR}/hap1.fa ${QC_DIR}/hap2.fa > ${QC_DIR}/union.fasta
+        
+        MODES=("hap1" "hap2" "union")
+    else
+        # Fallback for h0
+        gfatools gfa2fa ${DIR}/E_phylacis.bp.p_ctg.gfa > ${QC_DIR}/p_ctg.fasta
+        MODES=("p_ctg")
+    fi
+
+    # 2. Loop through the modes (Hap1, Hap2, Union)
+    for MODE in "${MODES[@]}"; do
+        FASTA="${QC_DIR}/${MODE}.fasta"
+        echo "Running QC for $DIR - $MODE..."
+
+        # --- RUN COMPLEASM ---
+        compleasm run \
+            -a $FASTA \
+            -o ${QC_DIR}/compleasm_${MODE} \
+            -l $LINEAGE \
+            -t $THREADS
+
+        # --- RUN MERQURY ---
+        # We run merqury from within its own subdir to avoid file name collisions
+        mkdir -p ${QC_DIR}/merqury_${MODE}
+        cd ${QC_DIR}/merqury_${MODE}
+        
+        merqury.sh ../../../$READS_MERYL ../${MODE}.fa ${MODE}_merq
+        
+        cd ../../../
+    done
+done
+```
 
 
 
