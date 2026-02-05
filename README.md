@@ -1720,17 +1720,6 @@ hifiasm -o l3/E_phylacis -t 160 --ont --hom-cov 60 --hg-size 520m -l 3 --telo-m 
 hifiasm -o h0/E_phylacis -t 160 --ont --hom-cov 30 --hg-size 1040m --telo-m AAACCCT E_phylacis_filtered.fastq.gz 2>&1 | tee h0/hifiasm.log
 
 
-# 5. VERY IMPORTANT: Move results back to /home before rebooting!
-rsync -avh --progress --exclude='*.fastq.gz' /mnt/ramdisk/ ~/MM_genome/06_1_hifiasm_assemblies/
-
-cd ~/MM_genome
-
-# 6. Unmount (only after you've verified the files are safe!)
-# cd ~
-# sudo umount /mnt/ramdisk
-
-# ignore this stuff for git, mostly
-echo "06_1_hifiasm_assemblies/" >> .gitignore
 
 ```
 
@@ -1744,8 +1733,6 @@ First we convert the gfa files to fasta, and build the meryl database, then run 
 # Build the read k-mer database once
 meryl count k=21 threads=160 memory=100G \
     E_phylacis_filtered.fastq.gz output reads.meryl
-
-kat hist -t 160 -m 27 -H 16000000000 -o kat_reads_ref E_phylacis_filtered.fastq.gz
 
 THREADS=160
 LINEAGE="eudicotyledons"
@@ -1762,7 +1749,7 @@ merqury.sh $READS_MERYL ../p_ctg.fasta p_ctg_merq
 cd ../../..
 
 ## l1, 2, and 3, and h0 change dir sequentially and re-run it
-DIR="l1" # now we have two haplotypes, which we analyse separately and together
+DIR="l3" # now we have two haplotypes, which we analyse separately and together
 
 # 1. Prepare FASTAs
 mkdir -p ${DIR}/qc_results
@@ -1790,18 +1777,44 @@ cd ../../../
 
 # Then repeat the above for h0, l2, and l3
 
+
+#########
+### Copy things you want back to the hard drive
+### Ignore all the big files, but of course keep the assemblies.
+
+# 5. VERY IMPORTANT: Move results back to /home before rebooting!
+rsync -avh --progress --exclude='*.fastq.gz' /mnt/ramdisk/ ~/MM_genome/06_1_hifiasm_assemblies/
+
+cd ~/MM_genome
+
+# 6. Unmount (only after you've verified the files are safe!)
+# cd ~
+# sudo umount /mnt/ramdisk
+
+# ignore this stuff for git, mostly
+echo "06_1_hifiasm_assemblies/" >> .gitignore
+
 ```
 
 Get assembly basic stats and organise them:
 
 ```bash
 # get all the .fasta except those in the compleasm folders, and get lots of stats
-find . -name "*.fasta" | grep -E "hap1|hap2|union|p_ctg" | grep -v "compleasm" | xargs seqkit stats -a -j 160 -N 50,90,95,99 | column -t
-
-
-
+find . -name "*.fasta" | grep -E "hap1|hap2|union|p_ctg" | grep -vE "compleasm|merq" | xargs seqkit stats -a -j 160 -N 50,90,95,99 | column -t
 ```
 
+```file                         format  type  num_seqs  sum_len        min_len  avg_len       max_len     Q1        Q2       Q3            sum_gap  N50         N50_num  Q20(%)  Q30(%)  AvgQual  GC(%)  sum_n   N50         N90         N95         N99
+./l3/qc_results/union.fasta  FASTA   DNA   131       1,097,940,037  30,917   8,381,221.7   65,688,633  66,540.5  92,347   258,145       0        45,062,906  10       0       0       0        39.63  43,947  45,062,906  33,511,041  20,522,527  504,488
+./l3/qc_results/hap2.fasta   FASTA   DNA   45        573,953,311    42,116   12,754,518    65,688,633  66,777    151,689  26,036,980    0        43,652,620  6        0       0       0        39.63  43,747  43,652,620  26,036,980  20,522,527  14,252,391
+./l3/qc_results/hap1.fasta   FASTA   DNA   86        523,986,726    30,917   6,092,868.9   61,716,932  65,110    85,704   191,335       0        45,216,074  5        0       0       0        39.64  200     45,216,074  33,914,441  33,914,441  191,335
+./l2/qc_results/union.fasta  FASTA   DNA   132       1,213,886,437  24,825   9,196,109.4   65,674,939  67,058    94,767   338,826.5     0        45,708,075  11       0       0       0        39.61  300     45,708,075  33,387,322  20,442,905  13,773,696
+./l2/qc_results/hap2.fasta   FASTA   DNA   58        610,625,537    42,116   10,528,026.5  61,716,932  76,003    118,755  380,136       0        45,708,075  6        0       0       0        39.61  200     45,708,075  33,387,322  26,036,980  20,442,905
+./l2/qc_results/hap1.fasta   FASTA   DNA   74        603,260,900    24,825   8,152,174.3   65,674,939  56,568    88,451   293,829       0        45,081,242  6        0       0       0        39.62  100     45,081,242  33,719,123  16,961,878  407,150
+./l1/qc_results/union.fasta  FASTA   DNA   119       1,069,391,022  30,917   8,986,479.2   65,674,939  64,743    87,899   303,443.5     0        45,081,242  10       0       0       0        39.62  74,339  45,081,242  33,719,123  20,310,318  13,773,696
+./l1/qc_results/hap2.fasta   FASTA   DNA   45        466,004,620    35,842   10,355,658.2  61,716,932  68,000    94,551   550,701       0        41,950,308  5        0       0       0        39.64  100     41,950,308  33,465,692  20,310,318  20,310,318
+./l1/qc_results/hap1.fasta   FASTA   DNA   74        603,386,402    30,917   8,153,870.3   65,674,939  56,855    86,360   232,920       0        45,081,242  6        0       0       0        39.61  74,239  45,081,242  33,719,123  16,961,878  518,253
+./l0/qc_results/p_ctg.fasta  FASTA   DNA   79        1,014,773,291  30,917   12,845,231.5  65,674,939  69,098.5  142,767  33,781,247.5  0        43,652,620  10       0       0       0        39.61  0       43,652,620  33,930,661  20,458,351  13,773,696
+```
 
 
 
