@@ -1927,14 +1927,13 @@ The final thing to check is the kmer spectra for the union, h1, and h2. These ar
   </tr>
 </table>
 
-Here's the plan
-
-0. Rerun hifiasm.
-
-Ash jones 
+Here's the plan from here
 
 
-1. Parental binning
+0. Dot plots
+L3 dot plots to check for duplicate regions in h1 and h2 - h1 vs h2 ,h1 against itself ,h2 against itself. remove potentially duplicated contigs.
+
+2. Parental binning
 1.1. Remove organelles
 We're doing organelles separately, and we already have them perfect thanks to oatk. So the first job is to align the haplotypes to the two organelle genomes I now have, and remove all contigs that are ~perfectly covered by the organelle genomes. Then we're dealing with the nuclear genome only. (We might lose some small nuclear contigs that are copies of the cp and mt genomes, but that's OK). Remove any contig that is >=95% covered by organellar genomes is probably a good start, but the best thing is to look at the coverage and see.
 
@@ -1952,7 +1951,8 @@ This tells us which contigs are ~interchangeable and align to each other. Import
 * Decide on a cutoff ratio. With the top 11 contigs, the LOWEST dominant ratio was 1.85x, but the cutoff should be determined empirically by looking at the table.
 * Contigs get one of three determinants: decipiens, virginea, unknown
 
-* Also use ROADIES with each contig as a 'species' independently. If we can see where they map vs. the ~35 existing euc genomes, we could assign haplotypes easily!
+* NB: Also use ROADIES with each contig as a 'species'. If we can see where they map vs. the ~35 existing euc genomes, we could assign haplotypes easily! Also each contig might just pop out cleanly on the species tree of other euc genomes. In an ideal world, homologous contigs would land on different parts of the tree, near their parent species.
+
 
 Then combine kmer dominance with coverage table to see how far we can get in sorting the contigs into groups. For example, if two contigs are clearly homologues, and the hap1 contig is BELOW the ratio, but the hap2 homologue is ABOVE it (but the assignment is reciprocal) we can still sort it into parents. Each contig now ends up assigned to one of three groups: decipiens-parent, virginea-parent, unknown-parent
 
