@@ -1819,6 +1819,43 @@ file                         format  type  num_seqs  sum_len        min_len  avg
 
 
 
+# L1 compleasm and kmers
+
+Run this code from within the relevant folders:
+
+Compleasm (run in the qc_results folder for each assembly)
+```
+echo "| Metric | Hap1 | Hap2 | Union |"
+echo "| :--- | :--- | :--- | :--- |"
+
+# Create temporary files for each column to handle the side-by-side join
+for mode in hap1 hap2 union; do
+    grep -P "S:|D:|F:|M:|N:" compleasm_${mode}/summary.txt | awk -F':|,' '{print $2}' > ${mode}_col.tmp
+done
+
+# Add labels and join the columns
+paste -d '|' <(echo -e "S\nD\nF\nM\nN") hap1_col.tmp hap2_col.tmp union_col.tmp | sed 's/^/| /' | sed 's/$/ |/'
+
+# Clean up
+rm *.tmp
+```
+
+Compleasm
+
+| Metric | Hap1 | Hap2 | Union |
+| :--- | :--- | :--- | :--- |
+| S|78.36%|78.89%|2.92% |
+| D|17.15%|6.35%|96.86% |
+| F|0.71%|1.00%|0.18% |
+| M|3.78%|13.76%|0.04% |
+| N|2805|2805|2805 |
+
+Merqury
+
+| Metric | Hap1 | Hap2 | Union |
+| :--- | :--- | :--- | :--- |
+| **QV** | 64.9563 | 66.1094 | 65.4217 |
+| **K-mer Completeness %** | 66.5101 | 54.6202 | 99.3052 |
 
 
 Here's the plan
