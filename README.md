@@ -1819,11 +1819,9 @@ file                         format  type  num_seqs  sum_len        min_len  avg
 
 
 
-# L1 compleasm and kmers
+## L1 compleasm and kmers
 
-Run this code from within the relevant folders:
-
-Compleasm (run in the qc_results folder for each assembly)
+For all of the following, run this code from within the relevant in the qc_results folder for each assembly
 ```
 echo "| Metric | Hap1 | Hap2 | Union |"
 echo "| :--- | :--- | :--- | :--- |"
@@ -1838,6 +1836,23 @@ paste -d '|' <(echo -e "S\nD\nF\nM\nN") hap1_col.tmp hap2_col.tmp union_col.tmp 
 
 # Clean up
 rm *.tmp
+
+echo "| Metric | Hap1 | Hap2 | Union |"
+echo "| :--- | :--- | :--- | :--- |"
+
+# Extract QV (Column 4 of the .qv file)
+qv_h1=$(awk '{print $4}' merq_hap1/hap1_merq.qv)
+qv_h2=$(awk '{print $4}' merq_hap2/hap2_merq.qv)
+qv_un=$(awk '{print $4}' merq_union/union_merq.qv)
+
+# Extract Completeness (Column 5 of the generic completeness.stats file)
+comp_h1=$(awk '{print $5}' merq_hap1/completeness.stats)
+comp_h2=$(awk '{print $5}' merq_hap2/completeness.stats)
+comp_un=$(awk '{print $5}' merq_union/completeness.stats)
+
+echo "| **QV** | $qv_h1 | $qv_h2 | $qv_un |"
+echo "| **K-mer Completeness %** | $comp_h1 | $comp_h2 | $comp_un |"
+
 ```
 
 Compleasm
