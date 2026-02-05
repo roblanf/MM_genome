@@ -1891,6 +1891,20 @@ The h0 and l0 assemblies don't separate haplotypes, so I'll only look at L1, L2 
 | **QV** | 65.1172 | 65.6202 | 65.3729 |
 | **K-mer Completeness %** | 62.3954 | 66.0179 | 99.3053 |
 
+### Quast
+
+```
+quast.py l1/qc_results/hap1.fasta l1/qc_results/hap2.fasta \
+    l2/qc_results/hap1.fasta l2/qc_results/hap2.fasta \
+    l3/qc_results/hap1.fasta l2/qc_results/hap2.fasta \
+    -o quast_comparison \
+    --labels L1-hap1,L1-hap2,L2-hap1,L2-hap2,L3-hap1,L3-hap2
+```
+![Screenshot 2026-02-06 at 6 50 35 AM](https://github.com/user-attachments/assets/e4c27269-182b-4f78-8a26-4f09d078c4b4)
+![Screenshot 2026-02-06 at 6 53 00 AM](https://github.com/user-attachments/assets/6f2d5c4f-1ff1-43d4-ba0c-73f4533f90d5)
+![Screenshot 2026-02-06 at 6 53 15 AM](https://github.com/user-attachments/assets/9f165230-6466-4238-a15e-c16163461aa9)
+
+Most of the length of the L3 haplotypes is contained in the first 12 (hap1) or 14 (hap2) contigs. There are essentially no N's. The union of hap1 and hap2 is 1.135Gb which is ~568Mb haploid genome size. This is a little big, so it seems likely that there's some duplication, especially in hap2 whose total size is 611Mb. This is confirmed by the ~8% BUSCO duplication rate in hap2, and is something to look for when cleaning the assembly.
 
 ### Conclusion: use L3
 
