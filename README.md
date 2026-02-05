@@ -1,4 +1,4 @@
-# MM_genome
+<img width="1800" height="1500" alt="hap2_merq spectra-asm fl" src="https://github.com/user-attachments/assets/af82e42a-62ab-4723-b302-2fb28ecb67e8" /># MM_genome
 An assembly of the Meelup Mallee genome.
 
 # Get the environment running
@@ -1893,7 +1893,26 @@ The h0 and l0 assemblies don't separate haplotypes, so I'll only look at L1, L2 
 | **K-mer Completeness %** | 62.3954 | 66.0179 | 99.3053 |
 
 
+### Conclusion: use L3
 
+L3 is *clearly* the best assembly. The two haplotypes have incredibly high compleasm scores, little duplication, almost nothing missing. I suspect hap2 has a a few contigs that actually belong in hap1, (it's longer than hap1, and it has more duplicates), but parental binning will solve that in the next step. The stats on the union are also excellent - 97% of BUSCOs are duplicated, as expected. The QV scores are uniformly high. The kmer completeness is very very high for the Union graph (bearing in mind these are nanopore reads) and is just about right for the haplotypes (we expect a lot of missing kmers if it's an F1 hybrid of divergent species). The N50 is about 45MB for all three assemblies (union, H1, H2). 
+
+One question I had is whether there were unresolved bubbles in the unitig graph, but there aren't any at all. (`gfatools bubble E_phylacis.bp.p_utg.gfa > bubbles_l3_utg.bed` produces nothing). This suggests that all the bubbles were big and obvious, as expected for accurate long reads with very divergent haplotypes.
+
+The final thing to check is the kmer spectra for the union, h1, and h2. These are also incredibly good. The union plot has very clear 1x and 2x peaks, as expected. The h1 and h2 plots show just over half of the 1x kmers in each sample (as expected - many unique kmers), and a smaller number of 2x kmers (as expected - some homozygous regions). 
+
+<table>
+  <tr>
+    <td align="center"><b>Union (Total)</b></td>
+    <td align="center"><b>Haplotype 1</b></td>
+    <td align="center"><b>Haplotype 2</b></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/4a75b606-59ef-4e56-9d7a-411907c19c9a" width="100%" /></td>
+    <td><img src="https://github.com/user-attachments/assets/41fdd64e-c2c0-4b36-b458-7cf0452297b5" width="100%" /></td>
+    <td><img src="https://github.com/user-attachments/assets/4357dad5-cc60-4f3c-b415-1f7dcfa8533e" width="100%" /></td>
+  </tr>
+</table>
 
 Here's the plan
 
@@ -1919,6 +1938,8 @@ This tells us which contigs are ~interchangeable and align to each other. Import
 * Use the unique kmers we got for decipiens and virginea to get the dominant parent and dominant ratio for every contig in hap1 and hap2. 
 * Decide on a cutoff ratio. With the top 11 contigs, the LOWEST dominant ratio was 1.85x, but the cutoff should be determined empirically by looking at the table.
 * Contigs get one of three determinants: decipiens, virginea, unknown
+
+* Also use ROADIES with each contig as a 'species' independently. If we can see where they map vs. the ~35 existing euc genomes, we could assign haplotypes easily!
 
 Then combine kmer dominance with coverage table to see how far we can get in sorting the contigs into groups. For example, if two contigs are clearly homologues, and the hap1 contig is BELOW the ratio, but the hap2 homologue is ABOVE it (but the assignment is reciprocal) we can still sort it into parents. Each contig now ends up assigned to one of three groups: decipiens-parent, virginea-parent, unknown-parent
 
