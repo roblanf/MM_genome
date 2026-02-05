@@ -1,5 +1,4 @@
-<img width="1800" height="1500" alt="hap2_merq spectra-asm fl" src="https://github.com/user-attachments/assets/af82e42a-62ab-4723-b302-2fb28ecb67e8" /># MM_genome
-An assembly of the Meelup Mallee genome.
+# An assembly of the Meelup Mallee genome.
 
 # Get the environment running
 
