@@ -1910,9 +1910,36 @@ Most of the length of the L3 haplotypes is contained in the first 12 (hap1) or 1
 
 L3 is *clearly* the best assembly. The two haplotypes have incredibly high compleasm scores, little duplication, almost nothing missing. I suspect hap2 has a a few contigs that actually belong in hap1, (it's longer than hap1, and it has more duplicates), but parental binning will solve that in the next step. The stats on the union are also excellent - 97% of BUSCOs are duplicated, as expected. The QV scores are uniformly high. The kmer completeness is very very high for the Union graph (bearing in mind these are nanopore reads) and is just about right for the haplotypes (we expect a lot of missing kmers if it's an F1 hybrid of divergent species). The N50 is about 45MB for all three assemblies (union, H1, H2). 
 
+Now I'll tidy up and get what I need off the ramdisk. No point keeping big files here, especially since the assemblies take only an hour to re-do.
+
+```bash
+cd /mnt/ramdisk
+
+#get rid of big duplicate files I don't need
+find . -name "E_phylacis_filtered.fastq.gz" -delete
+find . -name "*ec.bin" -delete
+rm -rf mb_downloads/
+
+# move to hard drive
+rsync -avP . ~/MM_genome/06_1_hifiasm_assemblies/
+
+# check sizes to ~verify
+du -sh .
+du -sh ~/MM_genome/06_1_hifiasm_assemblies/
+
+# unmount and delete mount point
+cd ~/MM_genome/
+sudo umount /mnt/ramdisk
+sudo rmdir /mnt/ramdisk
+```
+
+## L3 additional QC
+
+## Unresolved bubbles
 One question I had is whether there were unresolved bubbles in the unitig graph, but there aren't any at all. (`gfatools bubble E_phylacis.bp.p_utg.gfa > bubbles_l3_utg.bed` produces nothing). This suggests that all the bubbles were big and obvious, as expected for accurate long reads with very divergent haplotypes.
 
-The final thing to check is the kmer spectra for the union, h1, and h2. These are also incredibly good. The union plot has very clear 1x and 2x peaks, as expected. The h1 and h2 plots show just over half of the 1x kmers in each sample (as expected - many unique kmers), and a smaller number of 2x kmers (as expected - some homozygous regions). 
+## Kmer spectra
+Next are kmer spectra for the union, h1, and h2 from the merqury runs above. These are also incredibly good. The union plot has very clear 1x and 2x peaks, as expected. The h1 and h2 plots show just over half of the 1x kmers in each sample (as expected - many unique kmers), and a smaller number of 2x kmers (as expected - some homozygous regions). 
 
 <table>
   <tr>
@@ -1926,6 +1953,19 @@ The final thing to check is the kmer spectra for the union, h1, and h2. These ar
     <td><img src="https://github.com/user-attachments/assets/4357dad5-cc60-4f3c-b415-1f7dcfa8533e" width="100%" /></td>
   </tr>
 </table>
+
+## Parental kmer checks
+
+Similar to what I did on the initial assembly, now I want to see how the unique kmers from the putative parental genomes map to the contigs.
+
+
+
+
+
+
+
+
+
 
 Here's the plan from here
 
