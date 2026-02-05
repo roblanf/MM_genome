@@ -1855,7 +1855,7 @@ echo "| **K-mer Completeness %** | $comp_h1 | $comp_h2 | $comp_un |"
 
 ```
 
-The h0 and l0 assemblies don't separate haplotypes
+The h0 and l0 assemblies don't separate haplotypes, so I'll only look at L1, L2 and L3. 
 
 ### L1
 
@@ -1889,8 +1889,6 @@ The h0 and l0 assemblies don't separate haplotypes
 | F|0.29%|0.32%|0.18% |
 | M|0.89%|0.04%|0.04% |
 | N|2805|2805|2805 |
-| Metric | Hap1 | Hap2 | Union |
-| :--- | :--- | :--- | :--- |
 | **QV** | 65.1172 | 65.6202 | 65.3729 |
 | **K-mer Completeness %** | 62.3954 | 66.0179 | 99.3053 |
 
