@@ -1981,19 +1981,29 @@ E_phylacis.hist | more
 meryl greater-than 10 E_phylacis.meryl output E_phylacis.filtered.meryl
 
 # Run merqury twice - once with filtered and once with unfilitered read kmers
-merqury.sh E_phylacis.filtered.meryl \
-    $DECIPIENS_MERYL \
-    $VIRGINEA_MERYL \
-    ../06_1_hifiasm_assemblies/l3/hap1.fasta \
-    ../06_1_hifiasm_assemblies/l3/hap2.fasta \
-    L3_trio_result
 
-merqury.sh E_phylacis.meryl \
+# 1. Setup the Unfiltered Run
+mkdir -p trio_unfiltered
+cd trio_unfiltered
+merqury.sh ../E_phylacis.meryl \
     $DECIPIENS_MERYL \
     $VIRGINEA_MERYL \
-    ../06_1_hifiasm_assemblies/l3/hap1.fasta \
-    ../06_1_hifiasm_assemblies/l3/hap2.fasta \
-    L3_trio_result
+    ../../06_1_hifiasm_assemblies/l3/hap1.fasta \
+    ../../06_1_hifiasm_assemblies/l3/hap2.fasta \
+    L3_unfiltered
+cd ..
+
+# 2. Setup the Filtered Run
+mkdir -p trio_filtered
+cd trio_filtered
+merqury.sh ../E_phylacis.filtered.meryl \
+    $DECIPIENS_MERYL \
+    $VIRGINEA_MERYL \
+    ../../06_1_hifiasm_assemblies/l3/hap1.fasta \
+    ../../06_1_hifiasm_assemblies/l3/hap2.fasta \
+    L3_filtered
+cd ..
+
 
 ```
 
