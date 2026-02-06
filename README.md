@@ -1978,7 +1978,22 @@ meryl histogram E_phylacis.meryl > E_phylacis.hist
 E_phylacis.hist | more
 
 # Filter based on trough - the number is the trough I observed
-meryl greater-than 3 E_phylacis.meryl output E_phylacis.filtered.meryl
+meryl greater-than 10 E_phylacis.meryl output E_phylacis.filtered.meryl
+
+# Run merqury twice - once with filtered and once with unfilitered read kmers
+merqury.sh E_phylacis.filtered.meryl \
+    $DECIPIENS_MERYL \
+    $VIRGINEA_MERYL \
+    ../06_1_hifiasm_assemblies/l3/hap1.fasta \
+    ../06_1_hifiasm_assemblies/l3/hap2.fasta \
+    L3_trio_result
+
+merqury.sh E_phylacis.meryl \
+    $DECIPIENS_MERYL \
+    $VIRGINEA_MERYL \
+    ../06_1_hifiasm_assemblies/l3/hap1.fasta \
+    ../06_1_hifiasm_assemblies/l3/hap2.fasta \
+    L3_trio_result
 
 ```
 
