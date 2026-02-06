@@ -1956,7 +1956,7 @@ Next are kmer spectra for the union, h1, and h2 from the merqury runs above. The
 
 ## 2 Parental kmer checks
 
-Similar to what I did on the initial assembly, now I want to see how the unique kmers from the putative parental genomes map to the contigs.
+Similar to what I did on the initial assembly, now I want to see how the unique kmers from the putative parental genomes map to the contigs. I already have hapmers from the parents, with k=31. this is described above, but I get the kmers, look for the noise | signal trough, filter out the noise, and then use subtraction to get the kmers unique to each parent (hapmers). Now I need to do the same for the phylacis reads, and then I can run merqury.
 
 
 ```bash
@@ -1972,6 +1972,13 @@ meryl count k=31 threads=128 memory=1200G \
     output E_phylacis.meryl \
     ../02_filtering/E_phylacis_filtered.fastq.gz
 
+meryl histogram E_phylacis.meryl > E_phylacis.hist
+
+# look for the trough
+E_phylacis.hist | more
+
+# Filter based on trough - the number is the trough I observed
+meryl greater-than 3 E_phylacis.meryl output E_phylacis.filtered.meryl
 
 ```
 
