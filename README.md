@@ -1954,18 +1954,26 @@ Next are kmer spectra for the union, h1, and h2 from the merqury runs above. The
   </tr>
 </table>
 
-## Parental kmer checks
+## 2 Parental kmer checks
 
 Similar to what I did on the initial assembly, now I want to see how the unique kmers from the putative parental genomes map to the contigs.
 
 
+```bash
+mkdir 06_2_parental_kmer_checks
+cd 06_2_parental_kmer_checks
+
+# we already made parental hapmers with k=31
+DECIPIENS_MERYL="~/MM_genome/parental_spp_genome/E_decipiens.only.meryl"
+VIRGINEA_MERYL="~/MM_genome/parental_spp_genome/E_virginea.only.meryl"
+
+# make phylacis meryl db (not sure how this will go with nanopore, but let's see)
+meryl count k=31 threads=128 memory=1200G \
+    output E_phylacis.meryl \
+    ../02_filtering/E_phylacis_filtered.fastq.gz
 
 
-
-
-
-
-
+```
 
 Here's the plan from here
 
