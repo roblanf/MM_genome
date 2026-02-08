@@ -1981,6 +1981,11 @@ E_phylacis.hist | more
 meryl greater-than 10 E_phylacis.meryl output E_phylacis.filtered.meryl
 
 # Run merqury twice - once with filtered and once with unfilitered read kmers
+cd ~/MM_genome/06_1_hifiasm_assemblies/l3/
+gfatools gfa2fa E_phylacis.bp.hap1.p_ctg.gfa > E_phylacis.hap1.fasta
+gfatools gfa2fa E_phylacis.bp.hap2.p_ctg.gfa > E_phylacis.hap2.fasta
+
+cd ../../06_2_parental_kmer_checks
 
 # 1. Setup the Unfiltered Run
 mkdir -p trio_unfiltered
@@ -1988,8 +1993,8 @@ cd trio_unfiltered
 merqury.sh ../E_phylacis.meryl \
     $DECIPIENS_MERYL \
     $VIRGINEA_MERYL \
-    ../../06_1_hifiasm_assemblies/l3/hap1.fasta \
-    ../../06_1_hifiasm_assemblies/l3/hap2.fasta \
+    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta \
+    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta \
     L3_unfiltered
 cd ..
 
@@ -1999,8 +2004,8 @@ cd trio_filtered
 merqury.sh ../E_phylacis.filtered.meryl \
     $DECIPIENS_MERYL \
     $VIRGINEA_MERYL \
-    ../../06_1_hifiasm_assemblies/l3/hap1.fasta \
-    ../../06_1_hifiasm_assemblies/l3/hap2.fasta \
+    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta \
+    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta \
     L3_filtered
 cd ..
 
