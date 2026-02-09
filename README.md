@@ -1987,28 +1987,38 @@ gfatools gfa2fa E_phylacis.bp.hap2.p_ctg.gfa > E_phylacis.hap2.fasta
 
 cd ../../06_2_parental_kmer_checks
 
-# 1. Setup the Unfiltered Run
+# 1. Setup the Unfiltered Run: NB this fails and I cannot figure out why...
 mkdir -p trio_unfiltered
 cd trio_unfiltered
 merqury.sh ../E_phylacis.meryl \
     $DECIPIENS_MERYL \
     $VIRGINEA_MERYL \
     ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta \
-    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta \
+    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta \
     L3_unfiltered
 cd ..
 
-# 2. Setup the Filtered Run
+# 2. Setup the Filtered Run: NB this fails and I cannot figure out why...
 mkdir -p trio_filtered
 cd trio_filtered
 merqury.sh ../E_phylacis.filtered.meryl \
     $DECIPIENS_MERYL \
     $VIRGINEA_MERYL \
     ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta \
-    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta \
+    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta \
     L3_filtered
 cd ..
 
+
+# 3. The two commands above lead merqury to fail. So next I'll try running it as I ran it initially on the top 11 contigs
+mkdir trio
+cd trio
+merqury.sh ../../parental_spp_genomes/species_union.meryl/ \
+    $DECIPIENS_MERYL \
+    $VIRGINEA_MERYL \
+    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta \
+    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta \
+    E_phylacis_k31
 
 ```
 
