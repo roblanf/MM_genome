@@ -2082,13 +2082,20 @@ cd ..
 mkdir -p roadies_input
 
 # Split Hap1 into individual contig files
-awk '/^>/{f="roadies_input/"substr($1,2)".fa";print > f;next}{print >> f}' ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta
+awk '/^>/{f="roadies_input/"substr($1,2)".fa";print > f;next}{print >> f}' ../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta
 
 # Split Hap2 into individual contig files
-awk '/^>/{f="roadies_input/"substr($1,2)".fa";print > f;next}{print >> f}' ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta
+awk '/^>/{f="roadies_input/"substr($1,2)".fa";print > f;next}{print >> f}' ../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta
 
 # Add your named reference genomes
 cp roadies_refs/*.fna roadies_input/
+
+roadies.py -i roadies_input/ \
+           -o roadies_output/ \
+           --loci 100000 \
+           --length 500 \
+           --threads 128
+
 ```
 
 
