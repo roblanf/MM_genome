@@ -2010,10 +2010,7 @@ Get the genomes
 
 mkdir 06_3_roadies
 cd 06_3_roadies
-datasets download genome taxon "Eucalyptus" --reference --filename eucs.zip
-datasets download genome taxon "Corymbia" --reference --filename eucs.zip
-datasets download genome taxon "Angophora" --reference --filename eucs.zip
-
+datasets download genome taxon "Eucalyptus" --reference --assembly-level chromosome --filename eucs.zip
 
 
 ```
