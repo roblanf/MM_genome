@@ -2011,9 +2011,9 @@ Get the genomes
 mkdir 06_3_roadies
 cd 06_3_roadies
 
-# 1a. Download the packages
+# 1a. Download the packages (Corymbia is taxid 87658, needed because it's also a beetle genus)
 datasets download genome taxon "Eucalyptus" --reference --assembly-level chromosome --filename eucs.zip
-datasets download genome taxon "Corymbia" --assembly-level chromosome,scaffold --filename corymbia.zip
+datasets download genome taxon "87658" --assembly-level chromosome,scaffold --filename corymbia.zip
 datasets download genome taxon "Angophora" --assembly-level chromosome,scaffold --filename angophora.zip
 
 # 1b. Create the reference directory
@@ -2025,8 +2025,78 @@ unzip -j eucs.zip "ncbi_dataset/data/*/*.fna" -d roadies_refs/
 unzip -j corymbia.zip "ncbi_dataset/data/*/*.fna" -d roadies_refs/
 unzip -j angophora.zip "ncbi_dataset/data/*/*.fna" -d roadies_refs/
 
+# Get metadata so we can rename files by species
+cd roadies_refs
+datasets summary genome taxon "Eucalyptus" --reference --assembly-level chromosome --as-json-lines > eucs_metadata.jsonl
+datasets summary genome taxon "Angophora" --reference --assembly-level chromosome --as-json-lines > angophora_metadata.jsonl
+datasets summary genome taxon "87658" --reference --assembly-level chromosome --as-json-lines > corymbia_metadata.jsonl
+
+# finally, we rename the genome files like this:
+python3 -c "
+import os, json
+
+# 1. Build a dictionary of Accession -> Species Name from all metadata files
+mapping = {}
+for meta_file in [f for f in os.listdir('.') if f.endswith('.jsonl')]:
+    with open(meta_file) as f:
+        for line in f:
+            data = json.loads(line)
+            # Access the nested accession and scientific name
+            acc = data['accession']
+            species = data['organism']['organism_name'].replace(' ', '_')
+            mapping[acc] = species
+
+# 2. Iterate through the genome files and rename them
+for filename in os.listdir('.'):
+    if filename.endswith('.fna'):
+        # Check if the accession (GCA/GCF_...) is in the filename
+        for acc, species in mapping.items():
+            if acc in filename:
+                new_name = f'{species}.fna'
+                print(f'Renaming {filename} to {new_name}')
+                os.rename(filename, new_name)
+                break
+"
+
+
 ```
 
+That's our reference data sorted. Now we want to treat each of the contigs as its own 'species'. First let's see how long the contigs are...
+
+```
+seqkit stats ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap*.fasta
+```
+
+```
+file                                                    format  type  num_seqs      sum_len  min_len      avg_len     max_len
+../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta  FASTA   DNA         86  523,986,726   30,917  6,092,868.9  61,716,932
+../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta  FASTA   DNA         45  573,953,311   42,116   12,754,518  65,688,633
+```
+
+We can attempt to just do all of them. Let's see what happens...
+
+Let's make the roadies input that we need:
+
+```
+cd ..
+mkdir -p roadies_input
+
+# Split Hap1 into individual contig files
+awk '/^>/{f="roadies_input/"substr($1,2)".fa";print > f;next}{print >> f}' ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta
+
+# Split Hap2 into individual contig files
+awk '/^>/{f="roadies_input/"substr($1,2)".fa";print > f;next}{print >> f}' ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta
+
+# Add your named reference genomes
+cp roadies_refs/*.fna roadies_input/
+```
+
+
+
+
+
+
+# Still to do...
 
 Here's the plan from here
 
