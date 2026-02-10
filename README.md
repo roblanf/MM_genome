@@ -2010,8 +2010,20 @@ Get the genomes
 
 mkdir 06_3_roadies
 cd 06_3_roadies
-datasets download genome taxon "Eucalyptus" --reference --assembly-level chromosome --filename eucs.zip
 
+# 1a. Download the packages
+datasets download genome taxon "Eucalyptus" --reference --assembly-level chromosome --filename eucs.zip
+datasets download genome taxon "Corymbia" --assembly-level chromosome,scaffold --filename corymbia.zip
+datasets download genome taxon "Angophora" --assembly-level chromosome,scaffold --filename angophora.zip
+
+# 1b. Create the reference directory
+mkdir -p roadies_refs
+
+# 1c. Unzip only the genomic fasta files (.fna) directly into the folder
+# The -j (junk paths) flag is key here to avoid deep folder structures
+unzip -j eucs.zip "ncbi_dataset/data/*/*.fna" -d roadies_refs/
+unzip -j corymbia.zip "ncbi_dataset/data/*/*.fna" -d roadies_refs/
+unzip -j angophora.zip "ncbi_dataset/data/*/*.fna" -d roadies_refs/
 
 ```
 
