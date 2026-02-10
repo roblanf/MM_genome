@@ -1963,10 +1963,6 @@ Similar to what I did on the initial assembly, now I want to see how the unique 
 mkdir 06_2_parental_kmer_checks
 cd 06_2_parental_kmer_checks
 
-# we already made parental hapmers with k=31
-DECIPIENS_MERYL="~/MM_genome/parental_spp_genome/E_decipiens.only.meryl"
-VIRGINEA_MERYL="~/MM_genome/parental_spp_genome/E_virginea.only.meryl"
-
 # make phylacis meryl db (not sure how this will go with nanopore, but let's see)
 meryl count k=31 threads=128 memory=1200G \
     output E_phylacis.meryl \
@@ -1985,42 +1981,43 @@ cd ~/MM_genome/06_1_hifiasm_assemblies/l3/
 gfatools gfa2fa E_phylacis.bp.hap1.p_ctg.gfa > E_phylacis.hap1.fasta
 gfatools gfa2fa E_phylacis.bp.hap2.p_ctg.gfa > E_phylacis.hap2.fasta
 
-cd ../../06_2_parental_kmer_checks
-
-# 1. Setup the Unfiltered Run: NB this fails and I cannot figure out why...
-mkdir -p trio_unfiltered
-cd trio_unfiltered
-merqury.sh ../E_phylacis.meryl \
-    $DECIPIENS_MERYL \
-    $VIRGINEA_MERYL \
-    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta \
-    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta \
-    L3_unfiltered
-cd ..
-
-# 2. Setup the Filtered Run: NB this fails and I cannot figure out why...
-mkdir -p trio_filtered
-cd trio_filtered
-merqury.sh ../E_phylacis.filtered.meryl \
-    $DECIPIENS_MERYL \
-    $VIRGINEA_MERYL \
-    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta \
-    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta \
-    L3_filtered
-cd ..
-
-
 # 3. The two commands above lead merqury to fail. So next I'll try running it as I ran it initially on the top 11 contigs
 mkdir trio
 cd trio
-merqury.sh ../../parental_spp_genomes/species_union.meryl/ \
-    $DECIPIENS_MERYL \
-    $VIRGINEA_MERYL \
-    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta \
-    ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta \
-    E_phylacis_k31
+
+# merqury is very finicky about having the actual files available, and fails a lot when it tries to make symlinks if they're not right there, so we copy them over for this analysis
+cp -r  ../E_phylacis.meryl/ . # phylacis kmers from nanopore reads, no filtering for noise
+cp -r ~/MM_genome/parental_spp_genomes/E_decipiens.final_probes.meryl/ .  # decipiens hapmers, noise filtered
+cp -r ~/MM_genome/parental_spp_genomes/E_virginea.final_probes.meryl/ .   # virginea hapmers, noise filtered
+cp ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta . # phylacis assembly hap1
+cp ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta . # phylacis assembly hap2
+
+merqury.sh \
+    E_phylacis.meryl \
+    E_virginea.final_probes.meryl \
+    E_decipiens.final_probes.meryl \
+    E_phylacis.hap1.fasta \
+    E_phylacis.hap2.fasta \
+    E_phylacis_trio
 
 ```
+
+## 3 ROADIES
+
+Get the genomes
+
+```bash
+
+mkdir 06_3_roadies
+cd 06_3_roadies
+datasets download genome taxon "Eucalyptus" --reference --filename eucs.zip
+datasets download genome taxon "Corymbia" --reference --filename eucs.zip
+datasets download genome taxon "Angophora" --reference --filename eucs.zip
+
+
+
+```
+
 
 Here's the plan from here
 
