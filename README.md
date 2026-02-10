@@ -2089,7 +2089,22 @@ awk '/^>/{f="roadies_input/"substr($1,2)".fa";print > f;next}{print >> f}' ../06
 
 # Add your named reference genomes
 cp roadies_refs/*.fna roadies_input/
+```
 
+
+Now we set up an environment for ROADIES:
+
+```bash
+conda create -n roadies_env python=3.9 ete3 seaborn
+conda activate roadies_env
+mamba install roadies
+cd $CONDA_PREFIX/ROADIES
+git clone https://github.com/smirarab/pasta.git
+git clone https://github.com/smirarab/sate-tools-linux.git
+cd pasta
+python3 setup.py develop --user
+
+```
 roadies.py -i roadies_input/ \
            -o roadies_output/ \
            --loci 100000 \
