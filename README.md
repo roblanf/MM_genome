@@ -1,5 +1,4 @@
-# MM_genome
-An assembly of the Meelup Mallee genome.
+# An assembly of the Meelup Mallee genome.
 
 # Get the environment running
 
@@ -1452,3 +1451,737 @@ Rscript ../scripts/pafCoordsDotPlotly.R \
 | Comparison: *E. phylacis* vs. *E. virginea* | Comparison: *E. phylacis* vs. *E. decipiens* |
 | :---: | :---: |
 | ![Phylacis vs Virginea](04_parental_assignment/cp_phylacis_vs_virginea.png) | ![Phylacis vs Decipiens](04_parental_assignment/cp_phylacis_vs_decipiens.png) |
+
+
+The dotplots reveal nothing amiss. 
+
+The mother is clearly E virginea.
+
+# 05 Organellar genome assembly
+
+## Read filtering
+
+```bash
+# Setup Directories
+source_file="02_filtering/E_phylacis_filtered.fastq.gz"
+temp_fq="05_organelle_genomes/temp_unzipped.fastq"
+organelle_reads_dir="05_organelle_genomes/organelle_subset"
+mkdir -p ${organelle_reads_dir}
+
+# 1. Decompress once to save CPU/IO
+echo "Decompressing source file..."
+pigz -dc -p 64 $source_file > $temp_fq
+
+# 2. Run the sweep
+for Q in 15 20; do
+    echo "--- Filtering for Q${Q} ---"
+    
+    # Process from the temp unzipped file
+    chopper -q $Q < $temp_fq | bgzip -@ 64 > ${organelle_reads_dir}/E_phylacis_Q${Q}.fastq.gz
+    
+    # Report results
+    echo "Stats for Q${Q}:"
+    seqkit stats ${organelle_reads_dir}/E_phylacis_Q${Q}.fastq.gz
+done
+
+# shows that I have a lot of Q20 or greater data (see below) so now let's try read lengths:
+
+# Sweep for Length while keeping Quality constant at Q20
+for L in 20000 30000 40000 50000; do
+    # Convert length to 'k' format for filename
+    L_kb=$(($L / 1000))
+    echo "--- Filtering for Q20 and Length > ${L_kb}kb ---"
+    
+    # Process: filter for Q20 AND length L
+    chopper -q 20 -l $L < $temp_fq | bgzip -@ 64 > ${organelle_reads_dir}/E_phylacis_Q20_L${L_kb}k.fastq.gz
+    
+    # Report results
+    echo "Stats for Q20_L${L_kb}k:"
+    seqkit stats ${organelle_reads_dir}/E_phylacis_Q20_L${L_kb}k.fastq.gz
+done
+
+# 3. Cleanup
+rm $temp_fq
+echo "All subsets created in ${organelle_reads_dir} and temp file removed."
+
+```
+
+
+
+This gives:
+
+```
+--- Filtering for Q15 ---
+Kept 1165231 reads out of 1345923 reads
+Stats for Q15:
+file                                                           format  type   num_seqs         sum_len  min_len   avg_len  max_len
+05_organelle_genomes/organelle_subset/E_phylacis_Q15.fastq.gz  FASTQ   DNA   1,165,231  29,326,043,409   15,000  25,167.6  147,172
+--- Filtering for Q20 ---
+Kept 696853 reads out of 1345923 reads
+Stats for Q20:
+file                                                           format  type  num_seqs         sum_len  min_len   avg_len  max_len
+05_organelle_genomes/organelle_subset/E_phylacis_Q20.fastq.gz  FASTQ   DNA    696,853  17,203,549,475   15,000  24,687.5  134,734
+
+
+--- Filtering for Q20 and Length > 20kb ---
+Kept 463140 reads out of 1345923 reads
+Stats for Q20_L20k:
+file                                                                format  type  num_seqs         sum_len  min_len   avg_len  max_len
+05_organelle_genomes/organelle_subset/E_phylacis_Q20_L20k.fastq.gz  FASTQ   DNA    463,140  13,056,995,216   20,000  28,192.3  134,734
+--- Filtering for Q20 and Length > 30kb ---
+Kept 144088 reads out of 1345923 reads
+Stats for Q20_L30k:
+file                                                                format  type  num_seqs        sum_len  min_len   avg_len  max_len
+05_organelle_genomes/organelle_subset/E_phylacis_Q20_L30k.fastq.gz  FASTQ   DNA    144,088  5,333,865,113   30,000  37,018.1  134,734
+--- Filtering for Q20 and Length > 40kb ---
+Kept 34958 reads out of 1345923 reads
+Stats for Q20_L40k:
+file                                                                format  type  num_seqs        sum_len  min_len   avg_len  max_len
+05_organelle_genomes/organelle_subset/E_phylacis_Q20_L40k.fastq.gz  FASTQ   DNA     34,958  1,627,555,827   40,000  46,557.5  134,734
+--- Filtering for Q20 and Length > 50kb ---
+Kept 7428 reads out of 1345923 reads
+Stats for Q20_L50k:
+file                                                                format  type  num_seqs      sum_len  min_len   avg_len  max_len
+05_organelle_genomes/organelle_subset/E_phylacis_Q20_L50k.fastq.gz  FASTQ   DNA      7,428  421,042,149   50,000  56,683.1  134,734
+
+```
+
+I'll try starting with the Q20 40KB subset: `E_phylacis_Q20_L40k.fastq.gz`
+
+## oatk fails with raw reads
+
+Let's try oatk...
+
+First we get the databases:
+
+```bash
+db_dir="05_organelle_genomes/db"
+mkdir -p ${db_dir}
+
+# Base URL for the raw files
+base_url="https://raw.githubusercontent.com/c-zhou/OatkDB/main/v20230921"
+
+# List of files to download
+files=(
+    "magnoliopsida_mito.fam"
+    "magnoliopsida_mito.fam.h3f"
+    "magnoliopsida_mito.fam.h3i"
+    "magnoliopsida_mito.fam.h3m"
+    "magnoliopsida_mito.fam.h3p"
+    "magnoliopsida_pltd.fam"
+    "magnoliopsida_pltd.fam.h3f"
+    "magnoliopsida_pltd.fam.h3i"
+    "magnoliopsida_pltd.fam.h3m"
+    "magnoliopsida_pltd.fam.h3p"
+)
+
+echo "Downloading Magnoliopsida HMM profiles..."
+
+for file in "${files[@]}"; do
+    wget -q "${base_url}/${file}" -O "${db_dir}/${file}"
+    echo "  Downloaded: ${file}"
+done
+
+echo "Done. Databases are in ${db_dir}"
+```
+
+Some trial and error with oatk shows that raw nanopore reads don't work. So I'll need to error correct them with hifiasm first.
+
+Various iterations of this approach with different k and c all failed. Just to much noise (homopolymer errors) in the reads I suppose.
+
+```bash
+# Define paths
+PT_FAM="05_organelle_genomes/db/magnoliopsida_pltd.fam"
+MT_FAM="05_organelle_genomes/db/magnoliopsida_mito.fam"
+out_dir="05_organelle_genomes/oatk_results"
+mkdir -p $out_dir
+
+# Run OatK
+# We use the Q20_L40k subset which has 1.6GB of high-quality long reads
+oatk -k 1001 \
+     -c 3 \
+     -t 64 \
+     -p $PT_FAM \
+     -m $MT_FAM \
+     -o ${out_dir}/e_phylacis \
+     05_organelle_genomes/organelle_subset/E_phylacis_Q20_L30k.fastq.gz
+```
+
+## oatk with hifiasm corrected reads
+
+Let's retry the above with hifiasm corrected reads
+
+First we get the corrected reads
+
+```bash
+cd 03_hifiasm_assembly/
+hifiasm -o E_phylacis_asm -t 124 --write-ec /dev/null
+seqkit stats -T E_phylacis_asm.ec.fa
+```
+
+```
+file    format  type    num_seqs        sum_len min_len avg_len max_len
+E_phylacis_asm.ec.fa    FASTA   DNA     1345923 33991131314     14202   25254.9 147315
+```
+
+That's about 28x coverage in these reads (of the haploid genome).
+
+Let's try oatk with c set to ~10x the nuclear coverage to start with (280).
+
+If this fails (too much noise...) then I might need to drop c and/or k
+
+I'll try a few and name the output files differently...
+
+* c280, k1001: run completed, plastid assembled well, mt didn't assemble
+* c140, k1001: run has zero coverage arcs, mt genome has 1 contig of 10kb (linear)
+* c70, k1001: run has zero coverage arcs, mt genome is in 3 contigs totalling 450kb (one circular, two linear)
+* c50, k1001:  run has zero coverage arcs, mt genome is in 3 contigs totalling 450kb (one circular, two linear) basically idential to c70, with an extra 450bp
+* c40, k1001:  run has zero coverage arcs, mt genome is in 3 contigs totalling 450kb (one circular, two linear) basically idential to c70, with an extra 450bp
+* c30, k1001: as above, but main contig of mt genome increases by 2.7kb
+* c25, k1001: this is getting into nuclear genome territory..., but the assembly is identical to c30
+
+Conclusion: c30 k1001 is the best we can probably do. I also tried a few lower values of k, but it made no difference initially, then down at k=601 the mt genome assembly broke, there were two ~identical 70kb linear fragments, and the nv for the main contig went from 11 to 13. 
+
+So we stick with c30 k1001 as the final organelle assemblies.
+
+```bash
+# Define paths
+PT_FAM="05_organelle_genomes/db/magnoliopsida_pltd.fam"
+MT_FAM="05_organelle_genomes/db/magnoliopsida_mito.fam"
+out_dir="05_organelle_genomes/oatk_results_c30k1001"
+mkdir -p $out_dir
+
+# Run OatK
+oatk -k 1001 \
+     -c 30 \
+     -t 64 \
+     -p $PT_FAM \
+     -m $MT_FAM \
+     -o ${out_dir}/e_phylacis \
+     03_hifiasm_assembly/E_phylacis_asm.ec.fa
+
+```
+
+## Final Organelle assemblies
+
+The mitochondrial genome assembles into 3 pieces. One is circular, the other two are linear, but the gfa shows that it's probably a complex mixture of major and minor circles, with potentially some linear pieces in there.
+
+>ctg000001l     length=355146 wlength=41066840.0 nv=11 circular=false path=u151-,u152+,u150-,u148-,u146-,u147+,u141-,u12277+,u139+,u146-,u138-
+>ctg000002l     length=23355 wlength=2312145.0 nv=1 circular=false path=u149+
+>ctg000003c     length=79427 wlength=7942700.0 nv=1 circular=true path=u12148-
+
+The cp genome assembles into a single circle, and is basically perfect as expected. The gfa shows the typical dumbell structure with LSC, SSC, and IR regions.
+
+>ctg000001c     length=160190 wlength=150009126.0 nv=12 circular=true path=u140+,u12277+,u137-,u7+,u12278-,u143-,u142+,u143+,u12278+,u7-,u137+,u12277-
+
+NB, with a higher c value of 140 or 280 which are the recommended values in the oatk docs of ~5-10x the nuclear coverage, the contig is identical but the graph structure is much simpler with an nv of 4 vs. 12 when c=30; this suggests that with more coverage or fresher samples we could probably do a better job of resolving the mt genome.
+
+# 06 Final Haplotype Assembly
+
+All of the above confirms that the genome is of high quality, that coverage from genome alignment and mapping parental species probes provide useful ways to sort contigs into parental groups, and that the organelle genomes assemble very well. We also know that the maternal haplotype is closer to virginea than decipiens.
+
+Now we need to put this all together, to get the best assembly. A key limitation of most of the above is that I just looked at the biggest 11 contigs, but of course there were plenty of additional big contigs in the haplotype files. The main challenges are to address that, and then do the parental assignment. 
+
+## 1. Re-run hifiasm
+
+Ash Jones helpfully pointed out that hifiasm got a bit confused about the data because it's so heterozygous. Specifically  ```[M::ha_pt_gen] peak_hom: 29; peak_het: -1``` shows it didn't find the het peak, because it thought the hom peak was 29. Actually the homozygous peak is ~60x, and the heterozygous peak is 29x. The kmer distribution just looks odd because the heterozygosity is SO high. 
+
+To see if I can improve the assembly, I'll run three new assemblies, all with `--hom-cov 60` and at all value of `-l [0, 1, 2, 3]`. I can then compare the assemblies, and look at the BUSCO completeness of the two haplotypes in each, as well as the cumulative distribution of contig sizes, and the BUSCO completeness of the major contigs (crossing my fingers that there are only 11 big contigs this time). 
+
+
+```bash
+mkdir -p 06_1_hifiasm_assemblies
+
+# 1. Create a mount point
+sudo mkdir -p /mnt/ramdisk
+
+# 2. Mount 1500GB of the 2.2TB RAM as a disk
+sudo mount -t tmpfs -o size=1500G tmpfs /mnt/ramdisk
+sudo chown $USER /mnt/ramdisk
+
+# 3. Copy your filtered data THERE
+cp 02_filtering/E_phylacis_filtered.fastq.gz /mnt/ramdisk/
+
+# 4. Run hifiasm inside the ramdisk
+cd /mnt/ramdisk
+
+
+mkdir l0
+mkdir l1
+mkdir l2
+mkdir l3
+mkdir h0 # what happens if we pretend it's haploid...
+
+hifiasm -o l0/E_phylacis -t 160 --ont --hom-cov 60 --hg-size 520m -l 0 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l0/hifiasm.log
+hifiasm -o l1/E_phylacis -t 160 --ont --hom-cov 60 --hg-size 520m -l 1 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l1/hifiasm.log
+hifiasm -o l2/E_phylacis -t 160 --ont --hom-cov 60 --hg-size 520m -l 2 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l2/hifiasm.log
+hifiasm -o l3/E_phylacis -t 160 --ont --hom-cov 60 --hg-size 520m -l 3 --telo-m AAACCCT --dual-scaf E_phylacis_filtered.fastq.gz 2>&1 | tee l3/hifiasm.log
+hifiasm -o h0/E_phylacis -t 160 --ont --hom-cov 30 --hg-size 1040m --telo-m AAACCCT E_phylacis_filtered.fastq.gz 2>&1 | tee h0/hifiasm.log
+
+
+
+```
+
+Now to pick a winner we can run compleasm and merqury on all of those assemblies. Note that I'll do this either for the primary assembly (for l0 and h0, which don't have haplotype files), or on the h1 and h2 files separately AND together (i.e. cat of the hap1 and hap2 files). This is because there's no guarantee that h1 and h2 will be balanced and sorted correctly. However, their union should have a genome size of ~1040MB, perfect kmer coverage, and 100% BUSCO duplication rate. If I can find a primary assembly or cat'ted h1 and h2 assembly with these characteristics, it's a good one. 
+
+First we convert the gfa files to fasta, and build the meryl database, then run the QC.
+
+
+
+```bash
+# Build the read k-mer database once
+meryl count k=21 threads=160 memory=100G \
+    E_phylacis_filtered.fastq.gz output reads.meryl
+
+THREADS=160
+LINEAGE="eudicotyledons"
+READS_MERYL="/mnt/ramdisk/reads.meryl"
+
+## l0
+# Make FASTA; compleasm; merqury
+DIR="l0" # for this one, there's only the p_ctg.fa
+mkdir -p ${DIR}/qc_results
+gfatools gfa2fa ${DIR}/E_phylacis.bp.p_ctg.gfa > ${DIR}/qc_results/p_ctg.fasta
+compleasm run -t $THREADS -l $LINEAGE -a ${DIR}/qc_results/p_ctg.fasta -o ${DIR}/qc_results/compleasm_p_ctg
+mkdir -p ${DIR}/qc_results/merq_p_ctg && cd ${DIR}/qc_results/merq_p_ctg
+merqury.sh $READS_MERYL ../p_ctg.fasta p_ctg_merq
+cd ../../..
+
+## l1, 2, and 3, and h0 change dir sequentially and re-run it
+DIR="l3" # now we have two haplotypes, which we analyse separately and together
+
+# 1. Prepare FASTAs
+mkdir -p ${DIR}/qc_results
+gfatools gfa2fa ${DIR}/E_phylacis.bp.hap1.p_ctg.gfa > ${DIR}/qc_results/hap1.fasta
+gfatools gfa2fa ${DIR}/E_phylacis.bp.hap2.p_ctg.gfa > ${DIR}/qc_results/hap2.fasta
+cat ${DIR}/qc_results/hap1.fasta ${DIR}/qc_results/hap2.fasta > ${DIR}/qc_results/union.fasta
+
+# 2. Compleasm (Hap1, Hap2, then Union)
+compleasm run -t $THREADS -l $LINEAGE -a ${DIR}/qc_results/hap1.fasta -o ${DIR}/qc_results/compleasm_hap1
+compleasm run -t $THREADS -l $LINEAGE -a ${DIR}/qc_results/hap2.fasta -o ${DIR}/qc_results/compleasm_hap2
+compleasm run -t $THREADS -l $LINEAGE -a ${DIR}/qc_results/union.fasta -o ${DIR}/qc_results/compleasm_union
+
+# 3. Merqury (Hap1, Hap2, then Union)
+mkdir -p ${DIR}/qc_results/merq_hap1 && cd ${DIR}/qc_results/merq_hap1
+merqury.sh $READS_MERYL ../hap1.fasta hap1_merq
+cd ../../../
+
+mkdir -p ${DIR}/qc_results/merq_hap2 && cd ${DIR}/qc_results/merq_hap2
+merqury.sh $READS_MERYL ../hap2.fasta hap2_merq
+cd ../../../
+
+mkdir -p ${DIR}/qc_results/merq_union && cd ${DIR}/qc_results/merq_union
+merqury.sh $READS_MERYL ../union.fasta union_merq
+cd ../../../
+
+# Then repeat the above for h0, l2, and l3
+
+
+#########
+### Copy things you want back to the hard drive
+### Ignore all the big files, but of course keep the assemblies.
+
+# 5. VERY IMPORTANT: Move results back to /home before rebooting!
+rsync -avh --progress --exclude='*.fastq.gz' /mnt/ramdisk/ ~/MM_genome/06_1_hifiasm_assemblies/
+
+cd ~/MM_genome
+
+# 6. Unmount (only after you've verified the files are safe!)
+# cd ~
+# sudo umount /mnt/ramdisk
+
+# ignore this stuff for git, mostly
+echo "06_1_hifiasm_assemblies/" >> .gitignore
+
+```
+
+Get assembly basic stats and organise them:
+
+```bash
+# get all the .fasta except those in the compleasm folders, and get lots of stats
+find . -name "*.fasta" | grep -E "hap1|hap2|union|p_ctg" | grep -vE "compleasm|merq" | xargs seqkit stats -a -j 160 -N 50,90,95,99 | column -t
+```
+
+```
+file                         format  type  num_seqs  sum_len        min_len  avg_len       max_len     Q1        Q2       Q3            sum_gap  N50         N50_num  Q20(%)  Q30(%)  AvgQual  GC(%)  sum_n   N50         N90         N95         N99
+./l3/qc_results/union.fasta  FASTA   DNA   131       1,097,940,037  30,917   8,381,221.7   65,688,633  66,540.5  92,347   258,145       0        45,062,906  10       0       0       0        39.63  43,947  45,062,906  33,511,041  20,522,527  504,488
+./l3/qc_results/hap2.fasta   FASTA   DNA   45        573,953,311    42,116   12,754,518    65,688,633  66,777    151,689  26,036,980    0        43,652,620  6        0       0       0        39.63  43,747  43,652,620  26,036,980  20,522,527  14,252,391
+./l3/qc_results/hap1.fasta   FASTA   DNA   86        523,986,726    30,917   6,092,868.9   61,716,932  65,110    85,704   191,335       0        45,216,074  5        0       0       0        39.64  200     45,216,074  33,914,441  33,914,441  191,335
+./l2/qc_results/union.fasta  FASTA   DNA   132       1,213,886,437  24,825   9,196,109.4   65,674,939  67,058    94,767   338,826.5     0        45,708,075  11       0       0       0        39.61  300     45,708,075  33,387,322  20,442,905  13,773,696
+./l2/qc_results/hap2.fasta   FASTA   DNA   58        610,625,537    42,116   10,528,026.5  61,716,932  76,003    118,755  380,136       0        45,708,075  6        0       0       0        39.61  200     45,708,075  33,387,322  26,036,980  20,442,905
+./l2/qc_results/hap1.fasta   FASTA   DNA   74        603,260,900    24,825   8,152,174.3   65,674,939  56,568    88,451   293,829       0        45,081,242  6        0       0       0        39.62  100     45,081,242  33,719,123  16,961,878  407,150
+./l1/qc_results/union.fasta  FASTA   DNA   119       1,069,391,022  30,917   8,986,479.2   65,674,939  64,743    87,899   303,443.5     0        45,081,242  10       0       0       0        39.62  74,339  45,081,242  33,719,123  20,310,318  13,773,696
+./l1/qc_results/hap2.fasta   FASTA   DNA   45        466,004,620    35,842   10,355,658.2  61,716,932  68,000    94,551   550,701       0        41,950,308  5        0       0       0        39.64  100     41,950,308  33,465,692  20,310,318  20,310,318
+./l1/qc_results/hap1.fasta   FASTA   DNA   74        603,386,402    30,917   8,153,870.3   65,674,939  56,855    86,360   232,920       0        45,081,242  6        0       0       0        39.61  74,239  45,081,242  33,719,123  16,961,878  518,253
+./l0/qc_results/p_ctg.fasta  FASTA   DNA   79        1,014,773,291  30,917   12,845,231.5  65,674,939  69,098.5  142,767  33,781,247.5  0        43,652,620  10       0       0       0        39.61  0       43,652,620  33,930,661  20,458,351  13,773,696
+```
+
+
+
+## L1 compleasm and kmers
+
+For all of the following, run this code from within the relevant in the qc_results folder for each assembly
+```
+echo "| Metric | Hap1 | Hap2 | Union |"
+echo "| :--- | :--- | :--- | :--- |"
+
+# Create temporary files for each column to handle the side-by-side join
+for mode in hap1 hap2 union; do
+    grep -P "S:|D:|F:|M:|N:" compleasm_${mode}/summary.txt | awk -F':|,' '{print $2}' > ${mode}_col.tmp
+done
+
+# Add labels and join the columns
+paste -d '|' <(echo -e "S\nD\nF\nM\nN") hap1_col.tmp hap2_col.tmp union_col.tmp | sed 's/^/| /' | sed 's/$/ |/'
+
+# Clean up
+rm *.tmp
+
+echo "| Metric | Hap1 | Hap2 | Union |"
+echo "| :--- | :--- | :--- | :--- |"
+
+# Extract QV (Column 4 of the .qv file)
+qv_h1=$(awk '{print $4}' merq_hap1/hap1_merq.qv)
+qv_h2=$(awk '{print $4}' merq_hap2/hap2_merq.qv)
+qv_un=$(awk '{print $4}' merq_union/union_merq.qv)
+
+# Extract Completeness (Column 5 of the generic completeness.stats file)
+comp_h1=$(awk '{print $5}' merq_hap1/completeness.stats)
+comp_h2=$(awk '{print $5}' merq_hap2/completeness.stats)
+comp_un=$(awk '{print $5}' merq_union/completeness.stats)
+
+echo "| **QV** | $qv_h1 | $qv_h2 | $qv_un |"
+echo "| **K-mer Completeness %** | $comp_h1 | $comp_h2 | $comp_un |"
+
+```
+
+The h0 and l0 assemblies don't separate haplotypes, so I'll only look at L1, L2 and L3. 
+
+### L1
+
+| Metric | Hap1 | Hap2 | Union |
+| :--- | :--- | :--- | :--- |
+| S|78.36%|78.89%|2.92% |
+| D|17.15%|6.35%|96.86% |
+| F|0.71%|1.00%|0.18% |
+| M|3.78%|13.76%|0.04% |
+| N|2805|2805|2805 |
+| **QV** | 64.9563 | 66.1094 | 65.4217 |
+| **K-mer Completeness %** | 66.5101 | 54.6202 | 99.3052 |
+
+
+### L2
+| Metric | Hap1 | Hap2 | Union |
+| :--- | :--- | :--- | :--- |
+| S|78.36%|73.51%|2.71% |
+| D|17.15%|19.00%|97.08% |
+| F|0.71%|0.46%|0.18% |
+| M|3.78%|7.02%|0.04% |
+| N|2805|2805|2805 |
+| **QV** | 65.0701 | 65.76 | 65.4034 |
+| **K-mer Completeness %** | 66.5072 | 67.0275 | 99.3053 |
+
+### L3
+| Metric | Hap1 | Hap2 | Union |
+| :--- | :--- | :--- | :--- |
+| S|96.83%|91.69%|2.85% |
+| D|2.00%|7.95%|96.93% |
+| F|0.29%|0.32%|0.18% |
+| M|0.89%|0.04%|0.04% |
+| N|2805|2805|2805 |
+| **QV** | 65.1172 | 65.6202 | 65.3729 |
+| **K-mer Completeness %** | 62.3954 | 66.0179 | 99.3053 |
+
+### Quast
+
+```
+quast.py l1/qc_results/hap1.fasta l1/qc_results/hap2.fasta \
+    l2/qc_results/hap1.fasta l2/qc_results/hap2.fasta \
+    l3/qc_results/hap1.fasta l2/qc_results/hap2.fasta \
+    -o quast_comparison \
+    --labels L1-hap1,L1-hap2,L2-hap1,L2-hap2,L3-hap1,L3-hap2
+```
+![Screenshot 2026-02-06 at 6 50 35 AM](https://github.com/user-attachments/assets/e4c27269-182b-4f78-8a26-4f09d078c4b4)
+![Screenshot 2026-02-06 at 6 53 00 AM](https://github.com/user-attachments/assets/6f2d5c4f-1ff1-43d4-ba0c-73f4533f90d5)
+![Screenshot 2026-02-06 at 6 53 15 AM](https://github.com/user-attachments/assets/9f165230-6466-4238-a15e-c16163461aa9)
+
+Most of the length of the L3 haplotypes is contained in the first 12 (hap1) or 14 (hap2) contigs. There are essentially no N's. The union of hap1 and hap2 is 1.135Gb which is ~568Mb haploid genome size. This is a little big, so it seems likely that there's some duplication, especially in hap2 whose total size is 611Mb. This is confirmed by the ~8% BUSCO duplication rate in hap2, and is something to look for when cleaning the assembly.
+
+### Conclusion: use L3
+
+L3 is *clearly* the best assembly. The two haplotypes have incredibly high compleasm scores, little duplication, almost nothing missing. I suspect hap2 has a a few contigs that actually belong in hap1, (it's longer than hap1, and it has more duplicates), but parental binning will solve that in the next step. The stats on the union are also excellent - 97% of BUSCOs are duplicated, as expected. The QV scores are uniformly high. The kmer completeness is very very high for the Union graph (bearing in mind these are nanopore reads) and is just about right for the haplotypes (we expect a lot of missing kmers if it's an F1 hybrid of divergent species). The N50 is about 45MB for all three assemblies (union, H1, H2). 
+
+Now I'll tidy up and get what I need off the ramdisk. No point keeping big files here, especially since the assemblies take only an hour to re-do.
+
+```bash
+cd /mnt/ramdisk
+
+#get rid of big duplicate files I don't need
+find . -name "E_phylacis_filtered.fastq.gz" -delete
+find . -name "*ec.bin" -delete
+rm -rf mb_downloads/
+
+# move to hard drive
+rsync -avP . ~/MM_genome/06_1_hifiasm_assemblies/
+
+# check sizes to ~verify
+du -sh .
+du -sh ~/MM_genome/06_1_hifiasm_assemblies/
+
+# unmount and delete mount point
+cd ~/MM_genome/
+sudo umount /mnt/ramdisk
+sudo rmdir /mnt/ramdisk
+```
+
+## L3 additional QC
+
+## Unresolved bubbles
+One question I had is whether there were unresolved bubbles in the unitig graph, but there aren't any at all. (`gfatools bubble E_phylacis.bp.p_utg.gfa > bubbles_l3_utg.bed` produces nothing). This suggests that all the bubbles were big and obvious, as expected for accurate long reads with very divergent haplotypes.
+
+## Kmer spectra
+Next are kmer spectra for the union, h1, and h2 from the merqury runs above. These are also incredibly good. The union plot has very clear 1x and 2x peaks, as expected. The h1 and h2 plots show just over half of the 1x kmers in each sample (as expected - many unique kmers), and a smaller number of 2x kmers (as expected - some homozygous regions). 
+
+<table>
+  <tr>
+    <td align="center"><b>Union (Total)</b></td>
+    <td align="center"><b>Haplotype 1</b></td>
+    <td align="center"><b>Haplotype 2</b></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/4a75b606-59ef-4e56-9d7a-411907c19c9a" width="100%" /></td>
+    <td><img src="https://github.com/user-attachments/assets/41fdd64e-c2c0-4b36-b458-7cf0452297b5" width="100%" /></td>
+    <td><img src="https://github.com/user-attachments/assets/4357dad5-cc60-4f3c-b415-1f7dcfa8533e" width="100%" /></td>
+  </tr>
+</table>
+
+## 2 Parental kmer checks
+
+Similar to what I did on the initial assembly, now I want to see how the unique kmers from the putative parental genomes map to the contigs. I already have hapmers from the parents, with k=31. this is described above, but I get the kmers, look for the noise | signal trough, filter out the noise, and then use subtraction to get the kmers unique to each parent (hapmers). Now I need to do the same for the phylacis reads, and then I can run merqury.
+
+
+```bash
+mkdir 06_2_parental_kmer_checks
+cd 06_2_parental_kmer_checks
+
+# make phylacis meryl db (not sure how this will go with nanopore, but let's see)
+meryl count k=31 threads=128 memory=1200G \
+    output E_phylacis.meryl \
+    ../02_filtering/E_phylacis_filtered.fastq.gz
+
+meryl histogram E_phylacis.meryl > E_phylacis.hist
+
+# look for the trough
+E_phylacis.hist | more
+
+# Filter based on trough - the number is the trough I observed
+meryl greater-than 10 E_phylacis.meryl output E_phylacis.filtered.meryl
+
+# Run merqury twice - once with filtered and once with unfilitered read kmers
+cd ~/MM_genome/06_1_hifiasm_assemblies/l3/
+gfatools gfa2fa E_phylacis.bp.hap1.p_ctg.gfa > E_phylacis.hap1.fasta
+gfatools gfa2fa E_phylacis.bp.hap2.p_ctg.gfa > E_phylacis.hap2.fasta
+
+# 3. The two commands above lead merqury to fail. So next I'll try running it as I ran it initially on the top 11 contigs
+mkdir trio
+cd trio
+
+# merqury is very finicky about having the actual files available, and fails a lot when it tries to make symlinks if they're not right there, so we copy them over for this analysis
+cp -r  ../E_phylacis.meryl/ . # phylacis kmers from nanopore reads, no filtering for noise
+cp -r ~/MM_genome/parental_spp_genomes/E_decipiens.final_probes.meryl/ .  # decipiens hapmers, noise filtered
+cp -r ~/MM_genome/parental_spp_genomes/E_virginea.final_probes.meryl/ .   # virginea hapmers, noise filtered
+cp ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta . # phylacis assembly hap1
+cp ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta . # phylacis assembly hap2
+
+merqury.sh \
+    E_phylacis.meryl \
+    E_virginea.final_probes.meryl \
+    E_decipiens.final_probes.meryl \
+    E_phylacis.hap1.fasta \
+    E_phylacis.hap2.fasta \
+    E_phylacis_trio
+
+```
+
+## 3 ROADIES
+
+Get the genomes
+
+```bash
+
+mkdir 06_3_roadies
+cd 06_3_roadies
+
+# 1a. Download the packages (Corymbia is taxid 87658, needed because it's also a beetle genus)
+datasets download genome taxon "Eucalyptus" --reference --assembly-level chromosome --filename eucs.zip
+datasets download genome taxon "87658" --assembly-level chromosome,scaffold --filename corymbia.zip
+datasets download genome taxon "Angophora" --assembly-level chromosome,scaffold --filename angophora.zip
+
+# 1b. Create the reference directory
+mkdir -p roadies_refs
+
+# 1c. Unzip only the genomic fasta files (.fna) directly into the folder
+# The -j (junk paths) flag is key here to avoid deep folder structures
+unzip -j eucs.zip "ncbi_dataset/data/*/*.fna" -d roadies_refs/
+unzip -j corymbia.zip "ncbi_dataset/data/*/*.fna" -d roadies_refs/
+unzip -j angophora.zip "ncbi_dataset/data/*/*.fna" -d roadies_refs/
+
+# Get metadata so we can rename files by species
+cd roadies_refs
+datasets summary genome taxon "Eucalyptus" --reference --assembly-level chromosome --as-json-lines > eucs_metadata.jsonl
+datasets summary genome taxon "Angophora" --reference --assembly-level chromosome --as-json-lines > angophora_metadata.jsonl
+datasets summary genome taxon "87658" --reference --assembly-level chromosome --as-json-lines > corymbia_metadata.jsonl
+
+# finally, we rename the genome files like this:
+python3 -c "
+import os, json
+
+# 1. Build a dictionary of Accession -> Species Name from all metadata files
+mapping = {}
+for meta_file in [f for f in os.listdir('.') if f.endswith('.jsonl')]:
+    with open(meta_file) as f:
+        for line in f:
+            data = json.loads(line)
+            # Access the nested accession and scientific name
+            acc = data['accession']
+            species = data['organism']['organism_name'].replace(' ', '_')
+            mapping[acc] = species
+
+# 2. Iterate through the genome files and rename them
+for filename in os.listdir('.'):
+    if filename.endswith('.fna'):
+        # Check if the accession (GCA/GCF_...) is in the filename
+        for acc, species in mapping.items():
+            if acc in filename:
+                new_name = f'{species}.fna'
+                print(f'Renaming {filename} to {new_name}')
+                os.rename(filename, new_name)
+                break
+"
+
+
+```
+
+That's our reference data sorted. Now we want to treat each of the contigs as its own 'species'. First let's see how long the contigs are...
+
+```
+seqkit stats ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap*.fasta
+```
+
+```
+file                                                    format  type  num_seqs      sum_len  min_len      avg_len     max_len
+../../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta  FASTA   DNA         86  523,986,726   30,917  6,092,868.9  61,716,932
+../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta  FASTA   DNA         45  573,953,311   42,116   12,754,518  65,688,633
+```
+
+We can attempt to just do all of them. Let's see what happens...
+
+Let's make the roadies input that we need:
+
+```
+cd ..
+mkdir -p roadies_input
+
+# Split Hap1 into individual contig files
+awk '/^>/{f="roadies_input/"substr($1,2)".fa";print > f;next}{print >> f}' ../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta
+
+# Split Hap2 into individual contig files
+awk '/^>/{f="roadies_input/"substr($1,2)".fa";print > f;next}{print >> f}' ../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta
+
+# Add your named reference genomes
+cp roadies_refs/*.fna roadies_input/
+```
+
+
+Now we set up an environment for ROADIES:
+
+```bash
+conda create -n roadies_env python=3.9 ete3 seaborn
+conda activate roadies_env
+mamba install roadies
+cd $CONDA_PREFIX/ROADIES
+git clone https://github.com/smirarab/pasta.git
+git clone https://github.com/smirarab/sate-tools-linux.git
+cd pasta
+python3 setup.py develop --user
+
+```
+roadies.py -i roadies_input/ \
+           -o roadies_output/ \
+           --loci 100000 \
+           --length 500 \
+           --threads 128
+
+```
+
+
+
+
+
+
+# Still to do...
+
+Here's the plan from here
+
+
+0. Dot plots
+L3 dot plots to check for duplicate regions in h1 and h2 - h1 vs h2 ,h1 against itself ,h2 against itself. remove potentially duplicated contigs.
+
+2. Parental binning
+1.1. Remove organelles
+We're doing organelles separately, and we already have them perfect thanks to oatk. So the first job is to align the haplotypes to the two organelle genomes I now have, and remove all contigs that are ~perfectly covered by the organelle genomes. Then we're dealing with the nuclear genome only. (We might lose some small nuclear contigs that are copies of the cp and mt genomes, but that's OK). Remove any contig that is >=95% covered by organellar genomes is probably a good start, but the best thing is to look at the coverage and see.
+
+this gives hap1_nuclear.fa and hap2_nuclear.fa
+
+1.2. Alignment:
+* align hap1 to hap2
+* dotplot of all contigs from hap1 vs all from hap2
+* get coverage table of all pairs, with H2 AND H1 coverage
+
+This tells us which contigs are ~interchangeable and align to each other. Important for helping with parental assignment because we can expect homologues to be reciprocally assigned.
+
+1.3. Kmer assignment
+* Use the unique kmers we got for decipiens and virginea to get the dominant parent and dominant ratio for every contig in hap1 and hap2. 
+* Decide on a cutoff ratio. With the top 11 contigs, the LOWEST dominant ratio was 1.85x, but the cutoff should be determined empirically by looking at the table.
+* Contigs get one of three determinants: decipiens, virginea, unknown
+
+* NB: Also use ROADIES with each contig as a 'species'. If we can see where they map vs. the ~35 existing euc genomes, we could assign haplotypes easily! Also each contig might just pop out cleanly on the species tree of other euc genomes. In an ideal world, homologous contigs would land on different parts of the tree, near their parent species.
+
+
+Then combine kmer dominance with coverage table to see how far we can get in sorting the contigs into groups. For example, if two contigs are clearly homologues, and the hap1 contig is BELOW the ratio, but the hap2 homologue is ABOVE it (but the assignment is reciprocal) we can still sort it into parents. Each contig now ends up assigned to one of three groups: decipiens-parent, virginea-parent, unknown-parent
+
+This can be done with a table like this:
+
+
+contig1_ID
+contig2_ID
+contig1_length
+contig2_length
+length_ratio (1 / 2)
+1v2_coverage
+2v1_coverage
+recip_best_hit (TRUE/FALSE)
+kmer_ratio (highest / lowest coverage, noting which parent is highest, e.g. "2.5x decipiens")
+parental_complementarity (TRUE if contig1 assigns to one parent, and contig2 assigns to the other)
+contig1_final_assignment
+
+
+1.4. Parental haplotypes
+Create paternal (decipiens parent) and maternal (virginea parent; we know this from the organelles) haplotype assemblies.
+Add organelle genome to maternal parent genome.
+
+This gives us e_phylacis_paternal_contigs.fa and e_phylacis_maternal_contigs.fa
+
+2. Scaffolding
+Use ragtag to scaffold paternal against decipiens and maternal against virginea. This gives e_phylacis_paternal_scaffolds.fa and e_phylacis_maternal_scaffolds.fa
+
+3. QC
+
+For all four assemblies (paternal contigs, maternal contigs, paternal scaffolds, maternal scaffolds) QC including:
+* compleasm
+* Basic stats (N50 etc)
+* map the reads back and check coverage
+* ?
+
+4. Annotation
+The organelles are already assembled, but a basic annotation will be useful. 
+
