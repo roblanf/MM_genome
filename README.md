@@ -2128,30 +2128,41 @@ The rest are just the defaults. This is set for a fairly conservative approach, 
 In this part I just get all the contigs, and run ROADIES sequentially, once for each contig. Running ROADIES like this is very I/O heavy, so to keep things running quickly and to save my disks, I do it all on a big ramdisk, and just copy the output back to where it needs to go. That part is in the loop.
 
 ```bash
-# Create a 1000GB ramdisk
+# --- PREP RAMDISK ---
 sudo mkdir -p /mnt/ramdisk
 sudo mount -t tmpfs -o size=1000G tmpfs /mnt/ramdisk
 sudo chown rob:rob /mnt/ramdisk
 
-# 1. Define paths
-REF_DIR="euc_refs"
-QUERY_DIR="query_contigs"
-RAM_DIR="/mnt/ramdisk/roadies_work"
-FINAL_DEST="~/MM_genome/ROADIES/euc_contigs_ramdisk"
+# --- DEFINE ABSOLUTE PATHS (The "Safe" Way) ---
+# Use $(pwd) or full paths so these work from anywhere
+BASE_DIR="/home/rob/MM_genome/ROADIES"
+REF_DIR="$BASE_DIR/euc_refs"
+QUERY_DIR="$BASE_DIR/query_contigs"
+FINAL_DEST="$BASE_DIR/euc_contigs_ramdisk"
 
-# 2. Get the list of all contigs
-# For the test: we grab all, but then overwrite with just two for the pilot run.
+mkdir -p "$FINAL_DEST"
+
+RAM_DIR="/mnt/ramdisk/roadies_work"
+RAM_ROADIES="/mnt/ramdisk/ROADIES_CODE"
+
+# 1. Copy ROADIES code to RAM
+echo "Migrating ROADIES code to RAM..."
+cp -r "$BASE_DIR" "$RAM_ROADIES"
+
+# 2. MOVE into the RAM directory to execute
+cd "$RAM_ROADIES"
+
+# 3. Get the list of all contigs
 CONTIG_LIST=$(ls "$QUERY_DIR"/*.fa | xargs -n 1 basename)
 
 # --- PILOT OVERWRITE ---
-# Comment these lines out when you are ready for the full 131 run
 CONTIG_LIST="h1tg000010l.fa h2tg000020l.fa"
 echo "Running PILOT mode with: $CONTIG_LIST"
-# -----------------------
 
-# 3. The Loop
+# 4. The Loop
 for CONTIG in $CONTIG_LIST; do
     ID="${CONTIG%.fa}"
+    echo "Processing $ID..."
     
     # Clean and set up the RAM workspace
     rm -rf "$RAM_DIR"
@@ -2161,25 +2172,39 @@ for CONTIG in $CONTIG_LIST; do
     cp "$REF_DIR"/*.fa "$RAM_DIR/input/"
     cp "$QUERY_DIR/$CONTIG" "$RAM_DIR/input/"
 
-    # Create the config pointing to the RAM_DIR
+    # Create the config using the local RAM config as a template
+    # Note: we use 'config/config.yaml' because we are now inside $RAM_ROADIES
     sed -e "s|^GENOMES:.*|GENOMES: \"$RAM_DIR/input\"|" \
         -e "s|^FOCAL_GENOME:.*|FOCAL_GENOME: \"$CONTIG\"|" \
         -e "s|^OUT_DIR:.*|OUT_DIR: \"$RAM_DIR/output\"|" \
         config/config.yaml > "$RAM_DIR/temp_config.yaml"
 
-    # Run ROADIES on the RAM hardware
-    python run_roadies.py --noconverge --cores 256 --config "$RAM_DIR/temp_config.yaml" --mode balanced
+    # Run ROADIES (Now running the RAM version of python/snakemake)
+    cp "$RAM_DIR/temp_config.yaml" config/config.yaml
+    python run_roadies.py --noconverge --cores 256 --config "config/config.yaml"
 
-    # HARVEST the results back to the hard drive
-    mkdir -p "$FINAL_DEST/$ID"
-    cp -r "$RAM_DIR/output" "$FINAL_DEST/$ID/"
-    cp -r "$RAM_DIR/input" "$FINAL_DEST/$ID/"
-    cp "$RAM_DIR/temp_config.yaml" "$FINAL_DEST/$ID/"
+    # HARVEST results
+    echo "Harvesting key results for $ID..."
+    CONTIG_DEST="$FINAL_DEST/$ID"
+    mkdir -p "$CONTIG_DEST"
+
+    # 1. Copy the trees
+    cp "$RAM_DIR/output/roadies.nwk" "$CONTIG_DEST/" 2>/dev/null
+    cp "$RAM_DIR/output/roadies_stats.nwk" "$CONTIG_DEST/" 2>/dev/null
+
+    # 2. Copy the plots and statistics folders
+    cp -r "$RAM_DIR/output/plots" "$CONTIG_DEST/"
+    cp -r "$RAM_DIR/output/statistics" "$CONTIG_DEST/"
+
+    # 3. Copy the timestamp and config for record-keeping
+    cp "$RAM_DIR/output/time_stamps.csv" "$CONTIG_DEST/"
+    cp "$RAM_DIR/temp_config.yaml" "$CONTIG_DEST/"
+
+    cp "$RAM_DIR/temp_config.yaml" "$CONTIG_DEST/"
     
-    # Wipe RAM to keep it fresh for next contig
+    # Optional: Wipe RAM work dir but keep RAM_ROADIES for next iteration
     rm -rf "$RAM_DIR"
 done
-
 ```
 
 
