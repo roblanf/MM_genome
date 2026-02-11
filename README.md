@@ -2114,7 +2114,16 @@ git add -f ROADIES/workflow/rules/sampling.smk
 
 Now we want to run roadies for each of the contigs that we have for our assembly...
 
-Run the following from the ROADIES/ directory...
+Run the following from the ROADIES/ directory. My initial CONFIG is set up to:
+
+* sample 1000 loci of 500bp each (if there's enough in the focal contig to do so)
+* minimum 95% uppercase in the alignments
+* minimum identity 85%
+* coverage and continuity also have to be at last 85%
+* max duplications 4
+* 64 instances
+
+The rest are just the defaults. This is set for a fairly conservative approach, looking for quite similar seuqences among the genomes.
 
 ```bash
 # 1. Define paths
