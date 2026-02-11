@@ -2125,12 +2125,19 @@ Run the following from the ROADIES/ directory. My initial CONFIG is set up to:
 
 The rest are just the defaults. This is set for a fairly conservative approach, looking for quite similar seuqences among the genomes.
 
+In this part I just get all the contigs, and run ROADIES sequentially, once for each contig. Running ROADIES like this is very I/O heavy, so to keep things running quickly and to save my disks, I do it all on a big ramdisk, and just copy the output back to where it needs to go. That part is in the loop.
+
 ```bash
+# Create a 1000GB ramdisk
+sudo mkdir -p /mnt/ramdisk
+sudo mount -t tmpfs -o size=1000G tmpfs /mnt/ramdisk
+sudo chown rob:rob /mnt/ramdisk
+
 # 1. Define paths
 REF_DIR="euc_refs"
 QUERY_DIR="query_contigs"
-BASE_DIR="euc_contigs"
-mkdir -p "$BASE_DIR"
+RAM_DIR="/mnt/ramdisk/roadies_work"
+FINAL_DEST="~/MM_genome/ROADIES/euc_contigs_ramdisk"
 
 # 2. Get the list of all contigs
 # For the test: we grab all, but then overwrite with just two for the pilot run.
@@ -2144,33 +2151,33 @@ echo "Running PILOT mode with: $CONTIG_LIST"
 
 # 3. The Loop
 for CONTIG in $CONTIG_LIST; do
-    # Remove extension for folder naming
     ID="${CONTIG%.fa}"
-    echo "------------------------------------------------"
-    echo "Processing Contig: $ID"
-    echo "------------------------------------------------"
+    
+    # Clean and set up the RAM workspace
+    rm -rf "$RAM_DIR"
+    mkdir -p "$RAM_DIR/input" "$RAM_DIR/output"
 
-    # Create directory structure
-    CONTIG_ROOT="$BASE_DIR/$ID"
-    INPUT_DIR="$CONTIG_ROOT/input"
-    OUTPUT_DIR="$CONTIG_ROOT/output"
-    mkdir -p "$INPUT_DIR" "$OUTPUT_DIR"
+    # Copy data TO ramdisk
+    cp "$REF_DIR"/*.fa "$RAM_DIR/input/"
+    cp "$QUERY_DIR/$CONTIG" "$RAM_DIR/input/"
 
-    # Copy references and the specific focal contig into the local input folder
-    cp "$REF_DIR"/*.fa "$INPUT_DIR/"
-    cp "$QUERY_DIR/$CONTIG" "$INPUT_DIR/"
-
-    # Create a custom config for THIS contig
-    # We use 'sed' to update the GENOMES, FOCAL_GENOME, and OUT_DIR lines
-    sed -e "s|^GENOMES:.*|GENOMES: \"$INPUT_DIR\"|" \
+    # Create the config pointing to the RAM_DIR
+    sed -e "s|^GENOMES:.*|GENOMES: \"$RAM_DIR/input\"|" \
         -e "s|^FOCAL_GENOME:.*|FOCAL_GENOME: \"$CONTIG\"|" \
-        -e "s|^OUT_DIR:.*|OUT_DIR: \"$OUTPUT_DIR\"|" \
-        config/config.yaml > "$CONTIG_ROOT/temp_config.yaml"
+        -e "s|^OUT_DIR:.*|OUT_DIR: \"$RAM_DIR/output\"|" \
+        config/config.yaml > "$RAM_DIR/temp_config.yaml"
 
-    # Run ROADIES
-    python run_roadies.py --noconverge --cores 256 --config "$CONTIG_ROOT/temp_config.yaml" --mode accurate
+    # Run ROADIES on the RAM hardware
+    python run_roadies.py --noconverge --cores 256 --config "$RAM_DIR/temp_config.yaml" --mode balanced
 
-    echo "Finished $ID. Results in $OUTPUT_DIR"
+    # HARVEST the results back to the hard drive
+    mkdir -p "$FINAL_DEST/$ID"
+    cp -r "$RAM_DIR/output" "$FINAL_DEST/$ID/"
+    cp -r "$RAM_DIR/input" "$FINAL_DEST/$ID/"
+    cp "$RAM_DIR/temp_config.yaml" "$FINAL_DEST/$ID/"
+    
+    # Wipe RAM to keep it fresh for next contig
+    rm -rf "$RAM_DIR"
 done
 
 ```
