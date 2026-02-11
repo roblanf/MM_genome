@@ -2073,13 +2073,50 @@ file                                                    format  type  num_seqs  
 ../../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta  FASTA   DNA         45  573,953,311   42,116   12,754,518  65,688,633
 ```
 
-We can attempt to just do all of them. Let's see what happens...
+The plan now is to treat each of these as a species, and see where they land w.r.t. the other genomes.
 
-Let's make the roadies input that we need:
+After installing ROADIES from source, we'll start by making an input folder with the reference genomes from above, renamed for roadies
+
 
 ```
+cd ~/MM_genome/ROADIES
+mkdir -p euc_refs
+cp ../06_3_roadies/roadies_refs/*.fna euc_refs/
+
+cd euc_refs
+
+for file in *.fna; do
+    # Replace 'subsp._' with 'subsp_' to remove the extra dot
+    new_name=$(echo "$file" | sed 's/subsp\._/subsp_/g')
+    # Change extension from .fna to .fa
+    new_name="${new_name%.fna}.fa"    
+    mv "$file" "$new_name"
+done
+
 cd ..
-mkdir -p roadies_input
+```
+
+OK, now let's make a file with all of our haplotype contigs as individual fasta files
+
+```bash
+mkdir -p query_contigs
+cp ../06_3_roadies/roadies_input/h[12]tg*.fa query_contigs/
+```
+
+NExt, I modified the ROADIES code to allow me to sample from a focal species, instead of from all species. This means that I can specify a single one of hte input genomes, and all of the loci will be sampled from that genome. This is what I need to allow me to try and 'place' individual contigs. This is particulary the case when an individual contig is <<1 chromosome. In other words, what ROADIES will now do is sample N genes from the focal species, and look for homologues on the other genomes.
+
+This invovles edits to just two files. To run this yourself, you'll need to install the latest version of ROADIES then update these two files on this repo:
+
+```bash
+git add -f ROADIES/config/config.yaml
+git add -f ROADIES/workflow/rules/sampling.smk
+```
+
+
+
+
+
+
 
 # Split Hap1 into individual contig files
 awk '/^>/{f="roadies_input/"substr($1,2)".fa";print > f;next}{print >> f}' ../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta
@@ -2109,7 +2146,8 @@ roadies.py -i roadies_input/ \
            -o roadies_output/ \
            --loci 100000 \
            --length 500 \
-           --threads 128
+           --threads 256 \
+           --noconverge
 
 ```
 
