@@ -2112,45 +2112,59 @@ git add -f ROADIES/config/config.yaml
 git add -f ROADIES/workflow/rules/sampling.smk
 ```
 
+Now we want to run roadies for each of the contigs that we have for our assembly...
 
-
-
-
-
-
-# Split Hap1 into individual contig files
-awk '/^>/{f="roadies_input/"substr($1,2)".fa";print > f;next}{print >> f}' ../06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta
-
-# Split Hap2 into individual contig files
-awk '/^>/{f="roadies_input/"substr($1,2)".fa";print > f;next}{print >> f}' ../06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta
-
-# Add your named reference genomes
-cp roadies_refs/*.fna roadies_input/
-```
-
-
-Now we set up an environment for ROADIES:
+Run the following from the ROADIES/ directory...
 
 ```bash
-conda create -n roadies_env python=3.9 ete3 seaborn
-conda activate roadies_env
-mamba install roadies
-cd $CONDA_PREFIX/ROADIES
-git clone https://github.com/smirarab/pasta.git
-git clone https://github.com/smirarab/sate-tools-linux.git
-cd pasta
-python3 setup.py develop --user
+# 1. Define paths
+REF_DIR="euc_refs"
+QUERY_DIR="query_contigs"
+BASE_DIR="euc_contigs"
+mkdir -p "$BASE_DIR"
+
+# 2. Get the list of all contigs
+# For the test: we grab all, but then overwrite with just two for the pilot run.
+CONTIG_LIST=$(ls "$QUERY_DIR"/*.fa | xargs -n 1 basename)
+
+# --- PILOT OVERWRITE ---
+# Comment these lines out when you are ready for the full 131 run
+CONTIG_LIST="h1tg000010l.fa h2tg000020l.fa"
+echo "Running PILOT mode with: $CONTIG_LIST"
+# -----------------------
+
+# 3. The Loop
+for CONTIG in $CONTIG_LIST; do
+    # Remove extension for folder naming
+    ID="${CONTIG%.fa}"
+    echo "------------------------------------------------"
+    echo "Processing Contig: $ID"
+    echo "------------------------------------------------"
+
+    # Create directory structure
+    CONTIG_ROOT="$BASE_DIR/$ID"
+    INPUT_DIR="$CONTIG_ROOT/input"
+    OUTPUT_DIR="$CONTIG_ROOT/output"
+    mkdir -p "$INPUT_DIR" "$OUTPUT_DIR"
+
+    # Copy references and the specific focal contig into the local input folder
+    cp "$REF_DIR"/*.fa "$INPUT_DIR/"
+    cp "$QUERY_DIR/$CONTIG" "$INPUT_DIR/"
+
+    # Create a custom config for THIS contig
+    # We use 'sed' to update the GENOMES, FOCAL_GENOME, and OUT_DIR lines
+    sed -e "s|^GENOMES:.*|GENOMES: \"$INPUT_DIR\"|" \
+        -e "s|^FOCAL_GENOME:.*|FOCAL_GENOME: \"$CONTIG\"|" \
+        -e "s|^OUT_DIR:.*|OUT_DIR: \"$OUTPUT_DIR\"|" \
+        config/config.yaml > "$CONTIG_ROOT/temp_config.yaml"
+
+    # Run ROADIES
+    python run_roadies.py --noconverge --cores 256 --config "$CONTIG_ROOT/temp_config.yaml" --mode accurate
+
+    echo "Finished $ID. Results in $OUTPUT_DIR"
+done
 
 ```
-roadies.py -i roadies_input/ \
-           -o roadies_output/ \
-           --loci 100000 \
-           --length 500 \
-           --threads 256 \
-           --noconverge
-
-```
-
 
 
 
