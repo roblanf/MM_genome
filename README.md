@@ -2152,6 +2152,7 @@ cp -r "$BASE_DIR" "$RAM_ROADIES"
 # 2. MOVE into the RAM directory to execute
 cd "$RAM_ROADIES"
 
+
 # 3. Get the list of all contigs
 CONTIG_LIST=$(ls "$QUERY_DIR"/*.fa | xargs -n 1 basename)
 
@@ -2170,13 +2171,32 @@ for CONTIG in $CONTIG_LIST; do
 
     # Copy data TO ramdisk
     cp "$REF_DIR"/*.fa "$RAM_DIR/input/"
-    cp "$QUERY_DIR/$CONTIG" "$RAM_DIR/input/"
+    cp "$QUERY_DIR/$CONTIG" "$RAM_DIR/input/"   
 
-    # Create the config using the local RAM config as a template
-    # Note: we use 'config/config.yaml' because we are now inside $RAM_ROADIES
+    #Calculate target loci to avoid overlap (1 per 10,000bp)
+    # initial testing suggests that 1 500bp locus per roughly 10Kb is good, and mostly avoids overlap in the *accepted* loci well)
+    CONTIG_PATH="$QUERY_DIR/$CONTIG"
+    CONTIG_LEN=$(awk '/^>/ {next} {len += length($0)} END {print len}' "$CONTIG_PATH")
+    N_LOCI=$(( CONTIG_LEN / 10000 ))
+
+    # Apply constraints: Min 1, Max 1000
+    if [ "$N_LOCI" -lt 1 ]; then
+        N_LOCI=1
+    elif [ "$N_LOCI" -gt 1000 ]; then
+        N_LOCI=1000
+    fi
+
+    echo "------------------------------------------------"
+    echo "Processing: $ID"
+    echo "Contig length: $CONTIG_LEN bp"
+    echo "Targeting 50% coverage -> N_LOCI: $N_LOCI"
+    echo "------------------------------------------------"
+
+    # 3. Update the config with the dynamic N_LOCI
     sed -e "s|^GENOMES:.*|GENOMES: \"$RAM_DIR/input\"|" \
         -e "s|^FOCAL_GENOME:.*|FOCAL_GENOME: \"$CONTIG\"|" \
         -e "s|^OUT_DIR:.*|OUT_DIR: \"$RAM_DIR/output\"|" \
+        -e "s|^N_LOCI:.*|N_LOCI: $N_LOCI|" \
         config/config.yaml > "$RAM_DIR/temp_config.yaml"
 
     # Run ROADIES (Now running the RAM version of python/snakemake)
