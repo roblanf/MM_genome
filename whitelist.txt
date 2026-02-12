@@ -1,0 +1,4 @@
+# files to always track - usually images for the github
+# can be tracked using:  grep -v '^#' tracked_assets.txt | xargs -I {} git add -f "{}"
+
+01_QC/02_Kmer_distribution/genomescope_results/transformed_linear_plot.png
