@@ -2180,10 +2180,10 @@ for CONTIG in $CONTIG_LIST; do
     N_LOCI=$(( CONTIG_LEN / 100000 ))
 
     # Apply constraints: Min 25, Max 1000
-    if [ "$N_LOCI" -lt 1 ]; then
+    if [ "$N_LOCI" -lt 25 ]; then
         N_LOCI=25
-    elif [ "$N_LOCI" -gt 1000 ]; then
-        N_LOCI=1000
+    elif [ "$N_LOCI" -gt 100 ]; then
+        N_LOCI=100
     fi
 
     echo "------------------------------------------------"
@@ -2196,7 +2196,7 @@ for CONTIG in $CONTIG_LIST; do
     sed -e "s|^GENOMES:.*|GENOMES: \"$RAM_DIR/input\"|" \
         -e "s|^FOCAL_GENOME:.*|FOCAL_GENOME: \"$CONTIG\"|" \
         -e "s|^OUT_DIR:.*|OUT_DIR: \"$RAM_DIR/output\"|" \
-        -e "s|^N_LOCI:.*|N_LOCI: $N_LOCI|" \
+        -e "s|^GENE_COUNT:.*|GENE_COUNT: $N_LOCI|" \
         config/config.yaml > "$RAM_DIR/temp_config.yaml"
 
     # Run ROADIES (Now running the RAM version of python/snakemake)
