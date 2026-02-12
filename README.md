@@ -2173,15 +2173,15 @@ for CONTIG in $CONTIG_LIST; do
     cp "$REF_DIR"/*.fa "$RAM_DIR/input/"
     cp "$QUERY_DIR/$CONTIG" "$RAM_DIR/input/"   
 
-    #Calculate target loci to avoid overlap (1 per 10,000bp)
-    # initial testing suggests that 1 500bp locus per roughly 10Kb is good, and mostly avoids overlap in the *accepted* loci well)
+    #Calculate target loci to avoid overlap (1 per 100,000bp)
+    # initial testing suggests that 1 500bp locus per roughly 100Kb is good, and mostly avoids overlap in the *accepted* loci well)
     CONTIG_PATH="$QUERY_DIR/$CONTIG"
     CONTIG_LEN=$(awk '/^>/ {next} {len += length($0)} END {print len}' "$CONTIG_PATH")
-    N_LOCI=$(( CONTIG_LEN / 10000 ))
+    N_LOCI=$(( CONTIG_LEN / 100000 ))
 
-    # Apply constraints: Min 1, Max 1000
+    # Apply constraints: Min 25, Max 1000
     if [ "$N_LOCI" -lt 1 ]; then
-        N_LOCI=1
+        N_LOCI=25
     elif [ "$N_LOCI" -gt 1000 ]; then
         N_LOCI=1000
     fi
