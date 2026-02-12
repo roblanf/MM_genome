@@ -2110,6 +2110,272 @@ Next are kmer spectra for the union, h1, and h2 from the merqury runs above. The
   </tr>
 </table>
 
+
+## Dotplots and contig level chromosome homology
+
+Let's align the hap1 and hap2 files to the virginea and decipiens references, and pull out the best contigs in those file that they align to. This will help us sort things out later.
+
+```
+# Define paths
+HAP1="06_1_hifiasm_assemblies/l3/E_phylacis.hap1.fasta"
+HAP2="06_1_hifiasm_assemblies/l3/E_phylacis.hap2.fasta"
+VIR_REF="parental_spp_genomes/E_virginea.fa"
+DEC_REF="parental_spp_genomes/E_decipiens.fa"
+
+OUT_DIR="06_1_hifiasm_assemblies/l3/genome_alignment"
+mkdir -p $OUT_DIR
+
+# 1. Run Alignments
+echo "Running Minimap2 alignments..."
+
+# Hap1 vs Parents
+minimap2 -x asm5 -N 1000 --secondary=no -t 128 $VIR_REF $HAP1 > $OUT_DIR/hap1_vs_virginea.paf
+minimap2 -x asm5 -N 1000 --secondary=no -t 128 $DEC_REF $HAP1 > $OUT_DIR/hap1_vs_decipiens.paf
+
+# Hap2 vs Parents
+minimap2 -x asm5 -N 1000 --secondary=no -t 128 $VIR_REF $HAP2 > $OUT_DIR/hap2_vs_virginea.paf
+minimap2 -x asm5 -N 1000 --secondary=no -t 128 $DEC_REF $HAP2 > $OUT_DIR/hap2_vs_decipiens.paf
+
+# CREATE HEADER MAPS
+# Regex updated: Captures all text after the CCA isolate ID up until the first comma.
+echo "Creating header mapping files..."
+grep ">" "$VIR_REF" | sed -E 's/^>([^ ]+) .*isolate CCA[0-9]+ ([^,]+).*/\1\t\2/' > "$OUT_DIR/vir_map.tsv"
+grep ">" "$DEC_REF" | sed -E 's/^>([^ ]+) .*isolate CCA[0-9]+ ([^,]+).*/\1\t\2/' > "$OUT_DIR/dec_map.tsv"
+
+# GENERATE THE TABLES
+for HAP in "hap1" "hap2"; do
+    echo "Processing $HAP..."
+    TABLE="$OUT_DIR/${HAP}_homology_table.tsv"
+    
+    echo -e "Your_Contig\tYour_Contig_Len\tvir_Ref_Chr1\tvir_MatchBases_Chr1\tvir_FullRefLen_Chr1\tvir_Ref_Chr2\tvir_MatchBases_Chr2\tvir_FullRefLen_Chr2\tvir_Ref_Chr3\tvir_MatchBases_Chr3\tvir_FullRefLen_Chr3\tdec_Ref_Chr1\tdec_MatchBases_Chr1\tdec_FullRefLen_Chr1\tdec_Ref_Chr2\tdec_MatchBases_Chr2\tdec_FullRefLen_Chr2\tdec_Ref_Chr3\tdec_MatchBases_Chr3\tdec_FullRefLen_Chr3" > "$TABLE"
+
+    CONTIGS=$(cat "$OUT_DIR/${HAP}_vs_virginea.paf" "$OUT_DIR/${HAP}_vs_decipiens.paf" | cut -f1 | sort -u)
+
+    for CONTIG in $CONTIGS; do
+        # Get contig length (col 2) correctly
+        QLEN=$(awk -v c="$CONTIG" '$1==c {print $2; exit}' "$OUT_DIR/${HAP}_vs_virginea.paf" "$OUT_DIR/${HAP}_vs_decipiens.paf")
+        
+        LINE="$CONTIG\t$QLEN"
+        
+        for REF_TYPE in "virginea" "decipiens"; do
+            PAF="$OUT_DIR/${HAP}_vs_${REF_TYPE}.paf"
+            MAP_ID=$(echo $REF_TYPE | cut -c1-3)
+            MAP="$OUT_DIR/${MAP_ID}_map.tsv"
+            
+            # Sum column 10, then join with map
+            # We use | as a temp separator to keep the name and length together during sorting
+            HITS=$(awk -F'\t' -v c="$CONTIG" '
+                NR==FNR { d[$1]=$2; next }
+                $1==c { m[$6]+=$10; r[$6]=$11 }
+                END {
+                    for (i in m) {
+                        print m[i] "###" i ", " d[i] "###" r[i]
+                    }
+                }' "$MAP" "$PAF" | sort -t'#' -k1,1nr | head -n 3)
+
+            HIT_COUNT=$(echo "$HITS" | grep -v '^$' | wc -l)
+            
+            while read -r HIT; do
+                [ -z "$HIT" ] && continue
+                # Reformat the "Sum###Name###Len" back to tabs
+                VALS=$(echo "$HIT" | sed 's/###/\t/g')
+                # The columns we want are Name (2), Sum (1), Len (3)
+                LINE+="\t$(echo "$VALS" | cut -f2)\t$(echo "$VALS" | cut -f1)\t$(echo "$VALS" | cut -f3)"
+            done <<< "$HITS"
+            
+            for ((i=HIT_COUNT; i<3; i++)); do
+                LINE+="\tNA\t0\t0"
+            done
+        done
+        echo -e "$LINE" >> "$TABLE"
+    done
+done
+
+echo "Success! Final tables with descriptive names are in $OUT_DIR"
+
+# now we make percentage tables
+
+for HAP in "hap1" "hap2"; do
+    INPUT="$OUT_DIR/${HAP}_homology_table.tsv"
+    OUTPUT="$OUT_DIR/${HAP}_homology_percentages.tsv"
+    
+    echo "Refactoring $HAP into percentages..."
+
+    # Create new header
+    echo -e "Your_Contig\tYour_Contig_Len\tvir_Ref_Chr1\t%matchChr1\tvir_Ref_Chr2\t%matchChr2\tvir_Ref_Chr3\t%matchChr3\tdec_Ref_Chr1\t%matchChr1\tdec_Ref_Chr2\t%matchChr2\tdec_Ref_Chr3\t%matchChr3" > "$OUTPUT"
+
+    # Skip header (NR>1) and process rows
+    awk -F'\t' 'NR > 1 {
+        qlen = $2
+        
+        # Function to format percentage
+        # pct = (matches / qlen) * 100
+        
+        printf "%s\t%s", $1, $2
+        
+        # Virginea columns: Names are 3, 6, 9. Matches are 4, 7, 10.
+        for (i=3; i<=9; i+=3) {
+            pct = (qlen > 0) ? ($ (i+1) / qlen) * 100 : 0
+            printf "\t%s\t%.1f%%", $i, pct
+        }
+        
+        # Decipiens columns: Names are 12, 15, 18. Matches are 13, 16, 19.
+        for (i=12; i<=18; i+=3) {
+            pct = (qlen > 0) ? ($ (i+1) / qlen) * 100 : 0
+            printf "\t%s\t%.1f%%", $i, pct
+        }
+        
+        printf "\n"
+    }' "$INPUT" >> "$OUTPUT"
+
+done
+```
+
+This code just looks at the genome alignments, and asks what each contig aligns to best in virginea and decipiens, then summarises the output. 
+
+### Homology of contigs vs. virginea and decipiens
+
+Easiest to view it like this:
+
+```bash
+column -t -s $'\t' 06_1_hifiasm_assemblies/l3/genome_alignment/hap1_homology_percentages.tsv
+column -t -s $'\t' 06_1_hifiasm_assemblies/l3/genome_alignment/hap2_homology_percentages.tsv
+```
+
+```
+Your_Contig  Your_Contig_Len  vir_Ref_Chr1                    %matchChr1  vir_Ref_Chr2               %matchChr2  vir_Ref_Chr3               %matchChr3  dec_Ref_Chr1                    %matchChr1  dec_Ref_Chr2               %matchChr2  dec_Ref_Chr3               %matchChr3
+h1tg000001l  51333920         CM024520.1, chromosome 7        27.8%       CM024515.1, chromosome 2   0.7%        CM024521.1, chromosome 8   0.5%        CM024615.1, chromosome 7        47.7%       CM024613.1, chromosome 5   1.2%        CM024617.1, chromosome 9   1.1%
+h1tg000002l  54083987         CM024519.1, chromosome 6        34.0%       CM024524.1, chromosome 11  0.4%        CM024518.1, chromosome 5   0.1%        CM024614.1, chromosome 6        60.2%       CM024615.1, chromosome 7   1.4%        CM024619.1, chromosome 11  0.8%
+h1tg000003l  38464560         CM024523.1, chromosome 10       32.0%       CM024520.1, chromosome 7   1.0%        CM024524.1, chromosome 11  0.7%        CM024618.1, chromosome 10       57.2%       CM024612.1, chromosome 4   0.9%        CM024614.1, chromosome 6   0.7%
+h1tg000004l  16945854         CM024515.1, chromosome 2        55.5%       CM024518.1, chromosome 5   0.0%        CM024523.1, chromosome 10  0.0%        CM024610.1, chromosome 2        29.5%       CM024615.1, chromosome 7   0.0%        CM024616.1, chromosome 8   0.0%
+h1tg000005l  36525698         CM024522.1, chromosome 9        56.4%       CM024524.1, chromosome 11  6.7%        CM024520.1, chromosome 7   0.1%        CM024617.1, chromosome 9        34.9%       CM024612.1, chromosome 4   0.5%        CM024611.1, chromosome 3   0.2%
+h1tg000006l  60158556         CM024516.1, chromosome 3        24.5%       CM024523.1, chromosome 10  1.9%        CM024518.1, chromosome 5   0.7%        CM024611.1, chromosome 3        45.7%       CM024614.1, chromosome 6   0.4%        CM024613.1, chromosome 5   0.2%
+h1tg000007l  41950308         CM024514.1, chromosome 1        60.7%       CM024516.1, chromosome 3   3.6%        CM024520.1, chromosome 7   0.1%        CM024609.1, chromosome 1        33.8%       CM024615.1, chromosome 7   0.1%        CM024611.1, chromosome 3   0.1%
+h1tg000008l  39810478         CM024524.1, chromosome 11       65.0%       CM024520.1, chromosome 7   1.3%        CM024519.1, chromosome 6   0.1%        CM024619.1, chromosome 11       37.0%       CM024617.1, chromosome 9   0.9%        CM024611.1, chromosome 3   0.2%
+h1tg000009l  33914441         CM024515.1, chromosome 2        32.7%       CM024516.1, chromosome 3   1.5%        CM024518.1, chromosome 5   0.1%        CM024610.1, chromosome 2        57.1%       CM024609.1, chromosome 1   0.5%        CM024613.1, chromosome 5   0.4%
+h1tg000010l  61716932         CM024521.1, chromosome 8        52.9%       CM024520.1, chromosome 7   4.2%        CM024517.1, chromosome 4   1.7%        CM024616.1, chromosome 8        31.5%       CM024614.1, chromosome 6   1.0%        CM024617.1, chromosome 9   0.4%
+h1tg000011l  35389336         CM024517.1, chromosome 4        54.2%       CM024521.1, chromosome 8   4.4%        CM024523.1, chromosome 10  2.2%        CM024612.1, chromosome 4        34.9%       CM024614.1, chromosome 6   0.2%        CM024615.1, chromosome 7   0.2%
+h1tg000012l  179571           CM024515.1, chromosome 2        82.2%       CM024516.1, chromosome 3   3.3%        NA                         0.0%        CM024610.1, chromosome 2        60.7%       NA                         0.0%        NA                         0.0%
+h1tg000014l  45216074         CM024518.1, chromosome 5        25.8%       CM024519.1, chromosome 6   1.4%        CM024520.1, chromosome 7   0.3%        CM024613.1, chromosome 5        46.7%       CM024616.1, chromosome 8   0.6%        CM024614.1, chromosome 6   0.5%
+h1tg000015l  240840           CM024515.1, chromosome 2        74.1%       CM024516.1, chromosome 3   1.2%        NA                         0.0%        CM024610.1, chromosome 2        20.3%       CM024614.1, chromosome 6   1.8%        NA                         0.0%
+h1tg000016l  93941            CM024514.1, chromosome 1        9.5%        CM024524.1, chromosome 11  5.9%        CM024516.1, chromosome 3   5.4%        CM024617.1, chromosome 9        18.8%       CM024614.1, chromosome 6   6.6%        CM024616.1, chromosome 8   4.3%
+h1tg000017l  247779           CM024515.1, chromosome 2        74.3%       CM024516.1, chromosome 3   8.0%        NA                         0.0%        CM024610.1, chromosome 2        52.8%       CM024614.1, chromosome 6   3.4%        NA                         0.0%
+h1tg000018l  267638           CM024524.1, chromosome 11       13.5%       CM024525.1, chloroplast    11.8%       CM024517.1, chromosome 4   3.0%        CM024611.1, chromosome 3        13.2%       CM024614.1, chromosome 6   8.9%        CM024615.1, chromosome 7   4.6%
+h1tg000019l  550701           CM024518.1, chromosome 5        24.6%       CM024516.1, chromosome 3   1.0%        CM024522.1, chromosome 9   0.8%        CM024611.1, chromosome 3        26.4%       CM024612.1, chromosome 4   0.3%        CM024614.1, chromosome 6   0.0%
+h1tg000020l  62283            CM024515.1, chromosome 2        69.7%       CM024516.1, chromosome 3   11.4%       NA                         0.0%        CM024610.1, chromosome 2        103.5%      CM024614.1, chromosome 6   0.8%        NA                         0.0%
+h1tg000021l  550977           CM024515.1, chromosome 2        79.9%       CM024516.1, chromosome 3   1.4%        NA                         0.0%        CM024610.1, chromosome 2        64.3%       CM024614.1, chromosome 6   0.6%        CM024617.1, chromosome 9   0.0%
+h1tg000022l  79850            CM024516.1, chromosome 3        71.5%       NA                         0.0%        NA                         0.0%        CM024611.1, chromosome 3        42.2%       CM024615.1, chromosome 7   0.4%        NA                         0.0%
+h1tg000023l  191335           CM024525.1, chloroplast         86.5%       CM024514.1, chromosome 1   2.7%        CM024521.1, chromosome 8   0.9%        CM024611.1, chromosome 3        83.8%       CM024617.1, chromosome 9   2.8%        CM024609.1, chromosome 1   2.7%
+h1tg000024l  110453           CM024515.1, chromosome 2        82.3%       CM024516.1, chromosome 3   0.3%        NA                         0.0%        CM024610.1, chromosome 2        108.5%      NA                         0.0%        NA                         0.0%
+h1tg000025l  94874            CM024515.1, chromosome 2        60.2%       CM024516.1, chromosome 3   8.0%        NA                         0.0%        CM024610.1, chromosome 2        87.9%       NA                         0.0%        NA                         0.0%
+h1tg000026l  48552            CM024525.1, chloroplast         73.4%       CM024516.1, chromosome 3   1.5%        CM024521.1, chromosome 8   1.0%        CM024611.1, chromosome 3        69.9%       CM024617.1, chromosome 9   8.4%        CM024616.1, chromosome 8   2.9%
+h1tg000027l  504488           CM024519.1, chromosome 6        1.3%        CM024518.1, chromosome 5   0.7%        CM024521.1, chromosome 8   0.6%        CM024617.1, chromosome 9        2.4%        CM024618.1, chromosome 10  1.6%        CM024614.1, chromosome 6   1.0%
+h1tg000028l  88856            CM024524.1, chromosome 11       40.6%       CM024516.1, chromosome 3   4.5%        CM024514.1, chromosome 1   1.5%        CM024609.1, chromosome 1        61.8%       NA                         0.0%        NA                         0.0%
+h1tg000029l  84892            CM024516.1, chromosome 3        43.5%       CM024515.1, chromosome 2   30.5%       NA                         0.0%        CM024610.1, chromosome 2        79.4%       CM024614.1, chromosome 6   1.3%        NA                         0.0%
+h1tg000030l  53716            CM024514.1, chromosome 1        9.5%        CM024515.1, chromosome 2   8.1%        CM024517.1, chromosome 4   4.5%        CM024610.1, chromosome 2        17.7%       CM024618.1, chromosome 10  4.9%        CM024612.1, chromosome 4   4.3%
+h1tg000031l  262582           CM024524.1, chromosome 11       10.5%       CM024521.1, chromosome 8   6.1%        CM024520.1, chromosome 7   4.9%        CM024619.1, chromosome 11       90.8%       NA                         0.0%        NA                         0.0%
+h1tg000032l  67171            CM024520.1, chromosome 7        72.2%       NA                         0.0%        NA                         0.0%        CM024615.1, chromosome 7        53.7%       CM024613.1, chromosome 5   0.2%        CM024610.1, chromosome 2   0.2%
+h1tg000033l  72644            CM024515.1, chromosome 2        71.1%       CM024516.1, chromosome 3   17.6%       NA                         0.0%        CM024610.1, chromosome 2        91.7%       CM024614.1, chromosome 6   1.9%        NA                         0.0%
+h1tg000034l  80746            CM024521.1, chromosome 8        16.6%       CM024522.1, chromosome 9   4.6%        CM024518.1, chromosome 5   3.7%        CM024616.1, chromosome 8        19.6%       CM024613.1, chromosome 5   6.9%        CM024614.1, chromosome 6   0.6%
+h1tg000035l  106259           CM024516.1, chromosome 3        63.4%       CM024515.1, chromosome 2   23.5%       CM024514.1, chromosome 1   0.7%        CM024610.1, chromosome 2        39.3%       CM024614.1, chromosome 6   2.3%        CM024618.1, chromosome 10  1.6%
+h1tg000036l  78549            CM024524.1, chromosome 11       59.3%       CM024520.1, chromosome 7   1.3%        NA                         0.0%        CM024619.1, chromosome 11       72.0%       CM024611.1, chromosome 3   5.0%        NA                         0.0%
+h1tg000037l  54248            CM024515.1, chromosome 2        63.7%       NA                         0.0%        NA                         0.0%        CM024610.1, chromosome 2        60.1%       NA                         0.0%        NA                         0.0%
+h1tg000038l  87121            CM024520.1, chromosome 7        9.8%        CM024518.1, chromosome 5   9.2%        CM024517.1, chromosome 4   3.5%        CM024615.1, chromosome 7        9.3%        CM024613.1, chromosome 5   8.0%        CM024612.1, chromosome 4   6.8%
+h1tg000039l  68546            CM024521.1, chromosome 8        29.2%       NA                         0.0%        NA                         0.0%        CM024616.1, chromosome 8        69.4%       NA                         0.0%        NA                         0.0%
+h1tg000040l  164941           CM024515.1, chromosome 2        59.6%       NA                         0.0%        NA                         0.0%        CM024610.1, chromosome 2        80.7%       CM024614.1, chromosome 6   0.2%        NA                         0.0%
+h1tg000042l  68000            CM024521.1, chromosome 8        7.9%        CM024516.1, chromosome 3   4.8%        CM024517.1, chromosome 4   1.6%        CM024611.1, chromosome 3        7.7%        CM024612.1, chromosome 4   3.3%        CM024619.1, chromosome 11  1.3%
+h1tg000043l  94628            CM024525.1, chloroplast         87.0%       CM024516.1, chromosome 3   4.8%        CM024517.1, chromosome 4   3.4%        CM024611.1, chromosome 3        89.1%       CM024613.1, chromosome 5   4.0%        CM024618.1, chromosome 10  0.5%
+h1tg000044l  246068           CM024515.1, chromosome 2        1.1%        CM024522.1, chromosome 9   1.1%        CM024518.1, chromosome 5   0.7%        JABKBM010000014.1, tig00112428  3.4%        CM024613.1, chromosome 5   1.3%        CM024611.1, chromosome 3   1.0%
+h1tg000045l  202662           CM024515.1, chromosome 2        85.8%       CM024516.1, chromosome 3   1.3%        NA                         0.0%        CM024610.1, chromosome 2        99.8%       CM024613.1, chromosome 5   0.0%        NA                         0.0%
+h1tg000046l  154476           CM024516.1, chromosome 3        12.6%       CM024521.1, chromosome 8   5.0%        CM024519.1, chromosome 6   4.1%        CM024609.1, chromosome 1        12.6%       CM024613.1, chromosome 5   9.3%        CM024617.1, chromosome 9   8.9%
+h1tg000047l  173338           CM024515.1, chromosome 2        88.1%       NA                         0.0%        NA                         0.0%        CM024610.1, chromosome 2        84.5%       CM024614.1, chromosome 6   0.1%        CM024619.1, chromosome 11  0.0%
+h1tg000048l  77500            CM024518.1, chromosome 5        30.4%       CM024519.1, chromosome 6   0.1%        CM024520.1, chromosome 7   0.1%        CM024613.1, chromosome 5        69.5%       CM024611.1, chromosome 3   0.2%        CM024615.1, chromosome 7   0.1%
+h1tg000049l  68892            CM024519.1, chromosome 6        15.9%       CM024518.1, chromosome 5   11.8%       CM024520.1, chromosome 7   6.4%        CM024614.1, chromosome 6        30.9%       CM024612.1, chromosome 4   6.9%        CM024618.1, chromosome 10  0.8%
+h1tg000050l  81571            CM024524.1, chromosome 11       30.1%       NA                         0.0%        NA                         0.0%        CM024619.1, chromosome 11       36.7%       NA                         0.0%        NA                         0.0%
+h1tg000052l  59545            CM024521.1, chromosome 8        8.4%        CM024520.1, chromosome 7   8.4%        CM024524.1, chromosome 11  5.7%        CM024619.1, chromosome 11       85.4%       NA                         0.0%        NA                         0.0%
+h1tg000053l  50303            JABKBC010000014.1, tig00007996  6.3%        NA                         0.0%        NA                         0.0%        NA                              0.0%        NA                         0.0%        NA                         0.0%
+h1tg000055l  80201            CM024525.1, chloroplast         76.9%       CM024514.1, chromosome 1   6.5%        CM024521.1, chromosome 8   1.9%        CM024616.1, chromosome 8        74.0%       CM024609.1, chromosome 1   6.5%        CM024617.1, chromosome 9   6.3%
+h1tg000056l  85102            CM024515.1, chromosome 2        78.6%       CM024516.1, chromosome 3   15.0%       NA                         0.0%        CM024610.1, chromosome 2        106.1%      CM024614.1, chromosome 6   1.7%        NA                         0.0%
+h1tg000057l  81096            CM024515.1, chromosome 2        59.5%       CM024516.1, chromosome 3   12.6%       NA                         0.0%        CM024610.1, chromosome 2        78.4%       CM024614.1, chromosome 6   6.8%        NA                         0.0%
+h1tg000058l  108016           CM024515.1, chromosome 2        53.6%       CM024516.1, chromosome 3   1.5%        CM024520.1, chromosome 7   0.1%        CM024610.1, chromosome 2        57.3%       CM024614.1, chromosome 6   0.8%        NA                         0.0%
+h1tg000059l  120315           CM024520.1, chromosome 7        9.8%        CM024518.1, chromosome 5   7.9%        CM024517.1, chromosome 4   6.2%        CM024615.1, chromosome 7        9.3%        CM024612.1, chromosome 4   8.0%        CM024613.1, chromosome 5   7.2%
+h1tg000060l  128970           CM024518.1, chromosome 5        0.4%        CM024517.1, chromosome 4   0.2%        CM024521.1, chromosome 8   0.2%        JABKBM010000014.1, tig00112428  3.9%        CM024618.1, chromosome 10  0.8%        CM024614.1, chromosome 6   0.1%
+h1tg000061l  73615            CM024521.1, chromosome 8        44.6%       CM024518.1, chromosome 5   0.6%        NA                         0.0%        CM024616.1, chromosome 8        84.7%       NA                         0.0%        NA                         0.0%
+h1tg000062l  49067            CM024515.1, chromosome 2        47.8%       NA                         0.0%        NA                         0.0%        CM024610.1, chromosome 2        65.1%       NA                         0.0%        NA                         0.0%
+h1tg000063l  87206            CM024514.1, chromosome 1        32.9%       CM024520.1, chromosome 7   7.9%        CM024516.1, chromosome 3   1.6%        CM024609.1, chromosome 1        63.5%       CM024619.1, chromosome 11  0.0%        NA                         0.0%
+h1tg000064l  82462            CM024521.1, chromosome 8        50.2%       NA                         0.0%        NA                         0.0%        CM024616.1, chromosome 8        64.5%       NA                         0.0%        NA                         0.0%
+h1tg000065l  61333            CM024515.1, chromosome 2        42.1%       CM024516.1, chromosome 3   39.5%       NA                         0.0%        CM024610.1, chromosome 2        82.1%       NA                         0.0%        NA                         0.0%
+h1tg000066l  162610           CM024518.1, chromosome 5        15.5%       CM024514.1, chromosome 1   3.0%        CM024519.1, chromosome 6   2.2%        JABKBM010000015.1, tig00006793  52.6%       CM024613.1, chromosome 5   33.1%       CM024619.1, chromosome 11  0.1%
+h1tg000067l  49495            CM024524.1, chromosome 11       7.4%        CM024521.1, chromosome 8   7.1%        CM024522.1, chromosome 9   2.7%        CM024619.1, chromosome 11       37.5%       CM024615.1, chromosome 7   4.1%        CM024618.1, chromosome 10  2.5%
+h1tg000068l  57909            CM024516.1, chromosome 3        55.0%       NA                         0.0%        NA                         0.0%        CM024611.1, chromosome 3        29.3%       CM024618.1, chromosome 10  1.4%        NA                         0.0%
+h1tg000069l  46567            CM024515.1, chromosome 2        52.8%       CM024516.1, chromosome 3   29.9%       CM024522.1, chromosome 9   2.8%        CM024610.1, chromosome 2        62.5%       NA                         0.0%        NA                         0.0%
+h1tg000070l  71332            CM024515.1, chromosome 2        36.6%       NA                         0.0%        NA                         0.0%        CM024610.1, chromosome 2        50.7%       NA                         0.0%        NA                         0.0%
+h1tg000071l  118804           CM024517.1, chromosome 4        25.7%       CM024523.1, chromosome 10  13.2%       CM024516.1, chromosome 3   8.0%        CM024614.1, chromosome 6        49.7%       CM024613.1, chromosome 5   5.7%        CM024611.1, chromosome 3   2.7%
+h1tg000072l  65110            CM024523.1, chromosome 10       6.0%        CM024518.1, chromosome 5   3.8%        CM024515.1, chromosome 2   3.4%        CM024610.1, chromosome 2        35.3%       CM024616.1, chromosome 8   2.9%        CM024615.1, chromosome 7   1.9%
+h1tg000073l  71031            CM024515.1, chromosome 2        34.2%       CM024520.1, chromosome 7   1.9%        CM024516.1, chromosome 3   0.3%        CM024610.1, chromosome 2        43.3%       CM024616.1, chromosome 8   8.2%        CM024613.1, chromosome 5   1.5%
+h1tg000074l  35174            CM024515.1, chromosome 2        43.4%       NA                         0.0%        NA                         0.0%        CM024610.1, chromosome 2        45.8%       CM024614.1, chromosome 6   1.5%        NA                         0.0%
+h1tg000076l  80866            CM024515.1, chromosome 2        36.1%       CM024516.1, chromosome 3   14.9%       NA                         0.0%        CM024610.1, chromosome 2        48.1%       NA                         0.0%        NA                         0.0%
+h1tg000078l  60163            CM024520.1, chromosome 7        4.2%        CM024516.1, chromosome 3   1.2%        CM024524.1, chromosome 11  1.0%        CM024619.1, chromosome 11       19.2%       NA                         0.0%        NA                         0.0%
+h1tg000079l  67339            CM024514.1, chromosome 1        47.7%       NA                         0.0%        NA                         0.0%        CM024609.1, chromosome 1        67.6%       NA                         0.0%        NA                         0.0%
+h1tg000080l  64287            CM024518.1, chromosome 5        11.0%       CM024524.1, chromosome 11  4.8%        CM024514.1, chromosome 1   4.5%        CM024619.1, chromosome 11       90.7%       NA                         0.0%        NA                         0.0%
+h1tg000081l  33610            CM024515.1, chromosome 2        65.3%       CM024516.1, chromosome 3   14.4%       NA                         0.0%        CM024610.1, chromosome 2        91.2%       NA                         0.0%        NA                         0.0%
+h1tg000083l  53008            CM024515.1, chromosome 2        41.2%       NA                         0.0%        NA                         0.0%        CM024610.1, chromosome 2        56.1%       NA                         0.0%        NA                         0.0%
+h1tg000084l  75001            CM024515.1, chromosome 2        91.9%       NA                         0.0%        NA                         0.0%        CM024610.1, chromosome 2        21.1%       CM024613.1, chromosome 5   0.4%        NA                         0.0%
+h1tg000085l  94551            CM024514.1, chromosome 1        15.9%       NA                         0.0%        NA                         0.0%        CM024609.1, chromosome 1        73.3%       NA                         0.0%        NA                         0.0%
+h1tg000086l  57449            CM024514.1, chromosome 1        20.1%       CM024517.1, chromosome 4   3.3%        NA                         0.0%        CM024617.1, chromosome 9        7.5%        CM024609.1, chromosome 1   5.0%        CM024612.1, chromosome 4   2.5%
+```
+
+
+```
+Your_Contig  Your_Contig_Len  vir_Ref_Chr1               %matchChr1  vir_Ref_Chr2               %matchChr2  vir_Ref_Chr3               %matchChr3  dec_Ref_Chr1                    %matchChr1  dec_Ref_Chr2               %matchChr2  dec_Ref_Chr3               %matchChr3
+h2tg000001l  59206199         CM024518.1, chromosome 5   45.2%       CM024519.1, chromosome 6   1.9%        CM024520.1, chromosome 7   0.6%        CM024613.1, chromosome 5        25.6%       CM024611.1, chromosome 3   0.6%        CM024614.1, chromosome 6   0.4%
+h2tg000002l  26036980         CM024519.1, chromosome 6   30.9%       CM024524.1, chromosome 11  0.8%        CM024518.1, chromosome 5   0.2%        CM024614.1, chromosome 6        57.8%       CM024615.1, chromosome 7   1.7%        CM024616.1, chromosome 8   0.0%
+h2tg000003l  37845087         CM024517.1, chromosome 4   27.0%       CM024521.1, chromosome 8   2.3%        CM024523.1, chromosome 10  1.2%        CM024612.1, chromosome 4        55.9%       CM024615.1, chromosome 7   0.2%        CM024613.1, chromosome 5   0.2%
+h2tg000004l  45062906         CM024520.1, chromosome 7   51.8%       CM024521.1, chromosome 8   0.5%        CM024524.1, chromosome 11  0.4%        CM024615.1, chromosome 7        30.0%       CM024617.1, chromosome 9   0.8%        CM024614.1, chromosome 6   0.8%
+h2tg000005l  65688633         CM024521.1, chromosome 8   29.2%       CM024520.1, chromosome 7   1.8%        CM024517.1, chromosome 4   0.9%        CM024616.1, chromosome 8        52.7%       CM024614.1, chromosome 6   1.3%        CM024617.1, chromosome 9   0.7%
+h2tg000006l  42555022         CM024524.1, chromosome 11  32.7%       CM024520.1, chromosome 7   1.1%        CM024521.1, chromosome 8   0.4%        CM024619.1, chromosome 11       63.7%       CM024617.1, chromosome 9   1.4%        CM024616.1, chromosome 8   0.1%
+h2tg000007l  34610167         CM024523.1, chromosome 10  63.4%       CM024524.1, chromosome 11  1.7%        CM024520.1, chromosome 7   1.6%        CM024618.1, chromosome 10       36.1%       CM024612.1, chromosome 4   0.7%        CM024614.1, chromosome 6   0.5%
+h2tg000008l  56293706         CM024516.1, chromosome 3   46.7%       CM024523.1, chromosome 10  3.1%        CM024518.1, chromosome 5   1.1%        CM024611.1, chromosome 3        28.8%       CM024614.1, chromosome 6   0.4%        CM024612.1, chromosome 4   0.2%
+h2tg000009l  39808945         CM024522.1, chromosome 9   29.0%       CM024524.1, chromosome 11  3.4%        CM024518.1, chromosome 5   0.3%        CM024617.1, chromosome 9        55.6%       CM024612.1, chromosome 4   0.7%        CM024611.1, chromosome 3   0.2%
+h2tg000010l  33511041         CM024515.1, chromosome 2   55.8%       CM024516.1, chromosome 3   2.6%        CM024519.1, chromosome 6   0.1%        CM024610.1, chromosome 2        34.8%       CM024609.1, chromosome 1   0.3%        CM024613.1, chromosome 5   0.3%
+h2tg000011l  51100880         CM024519.1, chromosome 6   65.2%       CM024524.1, chromosome 11  1.0%        CM024515.1, chromosome 2   0.0%        CM024614.1, chromosome 6        35.9%       CM024615.1, chromosome 7   0.8%        CM024619.1, chromosome 11  0.5%
+h2tg000012l  43652620         CM024514.1, chromosome 1   30.3%       CM024516.1, chromosome 3   1.5%        CM024518.1, chromosome 5   0.2%        CM024609.1, chromosome 1        56.7%       CM024619.1, chromosome 11  0.1%        CM024610.1, chromosome 2   0.1%
+h2tg000013l  14252391         CM024518.1, chromosome 5   22.9%       CM024521.1, chromosome 8   0.5%        CM024517.1, chromosome 4   0.3%        CM024613.1, chromosome 5        33.9%       CM024611.1, chromosome 3   3.8%        CM024615.1, chromosome 7   0.5%
+h2tg000014l  20522527         CM024515.1, chromosome 2   29.6%       CM024518.1, chromosome 5   0.3%        CM024516.1, chromosome 3   0.2%        CM024610.1, chromosome 2        47.9%       CM024614.1, chromosome 6   1.1%        CM024613.1, chromosome 5   0.4%
+h2tg000015l  500252           CM024515.1, chromosome 2   69.7%       CM024516.1, chromosome 3   13.7%       CM024514.1, chromosome 1   0.3%        CM024610.1, chromosome 2        67.3%       CM024614.1, chromosome 6   0.5%        CM024615.1, chromosome 7   0.3%
+h2tg000016l  193346           CM024525.1, chloroplast    74.5%       NA                         0.0%        NA                         0.0%        CM024611.1, chromosome 3        44.5%       CM024632.1, chloroplast    39.7%       NA                         0.0%
+h2tg000017l  151689           CM024525.1, chloroplast    98.7%       NA                         0.0%        NA                         0.0%        CM024611.1, chromosome 3        95.8%       NA                         0.0%        NA                         0.0%
+h2tg000018l  207414           CM024524.1, chromosome 11  18.6%       CM024514.1, chromosome 1   5.3%        CM024516.1, chromosome 3   5.2%        CM024617.1, chromosome 9        16.3%       CM024615.1, chromosome 7   9.7%        CM024612.1, chromosome 4   7.2%
+h2tg000019l  164625           CM024515.1, chromosome 2   91.2%       CM024516.1, chromosome 3   3.5%        CM024514.1, chromosome 1   1.7%        CM024610.1, chromosome 2        99.2%       CM024615.1, chromosome 7   1.7%        CM024614.1, chromosome 6   1.3%
+h2tg000020l  87899            CM024518.1, chromosome 5   51.6%       NA                         0.0%        NA                         0.0%        CM024613.1, chromosome 5        79.0%       NA                         0.0%        NA                         0.0%
+h2tg000021l  92347            CM024525.1, chloroplast    86.7%       CM024516.1, chromosome 3   4.9%        CM024517.1, chromosome 4   3.5%        CM024616.1, chromosome 8        93.8%       CM024613.1, chromosome 5   0.9%        CM024609.1, chromosome 1   0.6%
+h2tg000022l  49225            CM024518.1, chromosome 5   26.3%       CM024514.1, chromosome 1   4.9%        CM024519.1, chromosome 6   3.0%        JABKBM010000015.1, tig00006793  62.5%       CM024613.1, chromosome 5   62.3%       NA                         0.0%
+h2tg000023l  280860           CM024515.1, chromosome 2   76.8%       CM024516.1, chromosome 3   8.1%        NA                         0.0%        CM024610.1, chromosome 2        62.5%       CM024614.1, chromosome 6   0.6%        NA                         0.0%
+h2tg000024l  63097            CM024520.1, chromosome 7   51.3%       NA                         0.0%        NA                         0.0%        CM024614.1, chromosome 6        52.1%       CM024611.1, chromosome 3   0.3%        NA                         0.0%
+h2tg000025l  56855            CM024524.1, chromosome 11  92.7%       NA                         0.0%        NA                         0.0%        CM024619.1, chromosome 11       39.2%       CM024614.1, chromosome 6   2.9%        CM024615.1, chromosome 7   0.7%
+h2tg000026l  89563            CM024515.1, chromosome 2   55.8%       CM024516.1, chromosome 3   12.3%       NA                         0.0%        CM024610.1, chromosome 2        69.6%       CM024614.1, chromosome 6   12.6%       NA                         0.0%
+h2tg000027l  174770           CM024516.1, chromosome 3   63.4%       CM024515.1, chromosome 2   15.0%       NA                         0.0%        CM024610.1, chromosome 2        49.8%       NA                         0.0%        NA                         0.0%
+h2tg000028l  227859           CM024515.1, chromosome 2   87.2%       NA                         0.0%        NA                         0.0%        CM024610.1, chromosome 2        83.5%       CM024614.1, chromosome 6   0.2%        NA                         0.0%
+h2tg000029l  45841            CM024521.1, chromosome 8   37.3%       CM024516.1, chromosome 3   0.1%        CM024518.1, chromosome 5   0.1%        CM024616.1, chromosome 8        39.5%       CM024615.1, chromosome 7   3.9%        CM024612.1, chromosome 4   0.2%
+h2tg000030l  68747            CM024515.1, chromosome 2   63.3%       CM024522.1, chromosome 9   1.9%        CM024517.1, chromosome 4   1.6%        CM024610.1, chromosome 2        45.8%       NA                         0.0%        NA                         0.0%
+h2tg000031l  140617           CM024516.1, chromosome 3   14.1%       CM024521.1, chromosome 8   5.1%        CM024519.1, chromosome 6   3.6%        CM024609.1, chromosome 1        12.0%       CM024613.1, chromosome 5   10.2%       CM024611.1, chromosome 3   5.7%
+h2tg000032l  93954            CM024515.1, chromosome 2   28.3%       CM024516.1, chromosome 3   22.3%       CM024517.1, chromosome 4   1.4%        CM024610.1, chromosome 2        32.7%       CM024614.1, chromosome 6   14.6%       NA                         0.0%
+h2tg000033l  66304            CM024516.1, chromosome 3   54.4%       CM024514.1, chromosome 1   0.1%        NA                         0.0%        CM024611.1, chromosome 3        92.3%       NA                         0.0%        NA                         0.0%
+h2tg000034l  118804           CM024517.1, chromosome 4   25.7%       CM024523.1, chromosome 10  13.2%       CM024516.1, chromosome 3   8.0%        CM024614.1, chromosome 6        49.7%       CM024613.1, chromosome 5   5.7%        CM024611.1, chromosome 3   2.7%
+h2tg000035l  66777            CM024522.1, chromosome 9   60.8%       CM024518.1, chromosome 5   0.3%        NA                         0.0%        CM024617.1, chromosome 9        26.2%       CM024619.1, chromosome 11  5.5%        CM024616.1, chromosome 8   2.0%
+h2tg000036l  42116            CM024515.1, chromosome 2   58.4%       CM024516.1, chromosome 3   33.9%       CM024522.1, chromosome 9   3.0%        CM024610.1, chromosome 2        67.5%       NA                         0.0%        NA                         0.0%
+h2tg000037l  63729            CM024516.1, chromosome 3   23.9%       CM024519.1, chromosome 6   7.0%        CM024514.1, chromosome 1   1.2%        CM024611.1, chromosome 3        22.4%       CM024616.1, chromosome 8   6.5%        CM024615.1, chromosome 7   1.0%
+h2tg000038l  84936            CM024516.1, chromosome 3   36.1%       CM024521.1, chromosome 8   5.4%        CM024518.1, chromosome 5   1.3%        CM024611.1, chromosome 3        77.1%       CM024617.1, chromosome 9   0.4%        NA                         0.0%
+h2tg000039l  57976            CM024517.1, chromosome 4   40.7%       CM024524.1, chromosome 11  0.3%        NA                         0.0%        CM024612.1, chromosome 4        63.0%       NA                         0.0%        NA                         0.0%
+h2tg000040l  253708           CM024515.1, chromosome 2   42.6%       CM024516.1, chromosome 3   22.5%       NA                         0.0%        CM024610.1, chromosome 2        51.0%       CM024614.1, chromosome 6   2.9%        NA                         0.0%
+h2tg000041l  62567            CM024515.1, chromosome 2   39.5%       CM024516.1, chromosome 3   13.1%       CM024514.1, chromosome 1   4.0%        CM024610.1, chromosome 2        57.9%       CM024615.1, chromosome 7   4.1%        CM024614.1, chromosome 6   3.4%
+h2tg000042l  63218            CM024523.1, chromosome 10  35.7%       CM024514.1, chromosome 1   4.8%        CM024521.1, chromosome 8   0.8%        CM024618.1, chromosome 10       45.8%       CM024615.1, chromosome 7   5.9%        CM024610.1, chromosome 2   0.5%
+h2tg000043l  75596            CM024520.1, chromosome 7   69.7%       CM024517.1, chromosome 4   0.2%        NA                         0.0%        CM024614.1, chromosome 6        60.7%       CM024609.1, chromosome 1   0.2%        CM024610.1, chromosome 2   0.2%
+h2tg000044l  66155            CM024524.1, chromosome 11  93.1%       NA                         0.0%        NA                         0.0%        CM024611.1, chromosome 3        23.9%       CM024619.1, chromosome 11  11.4%       NA                         0.0%
+h2tg000045l  95361            CM024518.1, chromosome 5   3.6%        CM024520.1, chromosome 7   3.3%        CM024516.1, chromosome 3   2.8%        CM024610.1, chromosome 2        2.1%        CM024612.1, chromosome 4   1.7%        CM024618.1, chromosome 10  1.3%
+```
+
+
 ## 2 Parental kmer checks
 
 Similar to what I did on the initial assembly, now I want to see how the unique kmers from the putative parental genomes map to the contigs. I already have hapmers from the parents, with k=31. this is described above, but I get the kmers, look for the noise | signal trough, filter out the noise, and then use subtraction to get the kmers unique to each parent (hapmers). Now I need to do the same for the phylacis reads, and then I can run merqury.
