@@ -2243,6 +2243,12 @@ python summarise_haplotigs.py
 
 The results are absolutely completely amazing, and beyond my wildest expectations here...
 
+The haplotigs are mostly landing with pp of 1.0 next to *either* virginea or decipiens, but no other taxa.
+
+Just as remarkable, Q1 is usually >70%, and Q2 and Q3 are very close to equal, suggesting that incongruence is roughly attributable to ILS only.
+
+I'll update these as the results come in...
+
 ```
 Haplotig        Sister_Group              Genes    pp1      f1         f2         f3         q1         q2         q3        
 -----------------------------------------------------------------------------------------------------------------------------
