@@ -9,3 +9,6 @@ mb_downloads/
 06_1_hifiasm_assemblies/
 06_2_parental_kmer_checks/
 06_3_roadies/
+
+#plots to keep
+!01_QC/01_NanoPlot_Raw/LengthvsQualityScatterPlot_kde.png
