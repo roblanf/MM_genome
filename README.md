@@ -2229,6 +2229,34 @@ done
 
 
 
+### ROADIES results
+
+One way to summarise the results is to just look at where the haplotigs land in the species tree. 
+
+Gemini wrote me a little script for that. If you point it at the folder that has the results summaries, you can run it like this:
+
+(the input folder is hardcoded at the top of the script, so you need to change it to suit wherever the roadies output summaries are)
+
+```bash
+python summarise_haplotigs.py
+```
+
+The results are absolutely completely amazing, and beyond my wildest expectations here...
+
+```
+Haplotig        Sister_Group              Genes    pp1      f1         f2         f3         q1         q2         q3        
+-----------------------------------------------------------------------------------------------------------------------------
+h1tg000001l     Eucalyptus_decipiens      880      1.000000 199.852941 22.352941  25.764706  0.805954   0.090144   0.103902  
+h1tg000002l     Eucalyptus_decipiens      899      1.000000 318.558824 24.294118  27.117647  0.861038   0.065665   0.073297  
+h1tg000003l     Eucalyptus_decipiens      883      1.000000 316.617647 26.294118  28.147059  0.853282   0.070862   0.075856  
+h1tg000004l     Eucalyptus_virginea       908      1.000000 224.882353 36.617647  36.117647  0.755608   0.123036   0.121356  
+h1tg000005l     Eucalyptus_virginea       890      1.000000 288.676471 42.823529  40.558824  0.775889   0.115099   0.109012  
+h1tg000006l     Eucalyptus_decipiens      878      1.000000 164.088235 33.088235  28.852941  0.725960   0.146389   0.127651  
+h1tg000007l     Eucalyptus_virginea       895      1.000000 287.235294 38.235294  34.882353  0.797094   0.106105   0.096801  
+h1tg000008l     Eucalyptus_virginea       906      1.000000 276.176471 40.352941  39.882353  0.774880   0.113220   0.111900  
+h1tg000009l     Eucalyptus_decipiens      893      1.000000 268.558824 34.323529  26.000000  0.816580   0.104364   0.079056  
+h1tg000010l     Eucalyptus_virginea       909      1.000000 247.235294 38.323529  38.705882  0.762449   0.118186   0.119365  
+```
 
 
 # Still to do...
