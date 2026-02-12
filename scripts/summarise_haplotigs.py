@@ -1,92 +1,127 @@
-import re
 import os
+import re
+from ete3 import Tree
 
-# Configuration
-input_dir = os.path.expanduser("~/Desktop/euc_contigs_ramdisk/") 
-haplotig_pattern = r"h[12]tg\d+\w*" 
+# --- Configuration ---
+# Path to your contigs folder
+INPUT_DIR = os.path.expanduser("~/Desktop/euc_contigs_ramdisk/")
+# Outgroup for consistent rooting
+OUTGROUP_NAME = "Angophora_floribunda"
+# Regex to find the haplotig name in the tree
+HAPLOTIG_PATTERN = r"h[12]tg\d+\w*"
 
 def get_gene_count(root_path):
-    # ROADIES places num_gt.txt inside the statistics folder 
+    """Reads the gene tree count from statistics/num_gt.txt."""
     gt_file = os.path.join(root_path, "statistics", "num_gt.txt")
     if os.path.exists(gt_file):
         with open(gt_file, 'r') as f:
             content = f.read().strip()
-            # Grabs the integer count at the end of the line 
             match = re.search(r"(\d+)$", content)
             if match:
                 return int(match.group(1))
     return 0
 
-def parse_astral_node(newick_str, target_id):
-    # Captures Target BLen, Sister Name, and Metadata Block
-    # Case 1: (Target:BLen,Sister:Len)'[meta]'
-    pattern = rf"\(({target_id}:([^,)]+),([^:]+):[^)]+)\)'\[(.*?)\]'"
-    match = re.search(pattern, newick_str)
+def parse_astral_stats(name_string):
+    """Extracts pp1, f1, f2, f3, q1, q2, q3 from the ASTRAL comment string."""
+    # ASTRAL/ROADIES puts stats in '[...]' which ETE3 loads as the node name
+    clean_str = name_string.strip("'[] ")
+    pairs = re.findall(r"(\w+)=([^;]+)", clean_str)
+    return dict(pairs)
+
+def get_sister_label(node):
+    """Identifies the sister leaf or clade name."""
+    sisters = node.get_sisters()
+    if not sisters:
+        return "No_Sister"
     
-    if not match:
-        # Case 2: (Sister:Len,Target:BLen)'[meta]'
-        pattern = rf"\((([^:]+):[^,]+,{target_id}:([^)]+))\)'\[(.*?)\]'"
-        match = re.search(pattern, newick_str)
-        if match:
-            sister = match.group(2)
-            branch_len = match.group(3)
-            meta_str = match.group(4)
-        else:
-            return None, None, None
+    sister = sisters[0]
+    if sister.is_leaf():
+        return sister.name
     else:
-        branch_len = match.group(2)
-        sister = match.group(3)
-        meta_str = match.group(4)
+        # For a clade, return the first leaf name as a representative
+        leaves = sister.get_leaf_names()
+        return f"Clade({leaves[0]},...)" if len(leaves) > 1 else leaves[0]
+
+def process_contig(root):
+    tree_path = os.path.join(root, "roadies_stats.nwk")
+    if not os.path.exists(tree_path):
+        return None
+        
+    with open(tree_path, 'r') as f:
+        newick_str = f.read().strip()
+        
+    # Determine the haplotig ID for this folder
+    hid_match = re.search(HAPLOTIG_PATTERN, newick_str)
+    if not hid_match:
+        return None
+    hid = hid_match.group(0)
     
     try:
-        # Extracts f1-f3 and q1-q3 from the ASTRAL metadata string
-        meta = dict(item.split("=") for item in meta_str.split(";") if "=" in item)
-        return sister, branch_len, meta
-    except ValueError:
-        return sister, branch_len, {"error": "meta_parse_fail"}
-
-results = []
-
-# Gather data from all directories
-for root, dirs, files in os.walk(input_dir):
-    for filename in files:
-        if filename == "roadies_stats.nwk":
-            filepath = os.path.join(root, filename)
-            with open(filepath, 'r') as f:
-                tree = f.read()
+        # format=1 reads internal node names (where ROADIES stores metadata)
+        # quoted_node_names=True handles the ASTRAL '[...]' syntax
+        t = Tree(newick_str, format=1, quoted_node_names=True)
+        
+        # 1. Root the tree
+        outgroups = t.search_nodes(name=OUTGROUP_NAME)
+        if outgroups:
+            t.set_outgroup(outgroups[0])
+        else:
+            t.set_midpoint_outgroup()
             
-            hid_match = re.search(haplotig_pattern, tree)
-            if hid_match:
-                hid = hid_match.group(0)
-                sister, blen, stats = parse_astral_node(tree, hid)
-                num_genes = get_gene_count(root)
+        # 2. Find target haplotig
+        target_nodes = t.search_nodes(name=hid)
+        if not target_nodes:
+            return None
+        target = target_nodes[0]
+        
+        # 3. Collect Data
+        # Terminal branch length
+        blen = target.dist
+        # Sister group in the rooted tree
+        sister = get_sister_label(target)
+        # Stats are located on the parent node (representing the split)
+        stats = parse_astral_stats(target.up.name) if target.up else {}
+        # Gene count
+        genes = get_gene_count(root)
+        
+        return {
+            'hid': hid,
+            'sister': sister,
+            'genes': genes,
+            'blen': blen,
+            'stats': stats
+        }
+    except Exception:
+        return None
+
+def main():
+    results = []
+    
+    # Iterate through all subdirectories
+    for root, dirs, files in os.walk(INPUT_DIR):
+        if "roadies_stats.nwk" in files:
+            res = process_contig(root)
+            if res:
+                results.append(res)
                 
-                if stats:
-                    results.append({
-                        'hid': hid,
-                        'sister': sister.strip('('),
-                        'blen': blen,
-                        'genes': num_genes,
-                        'stats': stats
-                    })
+    # Natural sort by haplotig name (h1tg1 before h1tg10)
+    results.sort(key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', x['hid'])])
+    
+    # Print Table Header
+    header = ["Haplotig", "Sister_Group", "Genes", "BLen", "pp1", "f1", "f2", "f3", "q1", "q2", "q3"]
+    row_fmt = "{:<18} {:<22} {:<6} {:<10.8} {:<6} {:<8} {:<8} {:<8} {:<8} {:<8} {:<8}"
+    
+    print(row_fmt.format(*header))
+    print("-" * 120)
+    
+    # Print Rows
+    for r in results:
+        s = r['stats']
+        print(row_fmt.format(
+            r['hid'], r['sister'], r['genes'], r['blen'],
+            s.get('pp1', '-'), s.get('f1', '-'), s.get('f2', '-'), 
+            s.get('f3', '-'), s.get('q1', '-'), s.get('q2', '-'), s.get('q3', '-')
+        ))
 
-# Natural sort (h1tg1, h1tg2, h1tg10, h2tg1...)
-results.sort(key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', x['hid'])])
-
-# Formatting Headers
-header = f"{'Haplotig':<15} {'Sister_Group':<20} {'Genes':<6} {'BLen':<10} {'pp1':<6} {'f1':<8} {'f2':<8} {'f3':<8} {'q1':<8} {'q2':<8} {'q3':<8}"
-print(header)
-print("-" * len(header))
-
-for r in results:
-    s = r['stats']
-    print(f"{r['hid']:<15} {r['sister']:<20} "
-          f"{r['genes']:<6} "
-          f"{r['blen']:<10.8} " # Limit BLen display to 8 chars
-          f"{s.get('pp1','-'):<6} "
-          f"{s.get('f1','-'):<8.6} " # f counts as strings can be long
-          f"{s.get('f2','-'):<8.6} "
-          f"{s.get('f3','-'):<8.6} "
-          f"{s.get('q1','-'):<8} "
-          f"{s.get('q2','-'):<8} "
-          f"{s.get('q3','-'):<8}")
+if __name__ == "__main__":
+    main()
