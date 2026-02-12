@@ -1,4 +1,15 @@
 # files to always track - usually images for the github
-# can be tracked using:  grep -v '^#' tracked_assets.txt | xargs -I {} git add -f "{}"
+# can be tracked using:  grep -v '^#' whitelist.txt | xargs -I {} git add -f "{}"
 
 01_QC/02_Kmer_distribution/genomescope_results/transformed_linear_plot.png
+02_filtering/qc_filtered/LengthvsQualityScatterPlot_kde.png
+03_hifiasm_assembly/QC/telomere_results/p_ctg_repeat_fingerprint.png
+03_hifiasm_assembly/QC/telomere_results/hap1_repeat_fingerprint.png
+03_hifiasm_assembly/QC/telomere_results/hap2_repeat_fingerprint.png
+03_hifiasm_assembly/compare_h1h2/hap1_vs_hap2_dotplot2.png
+04_parental_assignment/parental_kmer_plots/raw_density_100k.png
+04_parental_assignment/parental_kmer_plots/proportion_100k.png
+04_parental_assignment/parental_kmer_plots/raw_density_10k.png
+04_parental_assignment/parental_kmer_plots/proportion_10k.png
+04_parental_assignment/cp_phylacis_vs_virginea.png
+04_parental_assignment/cp_phylacis_vs_decipiens.png
