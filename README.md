@@ -2382,6 +2382,220 @@ h2tg000029l  45841            CM024521.1, chromosome 8   37.3%       CM024516.1,
 h2tg000036l  42116            CM024515.1, chromosome 2   58.4%       CM024516.1, chromosome 3   33.9%       CM024522.1, chromosome 9   3.0%        CM024610.1, chromosome 2        67.5%       NA                         0.0%        NA                         0.0%
 ```
 
+We can summarise this succinctly by, for each contig, figuring out which parent has better coverage, and what the likely chromosome is.
+
+Here's a script to do that.
+
+```bash
+BASE_DIR="06_1_hifiasm_assemblies/l3/genome_alignment"
+OUTPUT="$BASE_DIR/final_assembly_summary.tsv"
+
+echo -e "Contig\tContig_Len\tPrimary_Chr\tMinimap\tVirginea_Cov%\tDecipiens_Cov%" > "$OUTPUT"
+
+for HAP_FILE in "$BASE_DIR/hap1_homology_percentages.tsv" "$BASE_DIR/hap2_homology_percentages.tsv"; do
+    if [ ! -f "$HAP_FILE" ]; then continue; fi
+
+    awk -F'\t' 'NR > 1 {
+        qlen = $2
+        vir_name = $3
+        dec_name = $9
+        
+        # Clean percentages
+        v_pct_raw = $4; sub(/%/, "", v_pct_raw); v_pct = (v_pct_raw == "NA" ? 0 : v_pct_raw)
+        d_pct_raw = $10; sub(/%/, "", d_pct_raw); d_pct = (d_pct_raw == "NA" ? 0 : d_pct_raw)
+
+        # 1. Determine Winner
+        if (v_pct >= d_pct && v_pct > 0) {
+            winner = "virginea"
+            raw_full_name = vir_name
+        } else if (d_pct > v_pct) {
+            winner = "decipiens"
+            raw_full_name = dec_name
+        } else {
+            winner = "unassigned"
+            raw_full_name = "unmapped"
+        }
+
+        # 2. Extract Name using Regex (Look for chromosome, chloroplast, or tig)
+        # This looks for the keywords and captures everything after them
+        clean_name = raw_full_name
+        if (raw_full_name ~ /chromosome/) {
+            match(raw_full_name, /chromosome [0-9]+/)
+            clean_name = substr(raw_full_name, RSTART, RLENGTH)
+        } else if (raw_full_name ~ /chloroplast/) {
+            clean_name = "chloroplast"
+        } else if (raw_full_name ~ /tig/) {
+            match(raw_full_name, /tig[0-9]+/)
+            clean_name = substr(raw_full_name, RSTART, RLENGTH)
+        } else if (raw_full_name ~ /, /) {
+            # Fallback: if keywords fail but comma exists, take part after comma
+            split(raw_full_name, parts, ", ")
+            clean_name = parts[2]
+        }
+
+        printf "%s\t%s\t%s\t%s\t%.1f%%\t%.1f%%\n", $1, $2, clean_name, winner, v_pct, d_pct
+    }' "$HAP_FILE" >> "$OUTPUT"
+done
+
+# Sort by length
+(head -n 1 "$OUTPUT" && tail -n +2 "$OUTPUT" | sort -t$'\t' -k2,2rn) > "${OUTPUT}.tmp" && mv "${OUTPUT}.tmp" "$OUTPUT"
+
+echo "Fixed! Names should now appear correctly for all rows."
+```
+
+That gives the following table:
+
+```
+awk -F'\t' '
+    BEGIN { print "| " }
+    { 
+        printf "|"; 
+        for(i=1; i<=NF; i++) printf " %s |", $i; 
+        print ""; 
+        if(NR==1) {
+            printf "|"; 
+            for(i=1; i<=NF; i++) printf "---|"; 
+            print ""
+        }
+    }' 06_1_hifiasm_assemblies/l3/genome_alignment/final_assembly_summary.tsv
+```
+
+
+The key is that for all of the largest contigs, the coverage gives a very clear winner. A few chromosomes are broken, but these mostly add up to the right number.
+
+For example, Chr5 in decipiens is in one piece from virginea `h2tg000001l` at 59.2Mbp. The decipiens copy comprises two major pieces `h1tg000014l` is 45.2Mbp, and `h2tg000013l` at 14.2Mbp, which sum to 59.4Mbp, very close to the length of the virginea copy. 
+
+Chr2 is certainly the most fragmented, and there are certain contigs where it's essentially impossible to pick a winning parent. E.g. `h2tg000028l` is 227859bp and matches virginea by 87.2% and decipiens by 83.5.
+
+Despite this, one could still bin them and scaffold them so as not to lose the information. 
+
+
+| Contig | Contig_Len | Primary_Chr | Minimap | Virginea_Cov% | Decipiens_Cov% |                                                                                                                                                                                                          
+|---|---|---|---|---|---|                                                                                                                                                                                                                                                                 
+| h2tg000005l | 65688633 | chromosome 8 | decipiens | 29.2% | 52.7% |                                                                                                                                                                                                                     
+| h1tg000010l | 61716932 | chromosome 8 | virginea | 52.9% | 31.5% |                                                                                                                                                                                                                      
+| h1tg000006l | 60158556 | chromosome 3 | decipiens | 24.5% | 45.7% |                                                                                                                                                                                                                     
+| h2tg000001l | 59206199 | chromosome 5 | virginea | 45.2% | 25.6% |                                                                                                                                                                                                                      
+| h2tg000008l | 56293706 | chromosome 3 | virginea | 46.7% | 28.8% |                                                                                                                                                                                                                      
+| h1tg000002l | 54083987 | chromosome 6 | decipiens | 34.0% | 60.2% |                                                                                                                                                                                                                     
+| h1tg000001l | 51333920 | chromosome 7 | decipiens | 27.8% | 47.7% |                                                                                                                                                                                                                     
+| h2tg000011l | 51100880 | chromosome 6 | virginea | 65.2% | 35.9% |                                                                                                                                                                                                                      
+| h1tg000014l | 45216074 | chromosome 5 | decipiens | 25.8% | 46.7% |                                                                                                                                                                                                                     
+| h2tg000004l | 45062906 | chromosome 7 | virginea | 51.8% | 30.0% |                                                                                                                                                                                                                      
+| h2tg000012l | 43652620 | chromosome 1 | decipiens | 30.3% | 56.7% |                                                                                                                                                                                                                     
+| h2tg000006l | 42555022 | chromosome 11 | decipiens | 32.7% | 63.7% |                                                                                                                                                                                                                    
+| h1tg000007l | 41950308 | chromosome 1 | virginea | 60.7% | 33.8% |                                                                                                                                                                                                                      
+| h1tg000008l | 39810478 | chromosome 11 | virginea | 65.0% | 37.0% |                                                                                                                                                                                                                     
+| h2tg000009l | 39808945 | chromosome 9 | decipiens | 29.0% | 55.6% |                                                                                                                                                                                                                     
+| h1tg000003l | 38464560 | chromosome 10 | decipiens | 32.0% | 57.2% |                                                                                                                                                                                                                    
+| h2tg000003l | 37845087 | chromosome 4 | decipiens | 27.0% | 55.9% |                                                                                                                                                                                                                     
+| h1tg000005l | 36525698 | chromosome 9 | virginea | 56.4% | 34.9% |                                                                                                                                                                                                                      
+| h1tg000011l | 35389336 | chromosome 4 | virginea | 54.2% | 34.9% |                                                                                                                                                                                                                      
+| h2tg000007l | 34610167 | chromosome 10 | virginea | 63.4% | 36.1% |                                                                                                                                                                                                                     
+| h1tg000009l | 33914441 | chromosome 2 | decipiens | 32.7% | 57.1% |                                                                                                                                                                                                                     
+| h2tg000010l | 33511041 | chromosome 2 | virginea | 55.8% | 34.8% |                                                                                                                                                                                                                      
+| h2tg000002l | 26036980 | chromosome 6 | decipiens | 30.9% | 57.8% |                                                                                                                                                                                                                     
+| h2tg000014l | 20522527 | chromosome 2 | decipiens | 29.6% | 47.9% |                                                                                                                                                                                                                     
+| h1tg000004l | 16945854 | chromosome 2 | virginea | 55.5% | 29.5% |                                                                                                                                                                                                                      
+| h2tg000013l | 14252391 | chromosome 5 | decipiens | 22.9% | 33.9% |                                                                                                                                                                                                                     
+| h1tg000021l | 550977 | chromosome 2 | virginea | 79.9% | 64.3% |                                                                                                                                                                                                                        
+| h1tg000019l | 550701 | chromosome 3 | decipiens | 24.6% | 26.4% |                                                                                                                                                                                                                       
+| h1tg000027l | 504488 | chromosome 9 | decipiens | 1.3% | 2.4% |                                                                                                                                                                                                                         
+| h2tg000015l | 500252 | chromosome 2 | virginea | 69.7% | 67.3% |                                                                                                                                                                                                                        
+| h2tg000023l | 280860 | chromosome 2 | virginea | 76.8% | 62.5% |                                                                                                                                                                                                                        
+| h1tg000018l | 267638 | chromosome 11 | virginea | 13.5% | 13.2% |                                                                                                                                                                                                                       
+| h1tg000031l | 262582 | chromosome 11 | decipiens | 10.5% | 90.8% |                                                                                                                                                                                                                      
+| h2tg000040l | 253708 | chromosome 2 | decipiens | 42.6% | 51.0% |                                                                                                                                                                                                                       
+| h1tg000017l | 247779 | chromosome 2 | virginea | 74.3% | 52.8% |                                                                                                                                                                                                                        
+| h1tg000044l | 246068 | tig00112428 | decipiens | 1.1% | 3.4% |                                                                                                                                                                                                                          
+| h1tg000015l | 240840 | chromosome 2 | virginea | 74.1% | 20.3% |                                                                                                                                                                                                                        
+| h2tg000028l | 227859 | chromosome 2 | virginea | 87.2% | 83.5% |                                                                                                                                                                                                                        
+| h2tg000018l | 207414 | chromosome 11 | virginea | 18.6% | 16.3% |                                                                                                                                                                                                                       
+| h1tg000045l | 202662 | chromosome 2 | decipiens | 85.8% | 99.8% |                                                                                                                                                                                                                       
+| h2tg000016l | 193346 | chloroplast | virginea | 74.5% | 44.5% |                                                                                                                                                                                                                         
+| h1tg000023l | 191335 | chloroplast | virginea | 86.5% | 83.8% |                                                                                                                                                                                                                         
+| h1tg000012l | 179571 | chromosome 2 | virginea | 82.2% | 60.7% |
+| h2tg000027l | 174770 | chromosome 3 | virginea | 63.4% | 49.8% |
+| h1tg000047l | 173338 | chromosome 2 | virginea | 88.1% | 84.5% |
+| h1tg000040l | 164941 | chromosome 2 | decipiens | 59.6% | 80.7% |
+| h2tg000019l | 164625 | chromosome 2 | decipiens | 91.2% | 99.2% |
+| h1tg000066l | 162610 | tig00006793 | decipiens | 15.5% | 52.6% |
+| h1tg000046l | 154476 | chromosome 3 | virginea | 12.6% | 12.6% |
+| h2tg000017l | 151689 | chloroplast | virginea | 98.7% | 95.8% |
+| h2tg000031l | 140617 | chromosome 3 | virginea | 14.1% | 12.0% |
+| h1tg000060l | 128970 | tig00112428 | decipiens | 0.4% | 3.9% |
+| h1tg000059l | 120315 | chromosome 7 | virginea | 9.8% | 9.3% |
+| h1tg000071l | 118804 | chromosome 6 | decipiens | 25.7% | 49.7% |
+| h2tg000034l | 118804 | chromosome 6 | decipiens | 25.7% | 49.7% |
+| h1tg000024l | 110453 | chromosome 2 | virginea | 82.3% | 108.5% |
+| h1tg000058l | 108016 | chromosome 2 | decipiens | 53.6% | 57.3% |
+| h1tg000035l | 106259 | chromosome 3 | virginea | 63.4% | 39.3% |
+| h2tg000045l | 95361 | chromosome 5 | virginea | 3.6% | 2.1% |
+| h1tg000025l | 94874 | chromosome 2 | decipiens | 60.2% | 87.9% |
+| h1tg000043l | 94628 | chromosome 3 | decipiens | 87.0% | 89.1% |
+| h1tg000085l | 94551 | chromosome 1 | decipiens | 15.9% | 73.3% |
+| h2tg000032l | 93954 | chromosome 2 | decipiens | 28.3% | 32.7% |
+| h1tg000016l | 93941 | chromosome 1 | virginea | 9.5% | 18.8% |
+| h2tg000021l | 92347 | chromosome 8 | decipiens | 86.7% | 93.8% |
+| h2tg000026l | 89563 | chromosome 2 | decipiens | 55.8% | 69.6% |
+| h1tg000028l | 88856 | chromosome 1 | decipiens | 40.6% | 61.8% |
+| h2tg000020l | 87899 | chromosome 5 | decipiens | 51.6% | 79.0% |
+| h1tg000063l | 87206 | chromosome 1 | decipiens | 32.9% | 63.5% |
+| h1tg000038l | 87121 | chromosome 7 | virginea | 9.8% | 9.3% |
+| h1tg000056l | 85102 | chromosome 2 | virginea | 78.6% | 106.1% |
+| h2tg000038l | 84936 | chromosome 3 | decipiens | 36.1% | 77.1% |
+| h1tg000029l | 84892 | chromosome 2 | decipiens | 43.5% | 79.4% |
+| h1tg000064l | 82462 | chromosome 8 | decipiens | 50.2% | 64.5% |
+| h1tg000050l | 81571 | chromosome 11 | decipiens | 30.1% | 36.7% |
+| h1tg000057l | 81096 | chromosome 2 | decipiens | 59.5% | 78.4% |
+| h1tg000076l | 80866 | chromosome 2 | decipiens | 36.1% | 48.1% |
+| h1tg000034l | 80746 | chromosome 8 | decipiens | 16.6% | 19.6% |
+| h1tg000055l | 80201 | chloroplast | virginea | 76.9% | 74.0% |
+| h1tg000022l | 79850 | chromosome 3 | virginea | 71.5% | 42.2% |
+| h1tg000036l | 78549 | chromosome 11 | decipiens | 59.3% | 72.0% |
+| h1tg000048l | 77500 | chromosome 5 | decipiens | 30.4% | 69.5% |
+| h2tg000043l | 75596 | chromosome 7 | virginea | 69.7% | 60.7% |
+| h1tg000084l | 75001 | chromosome 2 | virginea | 91.9% | 21.1% |
+| h1tg000061l | 73615 | chromosome 8 | decipiens | 44.6% | 84.7% |
+| h1tg000033l | 72644 | chromosome 2 | decipiens | 71.1% | 91.7% |
+| h1tg000070l | 71332 | chromosome 2 | decipiens | 36.6% | 50.7% |
+| h1tg000073l | 71031 | chromosome 2 | decipiens | 34.2% | 43.3% |
+| h1tg000049l | 68892 | chromosome 6 | decipiens | 15.9% | 30.9% |
+| h2tg000030l | 68747 | chromosome 2 | virginea | 63.3% | 45.8% |
+| h1tg000039l | 68546 | chromosome 8 | decipiens | 29.2% | 69.4% |
+| h1tg000042l | 68000 | chromosome 8 | virginea | 7.9% | 7.7% |
+| h1tg000079l | 67339 | chromosome 1 | decipiens | 47.7% | 67.6% |
+| h1tg000032l | 67171 | chromosome 7 | virginea | 72.2% | 53.7% |
+| h2tg000035l | 66777 | chromosome 9 | virginea | 60.8% | 26.2% |
+| h2tg000033l | 66304 | chromosome 3 | decipiens | 54.4% | 92.3% |
+| h2tg000044l | 66155 | chromosome 11 | virginea | 93.1% | 23.9% |
+| h1tg000072l | 65110 | chromosome 10 | virginea | 6.0% | 35.3% |
+| h1tg000080l | 64287 | chromosome 11 | decipiens | 11.0% | 90.7% |
+| h2tg000037l | 63729 | chromosome 3 | virginea | 23.9% | 22.4% |
+| h2tg000042l | 63218 | chromosome 10 | decipiens | 35.7% | 45.8% |
+| h2tg000024l | 63097 | chromosome 6 | decipiens | 51.3% | 52.1% |
+| h2tg000041l | 62567 | chromosome 2 | decipiens | 39.5% | 57.9% |
+| h1tg000020l | 62283 | chromosome 2 | virginea | 69.7% | 103.5% |
+| h1tg000065l | 61333 | chromosome 2 | decipiens | 42.1% | 82.1% |
+| h1tg000078l | 60163 | chromosome 7 | virginea | 4.2% | 19.2% |
+| h1tg000052l | 59545 | chromosome 11 | decipiens | 8.4% | 85.4% |
+| h2tg000039l | 57976 | chromosome 4 | decipiens | 40.7% | 63.0% |
+| h1tg000068l | 57909 | chromosome 3 | virginea | 55.0% | 29.3% |
+| h1tg000086l | 57449 | chromosome 9 | decipiens | 20.1% | 7.5% |
+| h2tg000025l | 56855 | chromosome 11 | virginea | 92.7% | 39.2% |
+| h1tg000037l | 54248 | chromosome 2 | virginea | 63.7% | 60.1% |
+| h1tg000030l | 53716 | chromosome 1 | virginea | 9.5% | 17.7% |
+| h1tg000083l | 53008 | chromosome 2 | decipiens | 41.2% | 56.1% |
+| h1tg000053l | 50303 | tig00007996 | virginea | 6.3% | 0.0% |
+| h1tg000067l | 49495 | chromosome 11 | virginea | 7.4% | 37.5% |
+| h2tg000022l | 49225 | tig00006793 | decipiens | 26.3% | 62.5% |
+| h1tg000062l | 49067 | chromosome 2 | decipiens | 47.8% | 65.1% |
+| h1tg000026l | 48552 | chloroplast | virginea | 73.4% | 69.9% |
+| h1tg000069l | 46567 | chromosome 2 | decipiens | 52.8% | 62.5% |
+| h2tg000029l | 45841 | chromosome 8 | decipiens | 37.3% | 39.5% |
+| h2tg000036l | 42116 | chromosome 2 | decipiens | 58.4% | 67.5% |
+| h1tg000074l | 35174 | chromosome 2 | decipiens | 43.4% | 45.8% |
+| h1tg000081l | 33610 | chromosome 2 | decipiens | 65.3% | 91.2% |
 
 ## 2 Parental kmer checks
 
@@ -2692,6 +2906,15 @@ h1tg000008l     Eucalyptus_virginea  906    0.001965   1.000000 276.17   40.352 
 h1tg000009l     Eucalyptus_decipiens 893    0.001254   1.000000 268.55   34.323   26.000   0.816580 0.104364 0.079056
 h1tg000010l     Eucalyptus_virginea  909    0.000484   1.000000 247.23   38.323   38.705   0.762449 0.118186 0.119365
 ```
+
+
+
+## Parental assignment table
+
+Finally, we can put all of the above together to make a table which allows us to assign contigs to the father or mother with some confidence. 
+
+Everything above suggests that decipiens and virginea are the likely parents, and that virginea is the mother (chloroplast matches very closely compared to decipiens)
+
 
 
 # Still to do...
