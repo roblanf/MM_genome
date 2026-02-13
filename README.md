@@ -2597,6 +2597,51 @@ Despite this, one could still bin them and scaffold them so as not to lose the i
 | h1tg000074l | 35174 | chromosome 2 | decipiens | 43.4% | 45.8% |
 | h1tg000081l | 33610 | chromosome 2 | decipiens | 65.3% | 91.2% |
 
+## Mapping rates
+
+Next we'll assess the contigs by mapping 
+
+```
+# 1. Setup paths
+BASE_DIR="06_1_hifiasm_assemblies/l3"
+WORK_DIR="$BASE_DIR/read_mapping"
+READS="02_filtering/E_phylacis_filtered.fastq.gz"
+HAP1="$BASE_DIR/E_phylacis.hap1.fasta"
+HAP2="$BASE_DIR/E_phylacis.hap2.fasta"
+COMBINED_REF="$WORK_DIR/combined_haps.fasta"
+
+mkdir -p "$WORK_DIR"
+cd "$WORK_DIR"
+
+# 2. Combine Haplotypes for competitive mapping
+echo "Combining haplotypes..."
+cat ../E_phylacis.hap1.fasta ../E_phylacis.hap2.fasta > combined_haps.fasta
+
+minimap2 -d combined_haps.mmi combined_haps.fasta
+
+minimap2 -ax map-ont -t 64 combined_haps.mmi ~/MM_genome/02_filtering/E_phylacis_filtered.fastq.gz > competitive_alignment.sam
+
+
+# ***
+# Convert SAM to BAM while filtering for MAPQ 30
+# -b: output BAM, -h: include header, -q 30: strict quality, -F 4: skip unmapped
+samtools view -bh -q 30 -F 4 competitive_alignment.sam > strict_filtered.bam
+
+# Sort the BAM (Required for indexing and mosdepth)
+samtools sort -@ 63 strict_filtered.bam -o strict_filtered.sorted.bam
+
+# Remove the massive intermediate SAM and the unsorted BAM to save space
+rm competitive_alignment.sam strict_filtered.bam
+
+# Index the sorted BAM
+samtools index strict_filtered.sorted.bam
+
+# Run mosdepth
+# -n: Quantize/Summary mode (don't need per-base depth for this)
+# -x: Fast mode for Nanopore
+mosdepth -n -x -t 64 coverage_stats strict_filtered.sorted.bam
+```
+
 ## 2 Parental kmer checks
 
 Similar to what I did on the initial assembly, now I want to see how the unique kmers from the putative parental genomes map to the contigs. I already have hapmers from the parents, with k=31. this is described above, but I get the kmers, look for the noise | signal trough, filter out the noise, and then use subtraction to get the kmers unique to each parent (hapmers). Now I need to do the same for the phylacis reads, and then I can run merqury.
@@ -2968,6 +3013,8 @@ Create paternal (decipiens parent) and maternal (virginea parent; we know this f
 Add organelle genome to maternal parent genome.
 
 This gives us e_phylacis_paternal_contigs.fa and e_phylacis_maternal_contigs.fa
+
+2. BlobTools - check for contaminant contigs
 
 2. Scaffolding
 Use ragtag to scaffold paternal against decipiens and maternal against virginea. This gives e_phylacis_paternal_scaffolds.fa and e_phylacis_maternal_scaffolds.fa
