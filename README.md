@@ -2465,7 +2465,7 @@ The key is that for all of the largest contigs, the coverage gives a very clear 
 
 For example, Chr5 in decipiens is in one piece from virginea `h2tg000001l` at 59.2Mbp. The decipiens copy comprises two major pieces `h1tg000014l` is 45.2Mbp, and `h2tg000013l` at 14.2Mbp, which sum to 59.4Mbp, very close to the length of the virginea copy. 
 
-Chr2 is certainly the most fragmented, and there are certain contigs where it's essentially impossible to pick a winning parent. E.g. `h2tg000028l` is 227859bp and matches virginea by 87.2% and decipiens by 83.5.
+Chr2 is certainly the most fragmented, and there are certain contigs where it's essentially impossible to pick a winning parent. E.g. `h2tg000028l` is 227859bp and matches virginea by 87.2% and decipiens by 83.5. Chrs probably has a lot of rDNA clusters. 
 
 Despite this, one could still bin them and scaffold them so as not to lose the information. 
 
