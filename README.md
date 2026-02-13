@@ -2645,6 +2645,9 @@ merqury.sh \
 
 ```
 
+
+
+
 ## 3 ROADIES
 
 Get the genomes
@@ -2799,10 +2802,6 @@ cd "$RAM_ROADIES"
 # 3. Get the list of all contigs
 CONTIG_LIST=$(ls "$QUERY_DIR"/*.fa | xargs -n 1 basename)
 
-# --- PILOT OVERWRITE ---
-CONTIG_LIST="h1tg000010l.fa h2tg000020l.fa"
-echo "Running PILOT mode with: $CONTIG_LIST"
-
 # 4. The Loop
 for CONTIG in $CONTIG_LIST; do
     ID="${CONTIG%.fa}"
@@ -2823,16 +2822,16 @@ for CONTIG in $CONTIG_LIST; do
     N_LOCI=$(( CONTIG_LEN / 100000 ))
 
     # Apply constraints: Min 25, Max 1000
-    if [ "$N_LOCI" -lt 25 ]; then
-        N_LOCI=25
-    elif [ "$N_LOCI" -gt 100 ]; then
-        N_LOCI=100
+    if [ "$N_LOCI" -lt 50 ]; then
+        N_LOCI=50
+    elif [ "$N_LOCI" -gt 1000 ]; then
+        N_LOCI=1000
     fi
 
     echo "------------------------------------------------"
     echo "Processing: $ID"
     echo "Contig length: $CONTIG_LEN bp"
-    echo "Targeting 50% coverage -> N_LOCI: $N_LOCI"
+    echo "Number of loci targeted: $N_LOCI"
     echo "------------------------------------------------"
 
     # 3. Update the config with the dynamic N_LOCI
