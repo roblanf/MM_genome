@@ -3030,3 +3030,8 @@ For all four assemblies (paternal contigs, maternal contigs, paternal scaffolds,
 4. Annotation
 The organelles are already assembled, but a basic annotation will be useful. 
 
+
+
+Plotting the haplotypes against each other:
+
+Ask Ash... Mummer/Nucmer for aligning, SIRI does structural variants, then deltafilter, plotSR does the display, Ask Ash. This is for plotting haplotypes next to each other. Use 1KB or 10KB  windows.
