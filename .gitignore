@@ -1,0 +1,12 @@
+# raw and intermediate data
+*.fastq
+*.fastq.gz
+*.fasta
+*.fa
+*.fa.gz
+*.bam
+*.sam
+data/
+results/
+outputs/
+*.log
