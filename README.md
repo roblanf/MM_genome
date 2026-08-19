@@ -1,5 +1,34 @@
 # Project: Assembly of the Meelup Mallee genome.
 
+[give a brief intro to what this is, why, and the raw data]
+
+# Environment
+
+This repo uses conda to help with reproducibility. 
+
+To set up a conda environment with everything you need, use the `environment.yml` file as follows:
+
+`conda env create -f environment.yml`
+
+# 01_QC: Quality control of raw data
+
+First we establish the quality of the raw data. This... [short description]
+
+First we use nanoplot to do x
+
+```
+bash /01_QC/scripts/run_nanoplot.sh
+```
+
+Then this
+
+And that
+
+## Results summary 
+
+
+
+
 The first two sections, QC and filtering, are the pre-assembly modifications and checks that are run to improve the reads for assembly. For the genomeQC tools, I will use:
 
 Porechop_ABI - discovers unknown adapters which must be trimmed, followed by...
