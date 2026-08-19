@@ -4,11 +4,13 @@
 
 # Environment
 
-This repo uses conda to help with reproducibility. 
+This repo uses conda to help with reproducibility. Everything here is run on a linux machine.
 
 To set up a conda environment with everything you need, use the `environment.yml` file as follows:
 
-`conda env create -f environment.yml`
+```
+conda env create -f environment.yml
+```
 
 # 01_QC: Quality control of raw data
 
