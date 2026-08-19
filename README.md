@@ -18,3 +18,6 @@ Once a good and well thought out assembly has been chosen, the focus will be on 
 Finally, the mitochondrial and chloroplast genomes can be considered and mapped to one of the parent species also.
 
 ## 01 QC
+
+First, NanoPlot is run on the raw reads prior to cleaning and filtering. This is important for getting baseline information about read lengths, quality, etc. It will be useful to compare the metrics before and after read cleaning/filtering to assess the work done and improvement.
+01
