@@ -14,41 +14,21 @@ conda env create -f environment.yml
 
 # 01_QC: Quality control of raw data
 
-First we establish the quality of the raw data. This... [short description]
+First we establish the quality of the raw data. This can be done primarily with the GenomeQC tool, which generates graphics and descriptive summaries for genome assembly. The metrics computed in this section can be re-ran after all measures have been implemented, making for useful comparison and reflection on the quality control process.
 
-First we use nanoplot to do x
+First we use NanoPlot. This visualises and summarises long-read sequencing data. The main plot shows read-length and quality scores which you will see below:
+Running NanoPlot:
 
 ```
 bash /01_QC/scripts/run_nanoplot.sh
 ```
 
-Then this
+*plot goes here*
 
-And that
+Interpreting...
 
-## Results summary 
+*other stats go here*
 
+NanoPlot will used again after the rest of the QC and filtering is complete to compare to these baseline results.
 
-
-
-The first two sections, QC and filtering, are the pre-assembly modifications and checks that are run to improve the reads for assembly. For the genomeQC tools, I will use:
-
-Porechop_ABI - discovers unknown adapters which must be trimmed, followed by...
-
-Chopper - trims these adaptes and further trims reads via quality scores and other metrics.
-
-Kraken2 - used for a formal contamination check.
-
-NanoPlot - used before and after read cleaning/filtering to compare.
-
-
-Then the next section is assembly, which will be done using hifiasm. To perform model selection, metrics such as BUSCO will be utilised.
-
-Once a good and well thought out assembly has been chosen, the focus will be on parental assignment. The work done in this section will allow for a table to be created mapping all contigs to one of the Meelup Mallee parent species, *E. decipiens* or *E. virginea*.
-
-Finally, the mitochondrial and chloroplast genomes can be considered and mapped to one of the parent species also.
-
-## 01 QC
-
-First, NanoPlot is run on the raw reads prior to cleaning and filtering. This is important for getting baseline information about read lengths, quality, etc. It will be useful to compare the metrics before and after read cleaning/filtering to assess the work done and improvement.
-01
+Then more GenomeQC tools...
