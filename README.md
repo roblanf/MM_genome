@@ -4,12 +4,12 @@
 
 # Environment
 
-This repo uses conda to help with reproducibility. Everything here is run on a linux machine.
+This repo uses Conda/Micromamba to help with reproducibility. Everything here is run on a Linux machine.
 
-To set up a conda environment with everything you need, use the `environment.yml` file as follows:
-
-```
-conda env create -f environment.yml
+To set up and activate the environment:
+```bash
+micromamba create -f eucalypt_asm.yml
+micromamba activate eucalypt_asm
 ```
 
 # 01_QC: Quality control of raw data
@@ -22,8 +22,9 @@ Running NanoPlot:
 ```
 bash /01_QC/scripts/run_nanoplot.sh
 ```
+Visualising the read length vs read quality results:
 
-*plot goes here*
+![Length vs Quality Scatter Plot](01_QC/01_NanoPlot_Raw/LengthvsQualityScatterPlot_kde.png)
 
 Interpreting...
 
