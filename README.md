@@ -20,13 +20,18 @@ First we use NanoPlot. This visualises and summarises long-read sequencing data.
 Running NanoPlot:
 
 ```
-bash /01_QC/scripts/run_nanoplot.sh
+bash /01_qc/scripts/run_nanoplot.sh
 ```
 Visualising the read length vs read quality results:
 
 ![Length vs Quality Scatter Plot](nanoplot_test_output/LengthvsQualityScatterPlot_kde.png)
 
-Interpreting...
+The displayed plot is for the tiny test dataset I've made. This is code to replicate my test data:
+
+```
+bash /01_qc/scripts/make_test_data.sh
+```
+*I will eventually replace this with the real outputs from the real raw_data once I'm done testing*
 
 *other stats go here*
 
