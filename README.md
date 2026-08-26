@@ -29,7 +29,7 @@ micromamba install pillow
 ```
 Visualising the read length vs read quality results after running NanoPlot:
 
-![Length vs Quality Scatter Plot](nanoplot_test_output/LengthvsQualityScatterPlot_kde.png)
+![Length vs Quality Scatter Plot](01_qc/results/nanoplot_test_output/LengthvsQualityScatterPlot_kde.png)
 
 The displayed plot is for the tiny test dataset I've made. This is code to replicate my test data:
 
