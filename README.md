@@ -24,7 +24,7 @@ bash /01_QC/scripts/run_nanoplot.sh
 ```
 Visualising the read length vs read quality results:
 
-![Length vs Quality Scatter Plot](01_qc/nanoplot_test_output/LengthvsQualityScatterPlot_kde.png)
+![Length vs Quality Scatter Plot](nanoplot_test_output/LengthvsQualityScatterPlot_kde.png)
 
 Interpreting...
 
