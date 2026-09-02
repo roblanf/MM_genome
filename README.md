@@ -164,4 +164,20 @@ Only one out of 5,131 reads had an adapter in the middle of the read, meaning th
 
 ## Further trimming by filtering reads with Chopper
 
+Chopper is a versatile tool which can filter based on average read quality, min/max read lengths and GC content. It then trims by a chosen method (see more info here https://github.com/wdecoster/chopper), in this case I used a Q10 (90% accuracy) quality score threshold.
 
+Performing filtering and quality-based trimming using Chopper:
+No installations required if you've already run porechop :)
+
+```
+bash /02_filtering/scripts/run_chopper.sh
+```
+
+Filtering Summary:  (for test_data, to be replaced by full data soon)
+| Stage | File | Read Count | Total Bases (bp) | Min Length | Avg Length | Max Length |
+|---|---|---|---|---|---|---|
+| **Raw** | `tiny_test.fastq` | 5,131 | 61.90 M | 47 | 12,064.4 | 55,317 |
+| **Porechop** | `tiny_test_porechop.fastq.gz` | 5,132 | 61.76 M | 14 | 12,042.8 | 55,276 |
+| **Chopper (Q10, >1kb)** | `tiny_test_filtered.fastq.gz` | 4,820 | 61.40 M | 1,001 | 14,090 | 55,276 |
+
+Most of the reads here were long enough and had a high enough Phred quality score (better than  Q10, >90% accuracy) to be kept for genome assembly while the others were filtered out (approx 300 out of 5132 reads filtered out).
