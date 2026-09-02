@@ -1,21 +1,41 @@
 #!/usr/bin/env bash
-# Quick GC distribution check using SeqKit
-# Usage: bash 01_qc/scripts/run_gc_check.sh <path_to_fastq_file> [num_reads]
+# Script: 01_qc/scripts/run_gc_check.sh
+# Purpose: Calculate GC content distribution and overall read statistics for raw ONT reads.
+# Usage: bash 01_qc/scripts/run_gc_check.sh [input_fastq] [output_dir] [threads]
 
 set -euo pipefail
 
-# Default to 100,000 reads if 2nd argument isn't provided
-FASTQ_INPUT="${1:-raw_data/tiny_test.fastq}"
-NUM_READS="${2:-100000}"
+INPUT_FASTQ="${1:-raw_data/raw_reads.fastq.gz}"
+OUTDIR="${2:-01_qc/results/gc_content}"
+THREADS="${3:-16}"
 
-echo "Analyzing GC content for top ${NUM_READS} reads in: ${FASTQ_INPUT}"
-echo "------------------------------------------------------------"
+mkdir -p "${OUTDIR}"
 
-seqkit head -n "${NUM_READS}" "${FASTQ_INPUT}" | \
-  seqkit fx2tab -n -g | \
-  cut -f 2 | \
-  awk '{printf "%.0f\n", $1}' | \
-  sort | \
-  uniq -c | \
-  awk '{printf "%s%%\t%s\n", $2, $1}' | \
-  sort -n
+STATS_FILE="${OUTDIR}/read_stats.txt"
+GC_PER_READ_FILE="${OUTDIR}/gc_per_read.tsv"
+
+echo "============================================================"
+echo "[GC Check] Starting sequence analysis"
+echo "Input FASTQ:   ${INPUT_FASTQ}"
+echo "Output Dir:    ${OUTDIR}"
+echo "Threads:       ${THREADS}"
+echo "============================================================"
+
+# Step 1: Calculate global summary stats (including average GC%)
+echo "[1/2] Computing global yield and mean GC% with SeqKit..."
+seqkit stats -j "${THREADS}" -a "${INPUT_FASTQ}" > "${STATS_FILE}"
+
+# Step 2: Extract per-read length and GC content for distribution plotting
+echo "[2/2] Extracting per-read length and GC content..."
+seqkit fx2tab \
+  --threads "${THREADS}" \
+  --name \
+  --length \
+  --gc \
+  "${INPUT_FASTQ}" > "${GC_PER_READ_FILE}"
+
+echo "============================================================"
+echo "[GC Check] Complete!"
+echo "Summary stats:    ${STATS_FILE}"
+echo "Per-read metrics: ${GC_PER_READ_FILE}"
+echo "============================================================"
