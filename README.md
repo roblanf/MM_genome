@@ -43,7 +43,30 @@ bash /01_qc/scripts/make_test_data.sh
 NanoPlot will used again after the rest of the QC and filtering is complete to compare to these baseline results.
 
 
-Then more GenomeQC tools...   I will talk to Rob and/or do my own research to decide what to include - ideas are to look at k-mers with KMC and I think I definitely want to include GenomeScope. This will be a matter of returning to this section and adding them in when I want to buff out my QC/read filtering more.
+## K-mer counting and GenomeScope
+
+GenomeQC allows for stats about the long reads' k-mers to be computed e.g. how many total k-mers and how many are unique. It is a good way to examine the size and complexity of the genome prior to assembly, and to measure the error rates in sequencing of the data we have.
+
+The following code is used to compute basic KMC statistics and create a GenomeScope profile histogram useful for gleaning information about the Meelup Mallee genome:
+
+```
+bash /01_qc/scripts/run_kmc.sh
+```
+(output is currently for test data, placeholder to be replaced by full genome data soon)
+
+KMC basics output:
+Stats:
+   No. of k-mers below min. threshold :            0
+   No. of k-mers above max. threshold :            0
+   No. of unique k-mers               :     49528710
+   No. of unique counted k-mers       :     49528710
+   Total no. of k-mers                :     61800000
+   Total no. of reads                 :         5131
+   Total no. of super-k-mers          :      8974769
+
+GenomeScope profile histogram:
+
+
 
 ## Contamination check
 The next step is to inspect the raw reads, determining the extent of contamination. One can check GC contamination easily, but a more thorough examination can be done with the Kraken2 tool.
@@ -107,5 +130,6 @@ bash /01_qc/scripts/run_gc_check.sh
 77%     1
 
 There doesn't seem to be major evidence for contamination, as there is a unimodal distribution of GC content in the reads tested of around 38-40%. Spike at 59% could be an issue or just coincidence. The contigs can be better decontaminated once I implement the more complex Kraken2 tool.
+
 
 
