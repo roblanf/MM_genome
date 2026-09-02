@@ -66,6 +66,8 @@ Stats:
 
 GenomeScope profile histogram:
 
+![GenomeScope K-mer Profile](01_qc/results/kmer_distribution/genomescope_results/linear_plot.png)
+
 
 
 ## Contamination check
