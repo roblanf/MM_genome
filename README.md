@@ -134,4 +134,29 @@ bash /01_qc/scripts/run_gc_check.sh
 There doesn't seem to be major evidence for contamination, as there is a unimodal distribution of GC content in the reads tested of around 38-40%. Spike at 59% could be an issue or just coincidence. The contigs can be better decontaminated once I implement the more complex Kraken2 tool.
 
 
+# 02_filtering: Preparing reads for genome assembly by trimming and filtering
+
+We have established the quality of the raw data. Next, the reads must be filtered and trimmed. This will involve the removal of adapters done by Porechop (trimming reads), and filtering reads based on thresholding quality score and other key metrics using Chopper (trims out those which don't pass the filters). Once this process has been conducted with parameters/thresholds determined suitable for the MM genome, the reads will be much better quality and well-prepared for genome assembly.
+
+## Trimming adapters with Porechop
+Porechop discovers unknown adapters in ONT reads such as those we have for the MM raw data and then trims them off. This is done using a k-mer based algorithm. It is a more specialised tool than Chopper, which will be used afterwards to more holistically filter out reads which are low in quality score or not suitable for genome assembly use based on a range of filters/metrics.
+
+Running Porechop on the data:
+
+```
+bash /02_filtering/scripts/run_porechop.sh
+```
+
+Results:
+Adapter trimming and chimeric read checking were run on `raw_data/tiny_test.fastq` (5,131 total reads).  (to be replaced by full dataset)
+* **Start Adapters:** 3,347 / 5,131 reads trimmed (65.2%) — 130,752 bp removed
+* **End Adapters:** 1,882 / 5,131 reads trimmed (36.7%) — 16,102 bp removed
+* **Chimeric Reads Split:** 1 read (0.02%)
+* **Total Adapters Removed:** 146,854 bp
+
+There was a high adapter rate (~65% start, ~37% end in adapter sequences), so trimming out this noise in the reads is a highly effective and important measure prior to genome assembly.
+Only one out of 5,131 reads had an adapter in the middle of the read, meaning this one had two distinct fragments joined together during library prep by mistake. The low rate suggests reads are in tact and lengths are genuine for almost all cases.
+
+## Further trimming by filtering reads with Chopper
+
 
