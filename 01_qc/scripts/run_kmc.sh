@@ -1,42 +1,68 @@
 #!/usr/bin/env bash
-# Long-read k-mer counting with KMC and GenomeScope 2.0 histogram
-# Usage: bash 01_qc/scripts/run_kmc.sh [raw_data_dir] [qc_out_dir]
+# Script: 01_qc/scripts/run_kmc.sh
+# Purpose: Run KMC k-mer counting and GenomeScope 2.0 on long-read FASTQ data.
+# Usage: bash 01_qc/scripts/run_kmc.sh [input_fastq] [out_dir] [kmer_len] [threads] [max_mem_gb]
 
 set -euo pipefail
 
-# Set defaults to match current directory structure
-RAW_DATA_DIR="${1:-raw_data}"
-QC_DIR="${2:-01_qc/results}"
+# Parameters & Defaults
+INPUT_FASTQ="${1:-raw_data/raw_reads.fastq.gz}"
+OUTDIR="${2:-01_qc/results/kmc_genomescope}"
+KMER_LEN="${3:-21}"          # k=21 is standard for genome size estimation
+THREADS="${4:-16}"
+MAX_MEM="${5:-64}"           # Max RAM memory limit in GB for KMC
 
-# Output directory for k-mer results - goes into 01_qc/results
-KMER_DIR="${QC_DIR}/kmer_distribution"
-TMP_DIR="tmp_kmc_processing" #will be deleted at the end
-
-echo "=== Starting KMC K-mer Analysis ==="
-mkdir -p "${KMER_DIR}"
+# Directories & Temporary Files
+mkdir -p "${OUTDIR}"
+TMP_DIR="${OUTDIR}/tmp"
 mkdir -p "${TMP_DIR}"
 
-# Step 1: Find all FASTQ files (compressed or uncompressed)
-find "${RAW_DATA_DIR}" -type f \( -name "*.fastq" -o -name "*.fastq.gz" \) > "${TMP_DIR}/files.txt"
+KMC_DB="${OUTDIR}/kmc_db"
+HIST_FILE="${OUTDIR}/kmc_k${KMER_LEN}.hist"
+GS_OUTDIR="${OUTDIR}/genomescope_k${KMER_LEN}"
 
-# Step 2: Run KMC
-# Adjust threads (-t) and memory (-m) safely for test runs
-kmc -k21 -t4 -m16 -ci1 -cs10000 \
-    @"${TMP_DIR}/files.txt" \
-    "${TMP_DIR}/kmc_db" \
-    "${TMP_DIR}/"
+echo "============================================================"
+echo "[KMC & GenomeScope2] Starting k-mer analysis"
+echo "Input FASTQ:   ${INPUT_FASTQ}"
+echo "Output Dir:    ${OUTDIR}"
+echo "K-mer Length:  k=${KMER_LEN}"
+echo "Threads:       ${THREADS}"
+echo "Max Memory:    ${MAX_MEM} GB"
+echo "============================================================"
 
-# Step 3: Create histogram for GenomeScope2
-kmc_tools transform "${TMP_DIR}/kmc_db" histogram "${KMER_DIR}/long_read_histogram.txt" -ci1 -cs1000000
+# Step 1: Count k-mers with KMC
+echo "[1/3] Running KMC k-mer counting..."
+# -fm: FASTQ mode; -ci1: count min threshold 1; -cs10000: count max threshold
+kmc \
+  -k"${KMER_LEN}" \
+  -t"${THREADS}" \
+  -m"${MAX_MEM}" \
+  -ci1 \
+  -cs100000 \
+  -fq \
+  "${INPUT_FASTQ}" \
+  "${KMC_DB}" \
+  "${TMP_DIR}"
 
-# Step 4: Run GenomeScope 2.0 (diploid)
+# Step 2: Generate k-mer frequency histogram
+echo "[2/3] Generating k-mer frequency histogram..."
+kmc_tools transform "${KMC_DB}" histogram "${HIST_FILE}" -cx10000
+
+# Step 3: Run GenomeScope 2.0
+echo "[3/3] Running GenomeScope 2.0..."
 genomescope2 \
-    -i "${KMER_DIR}/long_read_histogram.txt" \
-    -o "${KMER_DIR}/genomescope_results" \
-    -k 21 \
-    -p 2
+  -i "${HIST_FILE}" \
+  -o "${GS_OUTDIR}" \
+  -k "${KMER_LEN}" \
+  -p 2 \
+  -l "${READ_TYPE:-long}" \
+  --verbose
 
-# Clean up temporary database files
+# Clean up temporary KMC working files
 rm -rf "${TMP_DIR}"
 
-echo "=== KMC & GenomeScope Analysis Complete ==="
+echo "============================================================"
+echo "[KMC & GenomeScope2] Pipeline complete!"
+echo "Histogram saved to:         ${HIST_FILE}"
+echo "GenomeScope results saved:  ${GS_OUTDIR}"
+echo "============================================================"
