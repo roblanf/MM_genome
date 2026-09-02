@@ -143,6 +143,11 @@ Porechop discovers unknown adapters in ONT reads such as those we have for the M
 
 Running Porechop on the data:
 
+If this is your first time running Porechop, you will need to install it to your environment like so:
+```
+micromamba install -c bioconda porechop -y 
+```
+
 ```
 bash /02_filtering/scripts/run_porechop.sh
 ```
