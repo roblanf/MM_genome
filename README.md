@@ -192,3 +192,18 @@ Filtering Summary:  (for test_data, to be replaced by full data soon)
 | **Chopper (Q10, >1kb)** | `tiny_test_filtered.fastq.gz` | 4,820 | 61.40 M | 1,001 | 14,090 | 55,276 |
 
 Most of the reads here were long enough and had a high enough Phred quality score (better than  Q10, >90% accuracy) to be kept for genome assembly while the others were filtered out (approx 300 out of 5132 reads filtered out).
+
+The reads file has now been effectively examined, cleaned and filtered. The next step is to conduct the genome assembly\
+
+
+
+# 03_assembly: Assembling filtered reads with Hifiasm, model selection to choose an assembly
+
+The set up is all done and now it is time to actually run some assemblies. Hifiasm is a haplotype-resolved de novo genome assembler, which is very appropriate for our hybrid species *Eucalyptus x phylacis* (Meelup Mallee) genome because the goal is to assemble the contigs into chromosome sets of each parent.
+
+I will use a RAM disk for fast read/write speeds when assembling. Hifiasm claims it can assemble a human genome in half a day! (for more info on Hifiasm, go here: https://github.com/chhylp123/hifiasm)
+Assembling the filtered reads using Hifiasm:
+
+```
+bash /03_assembly/scripts/run_hifiasm.sh
+```
