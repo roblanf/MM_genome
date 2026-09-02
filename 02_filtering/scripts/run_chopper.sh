@@ -1,35 +1,37 @@
 #!/usr/bin/env bash
 # Script: 02_filtering/scripts/run_chopper.sh
-# Purpose: Filter reads by length and quality score using Chopper
-# Usage: bash 02_filtering/scripts/run_chopper.sh [input_fastq] [output_fastq] [min_length] [min_qual] [threads]
+# Purpose: Filter ONT reads by length and mean quality score using Chopper.
+# Usage: bash 02_filtering/scripts/run_chopper.sh [input_fastq] [output_dir] [min_length] [min_qual] [threads]
 
 set -euo pipefail
 
-INPUT_FASTQ="${1:-02_filtering/results/tiny_test_porechop.fastq.gz}"
-OUTPUT_FASTQ="${2:-02_filtering/results/tiny_test_filtered.fastq.gz}"
-MIN_LENGTH="${3:-1000}"   # Minimum read length (bp)
-MIN_QUAL="${4:-10}"       # Minimum average Phred quality score (Q10)
-THREADS="${5:-4}"
+# Inputs and defaults (defaults to output of Porechop)
+INPUT_FASTQ="${1:-02_filtering/results/porechop/trimmed_reads.fastq.gz}"
+OUTDIR="${2:-02_filtering/results/chopper}"
+MIN_LENGTH="${3:-1000}"   # Filter out reads < 1kb
+MIN_QUAL="${4:-10}"       # Filter out reads with mean Q-score < 10 (90% accuracy)
+THREADS="${5:-16}"
 
-# Ensure output directory exists
-mkdir -p "$(dirname "${OUTPUT_FASTQ}")"
+mkdir -p "${OUTDIR}"
 
-echo "============================================================"
-echo "[Chopper] Starting Quality & Length Filtering"
-echo "Input:      ${INPUT_FASTQ}"
-echo "Output:     ${OUTPUT_FASTQ}"
-echo "Min Length: ${MIN_LENGTH} bp"
-echo "Min Qual:   Q${MIN_QUAL}"
-echo "Threads:    ${THREADS}"
-echo "============================================================"
-
-# Process gzipped or uncompressed FASTQ directly
-if [[ "${INPUT_FASTQ}" == *.gz ]]; then
-  zcat "${INPUT_FASTQ}" | chopper -q "${MIN_QUAL}" -l "${MIN_LENGTH}" -t "${THREADS}" | gzip > "${OUTPUT_FASTQ}"
-else
-  chopper -i "${INPUT_FASTQ}" -q "${MIN_QUAL}" -l "${MIN_LENGTH}" -t "${THREADS}" | gzip > "${OUTPUT_FASTQ}"
-fi
+FILTERED_FASTQ="${OUTDIR}/filtered_reads.fastq.gz"
+LOG_FILE="${OUTDIR}/chopper_run.log"
 
 echo "============================================================"
-echo "[Chopper] Finished successfully."
+echo "[Chopper] Starting Read Filtering"
+echo "Input FASTQ:   ${INPUT_FASTQ}"
+echo "Output FASTQ:  ${FILTERED_FASTQ}"
+echo "Min Length:    >= ${MIN_LENGTH} bp"
+echo "Min Quality:   >= Q${MIN_QUAL}"
+echo "Threads:       ${THREADS}"
+echo "============================================================"
+
+# Stream gzipped FASTQ into Chopper and compress output directly
+gunzip -c "${INPUT_FASTQ}" | \
+  chopper -l "${MIN_LENGTH}" -q "${MIN_QUAL}" --threads "${THREADS}" | \
+  gzip -c > "${FILTERED_FASTQ}"
+
+echo "============================================================"
+echo "[Chopper] Filtering complete!"
+echo "Filtered FASTQ: ${FILTERED_FASTQ}"
 echo "============================================================"
