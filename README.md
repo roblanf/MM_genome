@@ -104,59 +104,18 @@ Running a quicker contamination check on GC content for now:
 ```
 bash /01_qc/scripts/run_gc_check.sh
 ```
-(these are placeholder results from the test dataset)
-9%      1
-23%     2
-24%     2
-25%     3
-26%     8
-27%     4
-28%     10
-29%     14
-30%     27
-31%     24
-32%     33
-33%     77
-34%     91
-35%     178
-36%     292
-37%     429
-38%     686
-39%     790
-40%     712
-41%     536
-42%     386
-43%     215
-44%     137
-45%     101
-46%     59
-47%     25
-48%     43
-49%     42
-50%     30
-51%     27
-52%     21
-53%     20
-54%     22
-55%     28
-56%     18
-57%     5
-58%     5
-59%     11
-60%     2
-61%     2
-62%     2
-65%     1
-66%     1
-67%     1
-68%     2
-69%     1
-71%     1
-72%     2
-73%     1
-77%     1
+### SeqKit Additional Metrics including GC content:
 
-There doesn't seem to be major evidence for contamination, as there is a unimodal distribution of GC content in the reads tested of around 38-40%. Spike at 59% could be an issue or just coincidence. The contigs can be better decontaminated once I implement the more complex Kraken2 tool.
+| Metric | Value | Significance |
+|---|---|---|
+| **GC Content** | **39.58%** | Matches *Eucalyptus* nuclear baseline (~39%); no contamination |
+| **Read Length Interquartile Range** | 4,646 – 21,519 bp | Q1 (25th percentile) to Q3 (75th percentile) |
+| **N50 Read Count** | 44,211 reads | Number of top long reads constructing the N50 yield |
+| **Base Accuracy $\ge$ Q20** | **88.36%** | Bases meeting $\ge$99% call accuracy |
+| **Base Accuracy $\ge$ Q30** | **79.99%** | Bases meeting $\ge$99.9% call accuracy |
+| **Ambiguous Bases (N)** | 0 (0.00%) | Zero uncalled bases across all 44.33 Gb |
+
+*Do I need to make a histogram of how many reads have each GC content percentage? Could be a better way to show there is little concern for contamination, but not sure how at the moment*
 
 
 # 02_filtering: Preparing reads for genome assembly by trimming and filtering
