@@ -12,6 +12,11 @@ micromamba create -f eucalypt_asm.yml
 micromamba activate eucalypt_asm
 ```
 
+Before running code on the full raw data (all of the reads), I made a tiny test dataset to practice with. If you would like to do the same for your own code e.g. if you tweak some of the code here, use this test data!
+```
+bash /01_qc/scripts/make_test_data.sh
+```
+
 # 01_QC: Quality control of raw data
 
 First we establish the quality of the raw data. This can be done primarily with the GenomeQC tool, which generates graphics and descriptive summaries for genome assembly. The metrics computed in this section can be re-ran after all measures have been implemented, making for useful comparison and reflection on the quality control process.
@@ -29,13 +34,8 @@ micromamba install pillow
 ```
 Visualising the read length vs read quality results after running NanoPlot:
 
-![Length vs Quality Scatter Plot](01_qc/results/nanoplot_test_output/LengthvsQualityScatterPlot_kde.png)
+![Length vs Quality Scatter Plot](01_qc/results/raw_nanoplot/LengthvsQualityScatterPlot_kde.png)
 
-The displayed plot is for the tiny test dataset I've made. This is code to replicate my test data:
-
-```
-bash /01_qc/scripts/make_test_data.sh
-```
 *I will eventually replace this with the real outputs from the real raw_data once I'm done testing*
 
 *I want to make a table of the important summary stats here*
