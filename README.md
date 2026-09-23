@@ -28,10 +28,7 @@ Running NanoPlot:
 ```
 bash /01_qc/scripts/run_nanoplot.sh
 ```
-If this is your first time running NanoPlot, you will need to have the `pillow` installed in the environment. Add it here:
-```
-micromamba install pillow
-```
+
 Visualising the read length vs read quality results after running NanoPlot:
 
 ### Read length vs Read quality
@@ -66,7 +63,6 @@ The following code is used to compute basic KMC statistics and create a GenomeSc
 ```
 bash /01_qc/scripts/run_kmc.sh
 ```
-(output is currently for test data, placeholder to be replaced by full genome data soon)
 
 ### KMC basics output:
 Stats:
@@ -93,7 +89,7 @@ A diploid model ($p=2$) was fitted to the $k=21$ frequency histogram generated b
 
 ![GenomeScope K-mer Profile](01_qc/results/kmc_genomescope/genomescope_k21/linear_plot.png)
 
-
+The major peak at the very left (low coverage) represents sequencing errors that are unique (only covered once). GenomeScope recognises this and excludes them when calculating genome size. The main peak lambda typically corresponds to k-mers identical in both chromosomes (homozygous), however in the case of this hybrid species the heterozygous peak (with half the coverage) is the main peak due to a large portion of k-mers being unique to one parent species and not present in both parents' genomes.
 
 ## Contamination check
 The next step is to inspect the raw reads, determining the extent of contamination. One can check GC contamination easily, but a more thorough examination can be done with the Kraken2 tool.
