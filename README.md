@@ -14,9 +14,12 @@ micromamba activate eucalypt_asm
 
 Before running code on the full raw data (all of the reads), I made a tiny test dataset to practice with. If you would like to do the same for your own code e.g. if you tweak some of the code here, use this test data!
 ```
-bash /01_qc/scripts/make_test_data.sh
+bash /make_test_data.sh
 ```
-This makes the data, matches the file type of the raw reads and makes a directory called test_data for it. In the rest of the scripts, you can set raw_data = "test_data" for testing, then replace it i.e. raw_data = "your directory with the raw reads" to run the scripts on your real data.
+This makes the data, matches the file type of the raw reads and makes a directory called test_data for it. In the rest of the scripts, you can set raw_data = "test_data" for testing, then replace it i.e. raw_data = "your directory with the raw reads" to run the scripts on your real data. I've set up the following script for you to do this - Follow the instruction in the script to swap between testing and running on raw reads at your leisure before running scripts for the assembly
+```
+bash /config.sh
+```
 
 # 01_QC: Quality control of raw data
 
