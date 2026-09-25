@@ -29,7 +29,7 @@ kmc \
     "${tmp_dir}"/
 
 # Generating k-mer frequency histogram
-#separate histogram lines up to 10000 occurrences.
+#separate histogram lines up to 1000000 occurrences.
 kmc_tools transform "${tmp_dir}/kmc_db" histogram "${kmc_dir}/lr_histogram.txt" -ci1 -cs1000000
 
 # Making GenomeScope 2.0 profile
@@ -38,6 +38,5 @@ genomescope2 \
   -o "${kmc_dir}" \
   -k 21 \
   -p 2 \
-  --verbose
 
 rm -rf "${tmp_dir}"
