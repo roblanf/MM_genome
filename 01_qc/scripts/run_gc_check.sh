@@ -1,41 +1,25 @@
 #!/usr/bin/env bash
 # Script: 01_qc/scripts/run_gc_check.sh
-# Purpose: Calculate GC content distribution and overall read statistics for raw ONT reads.
-# Usage: bash 01_qc/scripts/run_gc_check.sh [input_fastq] [output_dir] [threads]
+# Purpose: Calculate global statistics and per-read GC content distribution for ONT reads
 
 set -euo pipefail
+source config.sh
 
-INPUT_FASTQ="${1:-raw_data/raw_reads.fastq.gz}"
-OUTDIR="${2:-01_qc/results/gc_content}"
-THREADS="${3:-16}"
+gc_dir="01_qc/results/gc"
+mkdir -p "${gc_dir}"
 
-mkdir -p "${OUTDIR}"
+# Global yield, coverage, and mean GC% stats
+seqkit stats \
+  -j 64 \
+  -a \
+  ${raw_data}/*.fastq.gz \
+  > "${gc_dir}/read_stats.txt"
 
-STATS_FILE="${OUTDIR}/read_stats.txt"
-GC_PER_READ_FILE="${OUTDIR}/gc_per_read.tsv"
-
-echo "============================================================"
-echo "[GC Check] Starting sequence analysis"
-echo "Input FASTQ:   ${INPUT_FASTQ}"
-echo "Output Dir:    ${OUTDIR}"
-echo "Threads:       ${THREADS}"
-echo "============================================================"
-
-# Step 1: Calculate global summary stats (including average GC%)
-echo "[1/2] Computing global yield and mean GC% with SeqKit..."
-seqkit stats -j "${THREADS}" -a "${INPUT_FASTQ}" > "${STATS_FILE}"
-
-# Step 2: Extract per-read length and GC content for distribution plotting
-echo "[2/2] Extracting per-read length and GC content..."
+# Extract per-read length and GC content - used to make histogram in R afterwards
 seqkit fx2tab \
-  --threads "${THREADS}" \
+  --threads 64 \
   --name \
   --length \
   --gc \
-  "${INPUT_FASTQ}" > "${GC_PER_READ_FILE}"
-
-echo "============================================================"
-echo "[GC Check] Complete!"
-echo "Summary stats:    ${STATS_FILE}"
-echo "Per-read metrics: ${GC_PER_READ_FILE}"
-echo "============================================================"
+  ${raw_data}/*.fastq.gz \
+  > "${gc_dir}/gc_pcts.tsv"
