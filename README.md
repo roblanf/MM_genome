@@ -16,6 +16,7 @@ Before running code on the full raw data (all of the reads), I made a tiny test 
 ```
 bash /01_qc/scripts/make_test_data.sh
 ```
+This makes the data, matches the file type of the raw reads and makes a directory called test_data for it. In the rest of the scripts, you can set raw_data = "test_data" for testing, then replace it i.e. raw_data = "your directory with the raw reads" to run the scripts on your real data.
 
 # 01_QC: Quality control of raw data
 
