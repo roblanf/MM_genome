@@ -55,12 +55,12 @@ p <- ggplot(data, aes(x = gc)) +
     fontface = "bold"
   ) +
   scale_x_continuous(
-    breaks = seq(0, 100, by = 10), 
+    breaks = seq(0, 100, by = 5), 
     limits = c(0, 100)
   ) +
   scale_y_continuous(labels = comma) +
   labs(
-    title = expression(italic("Eucalyptus phylacis") ~ "- Per-read GC Content Distribution"),
+    title = expression(italic("Eucalyptus x phylacis") ~ "- Per-read GC Content Distribution"),
     subtitle = "Subsampled to first 500,000 reads",
     x = "GC Content (%)",
     y = "Number of Reads"
