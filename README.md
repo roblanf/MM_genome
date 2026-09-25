@@ -118,7 +118,9 @@ bash /01_qc/scripts/run_gc_check.sh
 | **Base Accuracy $\ge$ Q30** | **79.99%** | Bases meeting $\ge$99.9% call accuracy |
 | **Ambiguous Bases (N)** | 0 (0.00%) | Zero uncalled bases across all 44.33 Gb |
 
-*Do I need to make a histogram of how many reads have each GC content percentage? Could be a better way to show there is little concern for contamination, but not sure how at the moment*
+Here is a histogram to visualise the spread of GC content across reads and notice any unusual peaks that could suggest contamination:
+![Distribution of reads by GC content (%)](01_qc/results/gc/gc_distribution.png)
+
 
 
 # 02_filtering: Preparing reads for genome assembly by trimming and filtering
