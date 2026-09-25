@@ -7,7 +7,7 @@ set -euo pipefail
 # Happy coding!
 
 # 1. TEST DATA
-raw_data="test_data"
+#raw_data="test_data"
 
 # 2. REAL DATA
-# raw_data="/home/raw_data/MM/2025_long_reads/ONT_gDNA192_1071_RL/E_Phylacis/20251117_1227_2C_PBE85256_e040940c/fastq_pass"
+raw_data="/data/raw_data/MM/2025_long_reads/ONT_gDNA192_1071_RL/E_Phylacis/20251117_1227_2C_PBE85256_e040940c/fastq_pass"

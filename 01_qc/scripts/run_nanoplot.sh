@@ -13,7 +13,7 @@ mkdir -p "${nanoplot_dir}"
 
 # Run NanoPlot
 NanoPlot -t 128 \
-         --fastq "${raw_data}"/*.fastq.gz \
+         --fastq ${raw_data}/*.fastq.gz \
          --downsample 100000 \
          -o "${nanoplot_dir}" \
          --title "E. phylacis ONT reads NanoPlot"
