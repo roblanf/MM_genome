@@ -12,16 +12,16 @@ mkdir -p "${assembly_dir}"
 
 # Run hifiasm on filtered reads
 
-# in config.sh the data is named filtered_fastq whether you set to test or full filtered reads
-# so this will make the script work for both!
-input_file=$(basename "${filtered_fastq}")
-
 hifiasm \
-  -o MM_assembly \
+  -o "${assembly_dir}/MM_assembly" \
   -t 100 \
   --ont \
   -l 3 \
   --telo-m AAACCCT \
   --dual-scaf \
-  "${input_file}" \
-  2>&1 | tee hifiasm.log
+  "${filtered_fastq}" \
+  2>&1 | tee "${assembly_dir}/hifiasm.log"
+
+# Note for those testing prior to running on full data:
+# Please run the following line to remove outputs from the test run, BEFORE you run this script again on the full code
+# rm -f 03_assembly/results/hifiasm/MM_assembly.*
