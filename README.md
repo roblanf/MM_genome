@@ -125,55 +125,28 @@ Here is a histogram to visualise the spread of GC content across reads and notic
 
 # 02_filtering: Preparing reads for genome assembly by trimming and filtering
 
-We have established the quality of the raw data. Next, the reads must be filtered and trimmed. This will involve the removal of adapters done by Porechop (trimming reads), and filtering reads based on thresholding quality score and other key metrics using Chopper (trims out those which don't pass the filters). Once this process has been conducted with parameters/thresholds determined suitable for the MM genome, the reads will be much better quality and well-prepared for genome assembly.
+We have established the quality of the raw data. Next, the reads must be filtered. They have already had the adapters trimmed by default, so no adapter trimming tools such as Porechop_ABI are required. The reads will be filtered by thresholding quality score and read length using Chopper (trims out those which don't pass the filters). Once this process has been conducted with parameters/thresholds determined suitable for the MM genome, the reads will be much better quality and well-prepared for genome assembly.
 
-## Trimming adapters with Porechop
-Porechop discovers unknown adapters in ONT reads such as those we have for the MM raw data and then trims them off. This is done using a k-mer based algorithm. It is a more specialised tool than Chopper, which will be used afterwards to more holistically filter out reads which are low in quality score or not suitable for genome assembly use based on a range of filters/metrics.
+## Filtering reads with Chopper
 
-Running Porechop on the data:
-
-If this is your first time running Porechop, you will need to install it to your environment like so:
-```
-micromamba install -c bioconda porechop -y 
-```
-
-```
-bash /02_filtering/scripts/run_porechop.sh
-```
-
-Results:
-Adapter trimming and chimeric read checking were run on `raw_data/tiny_test.fastq` (5,131 total reads).  (to be replaced by full dataset)
-* **Start Adapters:** 3,347 / 5,131 reads trimmed (65.2%) — 130,752 bp removed
-* **End Adapters:** 1,882 / 5,131 reads trimmed (36.7%) — 16,102 bp removed
-* **Chimeric Reads Split:** 1 read (0.02%)
-* **Total Adapters Removed:** 146,854 bp
-
-There was a high adapter rate (~65% start, ~37% end in adapter sequences), so trimming out this noise in the reads is a highly effective and important measure prior to genome assembly.
-Only one out of 5,131 reads had an adapter in the middle of the read, meaning this one had two distinct fragments joined together during library prep by mistake. The low rate suggests reads are in tact and lengths are genuine for almost all cases.
-
-## Further trimming by filtering reads with Chopper
-
-Chopper is a versatile tool which can filter based on average read quality, min/max read lengths and GC content. It then trims by a chosen method (see more info here https://github.com/wdecoster/chopper), in this case I used a Q10 (90% accuracy) quality score threshold.
+Chopper is a versatile tool which can filter based on average read quality, min/max read lengths and GC content. It then trims by a chosen method (see more info here https://github.com/wdecoster/chopper), in this case I used a Q15 (95% accuracy) quality score threshold and a >20Kb read length cutoff.
 
 Performing filtering and quality-based trimming using Chopper:
-No installations required if you've already run porechop :)
 
 ```
 bash /02_filtering/scripts/run_chopper.sh
 ```
 
-Filtering Summary:  (for test_data, to be replaced by full data soon)
-| Stage | File | Read Count | Total Bases (bp) | Min Length | Avg Length | Max Length |
-|---|---|---|---|---|---|---|
-| **Raw** | `tiny_test.fastq` | 5,131 | 61.90 M | 47 | 12,064.4 | 55,317 |
-| **Porechop** | `tiny_test_porechop.fastq.gz` | 5,132 | 61.76 M | 14 | 12,042.8 | 55,276 |
-| **Chopper (Q10, >1kb)** | `tiny_test_filtered.fastq.gz` | 4,820 | 61.40 M | 1,001 | 14,090 | 55,276 |
+Filtering Summary:  *To be added once I've set filters that I'm happy with*
 
-Most of the reads here were long enough and had a high enough Phred quality score (better than  Q10, >90% accuracy) to be kept for genome assembly while the others were filtered out (approx 300 out of 5132 reads filtered out).
 
-*Need to run NanoPlot one more time to compare before/after filtering*
+## Re-running NanoPlot post-filtering for comparison of coverage and other read metrics
+The same type of plot is displayed here, but this time on the filtered reads which have over Q15 quality score and are at least 20Kb long.
 
-The reads file has now been effectively examined, cleaned and filtered. The next step is to conduct the genome assembly
+![Length vs Quality Scatter Plot for Filtered Reads](02_filtering/results/nanoplot/LengthvsQualityScatterPlot_kde.png)
+
+
+The reads file has now been effectively examined, cleaned and filtered. The next step is to conduct the genome assembly.
 
 # 03_assembly: Assembling filtered reads with Hifiasm, model selection to choose an assembly
 
