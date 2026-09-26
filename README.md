@@ -45,7 +45,7 @@ Visualising the read length vs read quality results after running NanoPlot:
 | Metric | Value |
 |---|---|
 | **Total Reads** | 3,064,194 |
-| **Total Yield** | 44.33 Gb |
+| **Total Yield** | 44.327 Gb |
 | **Coverage (~522 Mb Genome)** | ~84.9× |
 | **Median Read Length** | 12,334 bp |
 | **Mean Read Length** | 14,466.1 bp |
@@ -144,6 +144,22 @@ Filtering Summary:  *To be added once I've set filters that I'm happy with*
 The same type of plot is displayed here, but this time on the filtered reads which have over Q15 quality score and are at least 20Kb long.
 
 ![Length vs Quality Scatter Plot for Filtered Reads](02_filtering/results/nanoplot/LengthvsQualityScatterPlot_kde.png)
+
+### Filtered ONT Read quality summary
+
+| Metric | Value |
+|---|---|
+| **Total Reads** | 780,029 |
+| **Total Yield** | 22.496 Gb |
+| **Coverage (~522 Mb Genome)** | ~43.1× |
+| **Median Read Length** | 26,448 bp |
+| **Mean Read Length** | 28,840 bp |
+| **Read N50** | 28,556 bp |
+| **Median Quality Score** | Q20.7 |
+| **Reads $\ge$ Q15** | 780029 (100.0%) |
+| **Reads $\ge$ Q20** | 463140 (59.4%) |
+
+This has great quality and length improvements, but crucially doesn't have 30x coverage per haplotype! Need to revise filters to get at least 60x total coverage!
 
 
 The reads file has now been effectively examined, cleaned and filtered. The next step is to conduct the genome assembly.
