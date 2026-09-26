@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Script: 02_filtering/scripts/run_chopper.sh
-# Purpose: Decompress files with pigz, filter reads using >=Q15 and length >=20kb using chopper.
+# Purpose: Decompress files with pigz, filter reads using >=Q15 and length >=17.5kb using chopper.
 # These cutoffs are set to provide good quality whilst maintaining >30x coverage per haplotype.
 
 set -euo pipefail
@@ -15,5 +15,5 @@ out_fastq="${filter_dir}/filtered_reads.fastq.gz"
 # Use piping to decompress with pigz, then filter with chopper, and compress again
 find ${raw_data} -type f \( -name "*.fastq.gz" -o -name "*.fq.gz" \) | \
   xargs pigz -dc -p 64 | \
-  chopper -q 15 -l 20000 | \
+  chopper -q 15 -l 17500 | \
   pigz -p 64 > "${out_fastq}"
