@@ -6,22 +6,15 @@ set -euo pipefail
 
 source config.sh
 
+# Making output directory for results
 assembly_dir="03_assembly/results/hifiasm"
-ramdisk_dir="/mnt/ramdisk"
-
 mkdir -p "${assembly_dir}"
 
-#Set up the RAM disk with sudo:
-sudo mkdir -p "${ramdisk_dir}"
-sudo mount -t tmpfs -o size=1500G tmpfs "${ramdisk_dir}"
-sudo chown "${USER}" "${ramdisk_dir}"
-
-# Copy filtered data into the RAM disk
-cp "${filtered_fastq}" "${ramdisk_dir}/"
-
-# Run hifiasm on filtered reads in RAM disk
+# Run hifiasm on filtered reads
 cd "${ramdisk_dir}"
 
+# in config.sh the data is named filtered_fastq whether you set to test or full filtered reads
+# so this will make the script work for both!
 input_file=$(basename "${filtered_fastq}")
 
 hifiasm \
@@ -33,11 +26,3 @@ hifiasm \
   --dual-scaf \
   "${input_file}" \
   2>&1 | tee hifiasm.log
-
-# Move results back into project directory:
-# returns you to previous directory before copying results.
-cd - > /dev/null
-rsync -av --exclude='*.fastq.gz' "${ramdisk_dir}/" "${assembly_dir}/"
-
-# Unmount RAM disk
-sudo umount "${ramdisk_dir}" || true
