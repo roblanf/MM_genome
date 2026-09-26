@@ -11,7 +11,6 @@ assembly_dir="03_assembly/results/hifiasm"
 mkdir -p "${assembly_dir}"
 
 # Run hifiasm on filtered reads
-cd "${ramdisk_dir}"
 
 # in config.sh the data is named filtered_fastq whether you set to test or full filtered reads
 # so this will make the script work for both!
