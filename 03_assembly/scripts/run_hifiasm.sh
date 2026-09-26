@@ -24,4 +24,4 @@ hifiasm \
 
 # Note for those testing prior to running on full data:
 # Please run the following line to remove outputs from the test run, BEFORE you run this script again on the full code
-# rm -f 03_assembly/results/hifiasm/MM_assembly.*
+# rm -rf 03_assembly/results/hifiasm/*
