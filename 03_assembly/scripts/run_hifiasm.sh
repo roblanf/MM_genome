@@ -6,9 +6,7 @@ set -euo pipefail
 
 source config.sh
 
-filter_dir="02_filtering"
 assembly_dir="03_assembly/results/hifiasm"
-filtered_fastq="${filter_dir}/filtered_reads.fastq.gz"
 ramdisk_dir="/mnt/ramdisk"
 
 mkdir -p "${assembly_dir}"
@@ -24,6 +22,8 @@ cp "${filtered_fastq}" "${ramdisk_dir}/"
 # Run hifiasm on filtered reads in RAM disk
 cd "${ramdisk_dir}"
 
+input_file=$(basename "${filtered_fastq}")
+
 hifiasm \
   -o MM_assembly \
   -t 100 \
@@ -31,7 +31,7 @@ hifiasm \
   -l 3 \
   --telo-m AAACCCT \
   --dual-scaf \
-  filtered_reads.fastq.gz \
+  "${input_file}" \
   2>&1 | tee hifiasm.log
 
 # Move results back into project directory:
