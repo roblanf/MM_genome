@@ -17,4 +17,4 @@ NanoPlot \
   -t 64 \
   --downsample 100000 \
   -o "${nanoplot_dir}" \
-  --title "E. phylacis filtered reads NanoPlot (>Q15, >20Kb length)"
+  --title "E. phylacis filtered reads NanoPlot (>Q13, >15Kb length)"
