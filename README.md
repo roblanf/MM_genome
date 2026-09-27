@@ -137,38 +137,39 @@ Performing filtering and quality-based trimming using Chopper:
 bash /02_filtering/scripts/run_chopper.sh
 ```
 
-Filtering Summary:  *To be added once I've set filters that I'm happy with*
+After trial and error, I found that the best tradeoff between coverage (aiming for at least 30x coverage per haplotype) and quality/length was using thresholds for Q13 (~95% accuracy) and 15Kb read lengths. The coverage can be seen in the 'Filtered ONT read quality summary' further down.
 
 
 ## Re-running NanoPlot post-filtering for comparison of coverage and other read metrics
-The same type of plot is displayed here, but this time on the filtered reads which have over Q15 quality score and are at least 20Kb long.
+The same type of plot is displayed here, but this time on the filtered reads which have over Q13 quality score and are at least 15Kb long.
 
 ![Length vs Quality Scatter Plot for Filtered Reads](02_filtering/results/nanoplot/LengthvsQualityScatterPlot_kde.png)
 
-### Filtered ONT Read quality summary
+### Filtered ONT read quality summary
 
 | Metric | Value |
 |---|---|
-| **Total Reads** | 780,029 |
-| **Total Yield** | 22.496 Gb |
-| **Coverage (~522 Mb Genome)** | ~43.1× |
-| **Median Read Length** | 26,448 bp |
-| **Mean Read Length** | 28,840 bp |
-| **Read N50** | 28,556 bp |
-| **Median Quality Score** | Q20.7 |
-| **Reads $\ge$ Q15** | 780029 (100.0%) |
-| **Reads $\ge$ Q20** | 463140 (59.4%) |
+| **Total Reads** | 1,258,992 |
+| **Total Yield** | 31.762 Gb |
+| **Coverage (~522 Mb Genome)** | ~60.85× |
+| **Median Read Length** | 22,761 bp |
+| **Mean Read Length** | 25,228 bp |
+| **Read N50** | 25,591 bp |
+| **Median Quality Score** | Q20.4 |
+| **Reads $\ge$ Q15** | 1,165,231 (92.6%) |
+| **Reads $\ge$ Q20** | 696,853 (55.4%) |
+| **Reads $\ge$ Q25** | 32,580 (2.6%) |
 
-This has great quality and length improvements, but crucially doesn't have 30x coverage per haplotype! Need to revise filters to get at least 60x total coverage!
+This output has over just over 60x total coverage, meaning over 30x coverage per haplotype. The filtering has refined read quality and lengths as effectively as possible whilst maintaining the amount of coverage desired.
 
-
-The reads file has now been effectively examined, cleaned and filtered. The next step is to conduct the genome assembly.
+The raw reads for the Meelup Mallee genome have now been examined, cleaned and filtered. The next step is to conduct the genome assembly.
 
 # 03_assembly: Assembling filtered reads with Hifiasm, model selection to choose an assembly
 
 The set up is all done and now it is time to actually run some assemblies. Hifiasm is a haplotype-resolved de novo genome assembler, which is very appropriate for our hybrid species *Eucalyptus x phylacis* (Meelup Mallee) genome because the goal is to assemble the contigs into chromosome sets of each parent.
 
-I will use a RAM disk for fast read/write speeds when assembling. Hifiasm claims it can assemble a human genome in half a day! (for more info on Hifiasm, go here: https://github.com/chhylp123/hifiasm)
+The bulk of the progress and analysis for this project will come post-assembly, using many tools to make relevant graphs/plots and interpret the assembly outputted.
+
 Assembling the filtered reads using Hifiasm:
 
 ```
