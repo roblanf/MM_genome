@@ -121,7 +121,7 @@ bash /01_qc/scripts/run_gc_check.sh
 Here is a histogram to visualise the spread of GC content across reads and notice any unusual peaks that could suggest contamination:
 ![Distribution of reads by GC content (%)](01_qc/results/gc/gc_distribution.png)
 
-
+There is a relatively symmetric distribution of GC content across all of the reads, however a small bump is noticeable around 55% GC content. After some preliminary research, this is likely to be a microbial/fungal contaminant that has made its way into the *Eucalyptus x phylacis* tissue sample rather than a GC-rich area of the genome. GC-rich regions in typical eucalyptus genomes such as rRNA clusters are not proportionally large enough in the genome to cause a spike that pronounced, and many fungi and microbes can interact with leaves and roots of eucalyptus species, meaning it is very plausible for there to be some contamination. Post assembly, BlobTools can be used to pinpoint contaminant contig IDs if there are any. If there is a match with a taxon whose GC content is around 55%, this would explain the bump observed. 
 
 # 02_filtering: Preparing reads for genome assembly by trimming and filtering
 
@@ -168,10 +168,10 @@ The raw reads for the Meelup Mallee genome have now been examined, cleaned and f
 
 The set up is all done and now it is time to actually run some assemblies. Hifiasm is a haplotype-resolved de novo genome assembler, which is very appropriate for our hybrid species *Eucalyptus x phylacis* (Meelup Mallee) genome because the goal is to assemble the contigs into chromosome sets of each parent.
 
-The bulk of the progress and analysis for this project will come post-assembly, using many tools to make relevant graphs/plots and interpret the assembly outputted.
-
 Assembling the filtered reads using Hifiasm:
 
 ```
 bash /03_assembly/scripts/run_hifiasm.sh
 ```
+
+The reads have now been assembled, and a range of analysis with tools can be conducted to evaluate the assembly before coding for parental assignment.
