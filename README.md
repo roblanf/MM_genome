@@ -175,3 +175,23 @@ bash /03_assembly/scripts/run_hifiasm.sh
 ```
 
 The reads have now been assembled, and a range of analysis with tools can be conducted to evaluate the assembly before coding for parental assignment.
+
+## Getting Metrics for Assembly
+
+Using gfastats to get basic metrics for the assembly after hifiasm is complete:
+```
+bash /03_assembly/scripts/gfastats.sh
+```
+And looking specifically at the top 11 scaffolds, because *Eucalyptus x phylacis* has 2n = 22 chromosomes so a base chromosome number of 11. Thus if top 11 scaffolds coverage is very high, then the assembly is near-chromosome-scale already.
+
+```
+bash /03_assembly/scripts/get_top11.sh
+```
+
+### Assembly Metrics summary:
+
+| Assembly | Total Length (bp) | Total Contigs | Contig N50 (bp) | Top 11 Contigs (bp) | Top 11 Coverage (%) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Primary** | 579,220,214 | 76 | 39,810,302 | 510,677,781 | 88.16% |
+| **Haplotype 1** | 612,315,716 | 465 | 41,926,025 | 501,716,605 | 81.93% |
+| **Haplotype 2** | 604,287,328 | 466 | 38,526.299 | 482,434,239 | 79.83% |
