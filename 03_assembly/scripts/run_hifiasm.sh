@@ -10,12 +10,14 @@ source config.sh
 assembly_dir="03_assembly/results/hifiasm"
 mkdir -p "${assembly_dir}"
 
+
 # Run hifiasm on filtered reads
 
 hifiasm \
   -o "${assembly_dir}/MM_assembly" \
-  -t 100 \
+  -t 85 \
   --ont \
+  --hom-cov 56 \
   -l 3 \
   --telo-m AAACCCT \
   --dual-scaf \
