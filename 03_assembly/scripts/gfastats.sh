@@ -16,5 +16,5 @@ gfastats "${assembly_dir}/MM_assembly.bp.hap1.p_ctg.gfa" -t 16 --discover-paths 
 gfastats "${assembly_dir}/MM_assembly.bp.hap2.p_ctg.gfa" -t 16 --discover-paths --segment-report > "${stats_dir}/stats_hap2_segments.txt"
 gfastats "${assembly_dir}/MM_assembly.bp.hap2.p_ctg.gfa" -t 16 --discover-paths > "${stats_dir}/stats_hap2.txt"
 
-gfastats "${assembly_dir}/MM_assembly.bp.p_ctg.gfa" -t 16 --discover-paths --segment-report > "${stats_dir}/stats_primary_segments.txt"
-gfastats "${assembly_dir}/MM_assembly.bp.p_ctg.gfa" -t 16 --discover-paths > "${stats_dir}/stats_primary.txt"
+gfastats "${assembly_dir}/MM_assembly.bp.primary.p_ctg.gfa" -t 16 --discover-paths --segment-report > "${stats_dir}/stats_primary_segments.txt"
+gfastats "${assembly_dir}/MM_assembly.bp.primary.p_ctg.gfa" -t 16 --discover-paths > "${stats_dir}/stats_primary.txt"
