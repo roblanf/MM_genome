@@ -10,11 +10,13 @@ stats_dir="${assembly_dir}/post_hifi_stats"
 
 mkdir -p "${stats_dir}"
 
-gfastats "${assembly_dir}/MM_assembly.bp.hap1.p_ctg.gfa" -t 16 --discover-paths --segment-report > "${stats_dir}/stats_hap1_segments.txt"
-gfastats "${assembly_dir}/MM_assembly.bp.hap1.p_ctg.gfa" -t 16 --discover-paths > "${stats_dir}/stats_hap1.txt"
+# Compute gfastats whilst also converting to .fa for use in compleasm_busco.sh
 
-gfastats "${assembly_dir}/MM_assembly.bp.hap2.p_ctg.gfa" -t 16 --discover-paths --segment-report > "${stats_dir}/stats_hap2_segments.txt"
-gfastats "${assembly_dir}/MM_assembly.bp.hap2.p_ctg.gfa" -t 16 --discover-paths > "${stats_dir}/stats_hap2.txt"
+# Primary
+gfastats "${assembly_dir}/MM_assembly.primary.bp.p_ctg.gfa" -t 16 --discover-paths --out-fasta "${assembly_dir}/MM_assembly.primary.p_ctg.fa" > "${stats_dir}/stats_primary.txt"
 
-gfastats "${assembly_dir}/MM_assembly.bp.primary.p_ctg.gfa" -t 16 --discover-paths --segment-report > "${stats_dir}/stats_primary_segments.txt"
-gfastats "${assembly_dir}/MM_assembly.bp.primary.p_ctg.gfa" -t 16 --discover-paths > "${stats_dir}/stats_primary.txt"
+# Hap1
+gfastats "${assembly_dir}/MM_assembly.bp.hap1.p_ctg.gfa" -t 16 --discover-paths --out-fasta "${assembly_dir}/MM_assembly.hap1.p_ctg.fa" > "${stats_dir}/stats_hap1.txt"
+
+# Hap2
+gfastats "${assembly_dir}/MM_assembly.bp.hap2.p_ctg.gfa" -t 16 --discover-paths --out-fasta "${assembly_dir}/MM_assembly.hap2.p_ctg.fa" > "${stats_dir}/stats_hap2.txt"
