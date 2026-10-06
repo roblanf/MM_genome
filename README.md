@@ -193,11 +193,21 @@ bash /03_assembly/scripts/get_top11.sh
 
 ### Assembly Metrics summary:
 
+Before fixing homozygous peak:
 | Assembly | Total Length (bp) | Total Contigs | Contig N50 (bp) | Top 11 Contigs (bp) | Top 11 Coverage (%) |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Primary** | 579,220,214 | 76 | 39,810,302 | 510,677,781 | 88.16% |
 | **Haplotype 1** | 612,315,716 | 465 | 41,926,025 | 501,716,605 | 81.93% |
 | **Haplotype 2** | 604,287,328 | 466 | 38,526.299 | 482,434,239 | 79.83% |
+
+After fixing homozygous peak with `--hom-cov 56`:
+| Assembly | Total Length (bp) | Total Contigs | Contig N50 (bp) | Top 11 Contigs (bp) | Top 11 Coverage (%) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Primary** | 578,955,535 | 70 | 39,810,340 | 510,678,162 | 88.2% |
+| **Haplotype 1** | 591,870,853 | 287 | 38,526,317 | 482,913,485 | 81.59% |
+| **Haplotype 2** | 572,264,015 | 317 | 41,926,117 | 498,306,473 | 87.08% |
+
+By running a Hifiasm assembly that correctly identifies the second peak as the homozygous one, there are noticeable improvements. The reduced number of contigs (particularly for haplotypes) is an indication of reduced fragmentation, which has occurred because coverage is no longer underestimated and more duplicate haplotigs have been successfully purged. Additionally, the total lengths of assemblies have decreased for similar reasons of purging overlapping/duplicate haplotigs. This means the assembly is less noisy and inflated from fragmentation, and has shortened towards a likelier estimated genome size under 600Mbp.
 
 Notice that there is a primary, haplotype 1 and haplotype 2 assembly conducted by Hifiasm. 
 The primary assembly represents a haploid genome while the *Eucalyptus x phylacis* genome is diploid. This collapsed assembly approach arbitrarily patches together a haploid genome by choosing one representative sequence for heterozygous regions, which is not ideal for the purposes of this project. The primary assembly is also the shortest in length because Hifiasm seeks to maximise N50 and contiguity by stitching homozygous regions together.
