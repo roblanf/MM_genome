@@ -211,3 +211,32 @@ By running a Hifiasm assembly that correctly identifies the second peak as the h
 
 Notice that there is a primary, haplotype 1 and haplotype 2 assembly conducted by Hifiasm. 
 The primary assembly represents a haploid genome while the *Eucalyptus x phylacis* genome is diploid. This collapsed assembly approach arbitrarily patches together a haploid genome by choosing one representative sequence for heterozygous regions, which is not ideal for the purposes of this project. The primary assembly is also the shortest in length because Hifiasm seeks to maximise N50 and contiguity by stitching homozygous regions together.
+
+## Genome Completeness - BUSCO
+
+Benchmarking Universal Single-Copy Orthologs (BUSCO) is a crucial step in genome assembly used for measuring assembly quality. It measures genome completeness as a percentage by searching the genome for a predetermined set of single-copy genes. In this project I downloaded the recent OrthoDB v12 catalog which has been used for Ash's *Spinifex sericeus* assembly, but using the eudicots `odb_eudicotyledons12` (*S. sericius* is a monocot).
+
+Compleasm is an efficient tool to measure genome completeness, which I have used in the following script. This provides BUSCO genome completeness metrics for the primary and haplotype assemblies from the improved Hifiasm runthrough.
+
+```
+bash 03_assembly/scripts/compleasm_busco.sh
+```
+
+### Assembly Metrics including genome completeness:
+| Metric | **Primary** | **Haplotype 1** | **Haplotype 2** |
+| :--- | :---: | :---: | :---: |
+| **Total Length (bp)** | 578,955,535 | 591,870,853 | 572,264,015 |
+| **Total Contigs** | 70 | 287 | 317 |
+| **Contig N50 (bp)** | 39,810,340 | 38,526,317 | 41,926,117 |
+| **Top 11 Contigs (bp)** | 510,678,162 | 482,913,485 | 498,306,473 |
+| **Top 11 Coverage** | 88.2% | 81.59% | 87.08% |
+| **BUSCO Genome Completeness**| 95.69% | 98.47% | 99.61% |
+| Single-copy (S)| 85.59% | 91.30% | 92.48% |
+| Duplicated (D)| 6.10% | 7.17% | 7.13% |
+| Fragmented (F)| 0.71% | 0.39% | 0.36% |
+| Missing (M)| 3.60% | 1.14% | 0.04% |
+
+Note that BUSCO completedness is the addition of single-copy (S) and duplicated (D). The genes located should be single-copy but in the cases they are duplicated they are still present - and this is what is being checked to evaluate completeness of the genome.
+
+The results are promising, as results above 95% are typical of published eucalyptus and hybrid species genomes and above 99% is excellent. The same metrics will be computed after parental assignment, when the current haplotype assemblies which are a patchwork of contigs from both parents will be arranged into two parental haplotypes. If the metrics remain at a similar level or improve, this genome is likely worthy of publication.
+
