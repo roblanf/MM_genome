@@ -261,7 +261,7 @@ AAACCCT is the reverse complement of the canonical plant telomere DNA motif TTTA
 
 The following script combines the `tidk explore` and `tidk search` steps to look at motifs and assess T2T:
 ```
-
+bash 03_assembly/scripts/telomere_check.sh
 ```
 
 
