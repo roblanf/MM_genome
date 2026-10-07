@@ -240,3 +240,26 @@ Note that BUSCO completedness is the addition of single-copy (S) and duplicated 
 
 The results are promising, as results above 95% are typical of published eucalyptus and hybrid species genomes and above 99% is excellent. The same metrics will be computed after parental assignment, when the current haplotype assemblies which are a patchwork of contigs from both parents will be arranged into two parental haplotypes. If the metrics remain at a similar level or improve, this genome is likely worthy of publication.
 
+
+## Assembly Cleanup
+
+Performing parental binning to achieve post-assembly phasing and a haplotype-resolved genome assembly is the main goal from here. However, before doing this there are more checks and tools that can be used to improve and clean up remaining issues in the current assembly I have.
+These include filtering out small contigs, organelle removal to work on nuclear genome, investigating contamination with BlobTools and a telomere-to-telomere check.
+
+### Telomere Checks
+
+
+
+### Organelle removal
+
+
+### Contamination screening
+
+
+### Filter for contig size
+
+
+# 04_parental_assignment: Obtaining parental haplotype assemblies via mapping, k-mer profiling
+
+
+
