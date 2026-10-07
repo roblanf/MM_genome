@@ -248,6 +248,21 @@ These include filtering out small contigs, organelle removal to work on nuclear 
 
 ### Telomere Checks
 
+Looking for motifs in the assemblies with `tidk explore`, the following output was observed. Note that a run is recorded as 100 or more sequential repeats of the motif.
+
+| Motif | Runs in Primary Assembly | Runs in Haplotype 1 | Runs in Haplotype 2 |
+| :--- | :---: | :---: | :---: | :--- |
+| **`AAACCCT`** | **1,572** | **5,822** | **6,164** |
+| **`AAAAAAT`** | 4,245 | — | 4,302 |
+| **`ACCCGTC`** | — | 1,274 | 1,675 |
+| **`AAAAAAG`** | — | 318 | — |
+
+AAACCCT is the reverse complement of the canonical plant telomere DNA motif TTTAGGG. The fact that it is very prominent here especially in the better-suited haplotype assemblies reinforces that AAACCCT is the telomere motif for *Eucalyptus x phylacis*. Using `tidk search` the motifs' locations can be visualised, which will be useful for observing how many contigs in the assemblies are telomere-to-telomere (T2T). This is because telomere arrays of the known motif will be visible at both ends of the contig if it is T2T.
+
+The following script combines the `tidk explore` and `tidk search` steps to look at motifs and assess T2T:
+```
+
+```
 
 
 ### Organelle removal
