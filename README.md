@@ -250,8 +250,9 @@ These include filtering out small contigs, organelle removal to work on nuclear 
 
 Looking for motifs in the assemblies with `tidk explore`, the following output was observed. Note that a run is recorded as 100 or more sequential repeats of the motif.
 
+#### Motifs Output:
 | Motif | Runs in Primary Assembly | Runs in Haplotype 1 | Runs in Haplotype 2 |
-| :--- | :---: | :---: | :---: | :--- |
+| :--- | :---: | :---: | :---: |
 | **`AAACCCT`** | **1,572** | **5,822** | **6,164** |
 | **`AAAAAAT`** | 4,245 | — | 4,302 |
 | **`ACCCGTC`** | — | 1,274 | 1,675 |
