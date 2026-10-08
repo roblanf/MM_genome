@@ -56,13 +56,13 @@ for (asm in assemblies) {
         plot.subtitle = element_text(size = 9, face = "italic", hjust = 0.5)
       ) +
       labs(
-        title = sprintf("Repeat distribution for %s (%s)", asm_file, motif),
+        title = sprintf("Repeat distribution for %s (%s)", asm, motif),
         subtitle = "Method: Motif count mapped across 10kb windows using 'tidk search' with smoothed rolling mean trendline",
         x = "Position (Mb)",
         y = "Motif count"
       )
     
-    out_png <- file.path(out_dir, sprintf("%s_%s_fingerprint.png", label, motif))
+    out_png <- file.path(out_dir, sprintf("%s_%s_fingerprint.png", asm, motif))
     ggsave(out_png, plot = p, width = 8, height = 10, dpi = 300)
     cat(sprintf("Saved updated fingerprint plot: %s\n", out_png))
   } else {
