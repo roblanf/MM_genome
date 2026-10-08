@@ -16,7 +16,7 @@ mkdir -p "${tax_dir}"
 db_path="00_databases/uniprot/uniprot_sprot.dmnd"
 
 # BlobTools standard BLAST output format
-blast_fmt="6 qseqid staxids bitscore qstart qend sstart send pident evalue length"
+diamond_fmt="6 qseqid staxids bitscore qstart qend sstart send pident evalue length"
 
 # Run diamond blastx for haplotype 1
 diamond blastx \
