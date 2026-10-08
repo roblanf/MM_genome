@@ -26,15 +26,14 @@ for (i in 1:nrow(assemblies_config)) {
   prefix   <- assemblies_config$id_prefix[i]
   label    <- assemblies_config$asm_label[i]
   line_col <- assemblies_config$line_col[i]
-  if (file.exists(file_path)) {
-    df <- read_tsv(file_path, show_col_types = FALSE)
 
   tsv_path <- file.path(tidk_dir, sprintf("MM_assembly.%s_%s_telomeric_repeat_windows.tsv", asm, motif)) 
   id_file  <- file.path(stats_dir, sprintf("top11_%s_ids.txt", prefix))
     
   if (file.exists(tsv_path) && file.exists(id_file)) {
     # Read 11 longest contig IDs in exact order from get_top11.sh
-    top11_ids <- readLines(id_file) %>% trimws() %>% filter(. != "")
+    top11_ids <- readLines(id_file) %>% trimws()
+    top11_ids <- top11_ids[top11_ids != ""]
 
     # Map IDs to ranked labels C1...C11
     rank_map <- setNames(paste0("C", 1:length(top11_ids)), top11_ids)
@@ -57,11 +56,11 @@ for (i in 1:nrow(assemblies_config)) {
       )
     
     # Plot for different assemblies
-    p <- ggplot(plot_data, aes(x = position_mb)) +
-      # Raw count points
-      geom_point(aes(y = total_count), color = "black", size = 0.4, alpha = 0.5) +
+    p <- ggplot(plot_df, aes(x = position_mb)) +
       # 5-window smoothed rolling mean trend line
-      geom_line(aes(y = smoothed), color = motif_color, linewidth = 0.8) +
+      geom_line(aes(y = smoothed), color = line_col, linewidth = 0.8) +
+      # Raw count points on top
+      geom_point(aes(y = smoothed), color = line_col, size = 0.4, alpha = 0.5) +
       facet_wrap(~ contig_label, scales = "free_x", ncol = 1, strip.position = "left") +
       theme_classic(base_size = 11) +
       theme(
@@ -83,6 +82,6 @@ for (i in 1:nrow(assemblies_config)) {
     ggsave(out_png, plot = p, width = 8, height = 10, dpi = 300)
     cat(sprintf("Saved updated fingerprint plot: %s\n", out_png))
   } else {
-    cat(sprintf("Warning: File not found: %s\n", file_path))
+    cat(sprintf("Warning: Input files not found for %s. Checked:\n  TSV: %s\n  IDs: %s\n", asm, tsv_path, id_file))
   }
 }
