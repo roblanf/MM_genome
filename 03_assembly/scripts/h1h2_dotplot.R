@@ -45,14 +45,34 @@ paf_top11 <- paf %>%
     qend_plot   = if_else(strand == "-", qstart, qend)
   )
 
-# Generate Dotplot
-# Sort contigs by length/ID order in factors for clean plot axes
+# Find the best primary search matching hap2 contigs for each hap1 contig
+best_matches <- paf_top11 %>%
+  group_by(qname, tname) %>%
+  summarise(total_aln = sum(alen), .groups = "drop") %>%
+  group_by(qname) %>%
+  slice_max(total_aln, n = 1)
+
+# Order hap1 contigs as defined in top11_h1
+h1_ordered <- top11_h1
+
+# Order hap2 contigs so they match the order of their corresponding hap1 pair
+h2_ordered <- match(h1_ordered, best_matches$qname) %>%
+  best_matches$tname[.] %>%
+  na.omit() %>%
+  as.character() %>%
+  unique()  # Ensure no duplicate factor levels
+
+# Append any remaining hap2 contigs that didn't have a top match
+h2_ordered <- unique(c(h2_ordered, setdiff(top11_h2, h2_ordered)))
+
+# Apply ordered factors to align facets along the main diagonal
 paf_top11 <- paf_top11 %>%
   mutate(
-    qname = factor(qname, levels = rev(top11_h1)), # Hap1 on Y-axis
-    tname = factor(tname, levels = top11_h2)       # Hap2 on X-axis
+    qname = factor(qname, levels = rev(h1_ordered)), # Hap1 on Y-axis
+    tname = factor(tname, levels = h2_ordered)        # Hap2 on X-axis matching Hap1 order
   )
 
+# Generate dotplot
 plot_title <- paste0(
   "Hap1 vs Hap2 Alignment Dotplot (Top 11 Contigs)\n",
   "Alignments: ", nrow(paf_top11)
