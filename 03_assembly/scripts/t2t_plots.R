@@ -1,7 +1,9 @@
 #!/usr/bin/env Rscript
-# Purpose: Single-motif plot for AAACCCT to visually confirm T2T contigs
+# Purpose: New approach similar to initial_trials smoothing, rolling mean for AAACCCT telomere repeat profiles
 
 library(tidyverse)
+#for rolling mean:
+library(zoo)
 
 tidk_dir <- "03_assembly/results/tidk"
 out_dir  <- "03_assembly/results/tidk/plots"
@@ -9,76 +11,61 @@ dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
 assemblies <- c("primary.p_ctg", "hap1.p_ctg", "hap2.p_ctg")
 
-#Look at both forward and reverse telomere so we get peaks at both ends, not just one
+motif <- "AAACCCT"
+motif_color <- "#228B22"
+
 for (asm in assemblies) {
-  fwd_file <- file.path(tidk_dir, sprintf("MM_assembly.%s_AAACCCT_telomeric_repeat_windows.tsv", asm))
-  rev_file <- file.path(tidk_dir, sprintf("MM_assembly.%s_TTTAGGG_telomeric_repeat_windows.tsv", asm))
+  file_path <- file.path(tidk_dir, sprintf("MM_assembly.%s_%s_telomeric_repeat_windows.tsv", asm, motif))
   
-# Look for the key metrics needed for plotting in tsv files
-# Updated with numeric parsing from tsv files as error thought to be from issues in count_fwd + count_rev before
-  if (file.exists(fwd_file) && file.exists(rev_file)) {
-    # Skip header/comment lines in case that was an issue
-    fwd <- read_tsv(fwd_file, comment = "#", show_col_types = FALSE)
-    rev <- read_tsv(rev_file, comment = "#", show_col_types = FALSE)
+  if (file.exists(file_path)) {
+    df <- read_tsv(file_path, show_col_types = FALSE)
     
-    # Standardize first 4 columns: contig, start, end, count
-    colnames(fwd)[1:4] <- c("contig", "start", "end", "count_fwd")
-    colnames(rev)[1:4] <- c("contig", "start", "end", "count_rev")
-
-    # Filter out non-numeric header rows if present and parse counts
-    fwd_clean <- fwd %>%
-      filter(!is.na(suppressWarnings(as.numeric(start)))) %>%
-      mutate(start = as.numeric(start), end = as.numeric(end), count_fwd = as.numeric(count_fwd))
-      
-    rev_clean <- rev %>%
-      filter(!is.na(suppressWarnings(as.numeric(start)))) %>%
-      mutate(start = as.numeric(start), end = as.numeric(end), count_rev = as.numeric(count_rev))
-
-    # Merge forward & reverse counts
-    combined <- fwd_clean %>%
-      inner_join(rev_clean, by = c("contig", "start", "end")) %>%
-      mutate(count = coalesce(count_fwd, 0) + coalesce(count_rev, 0))
+    # Prefix mapping for hifiasm contig names to p, h1, h2
+    prefix <- if (grepl("hap1", asm)) "h1" else if (grepl("hap2", asm)) "h2" else "p"
+    target_contigs <- sprintf("%stg0000%02dl", prefix, 1:11)
     
-    # Focus on top 11 contigs, sort by length, descending to arrange for plotting
-    top_contigs <- combined %>%
-      group_by(contig) %>%
-      summarise(max_len = max(end, na.rm = TRUE)) %>%
-      arrange(desc(max_len)) %>%
-      slice_head(n = 11) %>%
-      pull(contig)
-    
-    plot_data <- combined %>%
-      filter(contig %in% top_contigs) %>%
+    # Filter data for top 11 contigs and calculate total count & smoothed rolling mean for trendline
+    plot_data <- df %>%
+      filter(id %in% target_contigs) %>%
       mutate(
-        position_mb = start / 1e6,
-        contig_label = factor(contig, levels = top_contigs, labels = paste0("C", 1:length(top_contigs)))
-      )
-
-    # Use facet wrap to make plots for 11 top contigs
-    # Fixed ylim to avoid cutting out the real end peaks
-    p <- ggplot(plot_data, aes(x = position_mb, y = count)) +
-      geom_line(color = "#D97706", linewidth = 0.4) +
-      ylim(0, max(plot_data$count)) +
+        total_count = forward_repeat_number + reverse_repeat_number,
+        position_mb = window / 1e6,
+        contig_label = factor(id, levels = target_contigs, labels = paste0("C", 1:11))
+      ) %>%
+      group_by(contig_label) %>%
+      mutate(
+        smoothed = rollmean(total_count, k = 5, fill = NA, align = "center")
+      ) %>%
+      # Handling NAs at boundaries for smoothing
+      mutate(smoothed = ifelse(is.na(smoothed), total_count, smoothed)) %>%
+      ungroup()
+    
+    p <- ggplot(plot_data, aes(x = position_mb)) +
+      # 1. Raw count points
+      geom_point(aes(y = total_count), color = "black", size = 0.4, alpha = 0.5) +
+      # 2. 5-window smoothed rolling mean trend line
+      geom_line(aes(y = smoothed), color = motif_color, linewidth = 0.8) +
       facet_wrap(~ contig_label, scales = "free_x", ncol = 1, strip.position = "left") +
       theme_classic(base_size = 11) +
       theme(
         strip.background = element_blank(),
-        strip.text.y.left = element_text(angle = 0, face = "bold"),
-        axis.text.y = element_blank(),
-        axis.ticks.y = element_blank(),
+        strip.text.y.left = element_text(angle = 0, face = "bold", size = 8),
+        axis.text.y = element_text(size = 7),
         panel.spacing = unit(0.3, "lines"),
-        plot.title = element_text(size = 12, face = "bold"),
-        plot.subtitle = element_text(size = 9)
+        plot.title = element_text(size = 12, face = "bold", hjust = 0.5),
+        plot.subtitle = element_text(size = 9, face = "italic", hjust = 0.5)
       ) +
       labs(
-        title = sprintf("Telomere Repeat Distribution Profile: %s", asm),
-        subtitle = "AAACCCT telomere motif identified using `tidk explore`, mapped using `tidk search` with 10Kb windows (bins)",
+        title = sprintf("Repeat distribution for %s (%s)", asm_file, motif),
+        subtitle = "Method: Motif count mapped across 10kb windows using 'tidk search' with smoothed rolling mean trendline",
         x = "Position (Mb)",
-        y = "Motif count per window"
+        y = "Motif count"
       )
     
-    out_png <- file.path(out_dir, sprintf("%s_t2t_aaaccct.png", asm))
+    out_png <- file.path(out_dir, sprintf("%s_%s_fingerprint.png", label, motif))
     ggsave(out_png, plot = p, width = 8, height = 10, dpi = 300)
-    cat(sprintf("Saved T2T plot: %s\n", out_png))
+    cat(sprintf("Saved updated fingerprint plot: %s\n", out_png))
+  } else {
+    cat(sprintf("Warning: File not found: %s\n", file_path))
   }
 }
