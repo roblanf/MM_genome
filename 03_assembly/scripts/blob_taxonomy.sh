@@ -20,22 +20,22 @@ diamond_fmt="6 qseqid staxids bitscore qstart qend sstart send pident evalue len
 
 # Run diamond blastx for haplotype 1
 diamond blastx \
-    -query "${hap1_fa}" \
-    -db "${db_path}" \
-    -outfmt "${diamond_fmt}" \
-    -evalue 1e-25 \
-    -max_hsps 1 \
-    -max_target_seqs 10 \
-    -num_threads 16 \
-    -out "${tax_dir}/hap1_diamond.out"
+    --query "${hap1_fa}" \
+    --db "${db_path}" \
+    --outfmt ${diamond_fmt} \
+    --evalue 1e-25 \
+    --max-hsps 1 \
+    --max-target-seqs 10 \
+    --threads 16 \
+    --out "${tax_dir}/hap1_diamond.out"
 
 # Run for haplotype 2
 diamond blastx \
-    -query "${hap2_fa}" \
-    -db "${db_path}" \
-    -outfmt "${diamond_fmt}" \
-    -evalue 1e-25 \
-    -max_hsps 1 \
-    -max_target_seqs 10 \
-    -num_threads 16 \
-    -out "${tax_dir}/hap2_diamond.out"
+    --query "${hap2_fa}" \
+    --db "${db_path}" \
+    --outfmt ${diamond_fmt} \
+    --evalue 1e-25 \
+    --max-hsps 1 \
+    --max-target-seqs 10 \
+    --threads 16 \
+    --out "${tax_dir}/hap2_diamond.out"
