@@ -9,27 +9,39 @@ dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
 assemblies <- c("primary.p_ctg", "hap1.p_ctg", "hap2.p_ctg")
 
+#Look at both forward and reverse telomere so we get peaks at both ends, not just one
 for (asm in assemblies) {
-  file_path <- file.path(tidk_dir, sprintf("MM_assembly.%s_AAACCCT_telomeric_repeat_windows.tsv", asm))
-  # Look for the key metrics needed for plotting in tsv files
-  if (file.exists(file_path)) {
-    dat <- read_tsv(file_path, show_col_types = FALSE)
-    colnames(dat)[1:4] <- c("contig", "start", "end", "count")
+  fwd_file <- file.path(tidk_dir, sprintf("MM_assembly.%s_AAACCCT_telomeric_repeat_windows.tsv", asm))
+  rev_file <- file.path(tidk_dir, sprintf("MM_assembly.%s_TTTAGGG_telomeric_repeat_windows.tsv", asm))
+  
+# Look for the key metrics needed for plotting in tsv files
+  if (file.exists(fwd_file) && file.exists(rev_file)) {
+    fwd <- read_tsv(fwd_file, show_col_types = FALSE)
+    rev <- read_tsv(rev_file, show_col_types = FALSE)
     
-    # Select top 11 largest contigs (n = 11 for Eucalyptus) and arrange for plotting
-    top_contigs <- dat %>%
+    colnames(fwd)[1:4] <- c("contig", "start", "end", "count_fwd")
+    colnames(rev)[1:4] <- c("contig", "start", "end", "count_rev")
+    
+    # Merge forward & reverse counts
+    combined <- fwd %>%
+      inner_join(rev, by = c("contig", "start", "end")) %>%
+      mutate(count = count_fwd + count_rev)
+    
+    # Focus on top 11 contigs, sort by length, descending to arrange for plotting
+    top_contigs <- combined %>%
       group_by(contig) %>%
       summarise(max_len = max(end)) %>%
       arrange(desc(max_len)) %>%
       slice_head(n = 11) %>%
       pull(contig)
-        
-    plot_data <- dat %>%
+    
+    plot_data <- combined %>%
       filter(contig %in% top_contigs) %>%
       mutate(
         position_mb = start / 1e6,
         contig_label = factor(contig, levels = top_contigs, labels = paste0("C", 1:length(top_contigs)))
       )
+
     # Use facet wrap to make plots for 11 top contigs
     p <- ggplot(plot_data, aes(x = position_mb, y = count)) +
       geom_line(color = "#D97706", linewidth = 0.5) +
@@ -40,11 +52,13 @@ for (asm in assemblies) {
         strip.text.y.left = element_text(angle = 0, face = "bold"),
         axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
-        panel.spacing = unit(0.3, "lines")
+        panel.spacing = unit(0.3, "lines"),
+        plot.title = element_text(size = 12, face = "bold"),
+        plot.subtitle = element_text(size = 9)
       ) +
       labs(
         title = sprintf("Telomere Repeat Distribution Profile: %s", asm),
-        subtitle = "AAACCCT motif identified using `tidk explore`, mapped using `tidk search` with 10Kb windows (bins)",
+        subtitle = "AAACCCT telomere motif identified using `tidk explore`, mapped using `tidk search` with 10Kb windows (bins)",
         x = "Position (Mb)",
         y = "Motif occurrences"
       )
