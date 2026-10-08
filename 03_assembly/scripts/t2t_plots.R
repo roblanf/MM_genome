@@ -43,8 +43,10 @@ for (asm in assemblies) {
       )
 
     # Use facet wrap to make plots for 11 top contigs
+    # Fixed ylim to avoid cutting out the real end peaks
     p <- ggplot(plot_data, aes(x = position_mb, y = count)) +
-      geom_line(color = "#D97706", linewidth = 0.5) +
+      geom_line(color = "#D97706", linewidth = 0.4) +
+      ylim(0, max(plot_data$count)) +
       facet_wrap(~ contig_label, scales = "free_x", ncol = 1, strip.position = "left") +
       theme_classic(base_size = 11) +
       theme(
@@ -60,7 +62,7 @@ for (asm in assemblies) {
         title = sprintf("Telomere Repeat Distribution Profile: %s", asm),
         subtitle = "AAACCCT telomere motif identified using `tidk explore`, mapped using `tidk search` with 10Kb windows (bins)",
         x = "Position (Mb)",
-        y = "Motif occurrences"
+        y = "Motif count per window"
       )
     
     out_png <- file.path(out_dir, sprintf("%s_t2t_aaaccct.png", asm))
