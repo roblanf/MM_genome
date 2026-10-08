@@ -12,6 +12,18 @@ stats_dir="${asm_dir}/post_hifi_stats"
 # Ensure output directory exists
 mkdir -p "${stats_dir}"
 
+# Extract top 11 largest contig IDs and Lengths for future use.
+get_top11_info() {
+  local fasta="$1"
+  awk '/^>/ {
+    if (seq) print length(seq), header;
+    header=$1; sub(/^>/, "", header); seq=""; next
+  }
+  {seq=seq$0}
+  END {if (seq) print length(seq), header}' "${fasta}" \
+  | sort -nr | head -n 11
+}
+
 # --- Primary Assembly ---
 tot_primary=$(grep "Total scaffold length" "${stats_dir}/stats_primary.txt" | awk '{print $NF}')
 top11_primary=$(awk '/^>/ {if (seq) print length(seq); seq=""; next} {seq=seq$0} END {print length(seq)}' "${asm_dir}/MM_assembly.primary.p_ctg.fa" | sort -nr | head -n 11 | paste -sd+ | bc)
@@ -35,3 +47,15 @@ out_file="${stats_dir}/top11_metrics.txt"
   echo "HAP1:    Total=${tot_hap1} bp | Top11=${top11_hap1} bp | Pct=${pct_hap1}%"
   echo "HAP2:    Total=${tot_hap2} bp | Top11=${top11_hap2} bp | Pct=${pct_hap2}%"
 } | tee "${out_file}"
+
+echo ""
+echo "=== Top 11 Contigs (Primary) ==="
+cat "${stats_dir}/top11_primary_info.txt"
+
+echo ""
+echo "=== Top 11 Contigs (Hap1) ==="
+cat "${stats_dir}/top11_hap1_info.txt"
+
+echo ""
+echo "=== Top 11 Contigs (Hap2) ==="
+cat "${stats_dir}/top11_hap2_info.txt"
