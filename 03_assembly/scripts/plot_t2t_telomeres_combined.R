@@ -16,7 +16,7 @@ assemblies_config <- tibble(
   asm_id     = c("primary.p_ctg", "hap1.p_ctg", "hap2.p_ctg"),
   asm_label  = factor(c("Primary", "Haplotype 1 (Hap1)", "Haplotype 2 (Hap2)"),
                       levels = c("Primary", "Haplotype 1 (Hap1)", "Haplotype 2 (Hap2)")),
-  prefix     = c("p", "h1", "h2"),
+  prefix     = c("primary", "hap1", "hap2"),
   line_color = c("#D97706", "#228B22", "#2563EB")
 )
 
