@@ -15,17 +15,29 @@ for (asm in assemblies) {
   rev_file <- file.path(tidk_dir, sprintf("MM_assembly.%s_TTTAGGG_telomeric_repeat_windows.tsv", asm))
   
 # Look for the key metrics needed for plotting in tsv files
+# Updated with numeric parsing from tsv files as error thought to be from issues in count_fwd + count_rev before
   if (file.exists(fwd_file) && file.exists(rev_file)) {
-    fwd <- read_tsv(fwd_file, show_col_types = FALSE)
-    rev <- read_tsv(rev_file, show_col_types = FALSE)
+    # Skip header/comment lines in case that was an issue
+    fwd <- read_tsv(fwd_file, comment = "#", show_col_types = FALSE)
+    rev <- read_tsv(rev_file, comment = "#", show_col_types = FALSE)
     
+    # Standardize first 4 columns: contig, start, end, count
     colnames(fwd)[1:4] <- c("contig", "start", "end", "count_fwd")
     colnames(rev)[1:4] <- c("contig", "start", "end", "count_rev")
-    
+
+    # Filter out non-numeric header rows if present and parse counts
+    fwd_clean <- fwd %>%
+      filter(!is.na(as.numeric(start))) %>%
+      mutate(start = as.numeric(start), count_fwd = as.numeric(count_fwd))
+      
+    rev_clean <- rev %>%
+      filter(!is.na(as.numeric(start))) %>%
+      mutate(start = as.numeric(start), count_rev = as.numeric(count_rev))
+
     # Merge forward & reverse counts
-    combined <- fwd %>%
-      inner_join(rev, by = c("contig", "start", "end")) %>%
-      mutate(count = count_fwd + count_rev)
+    combined <- fwd_clean %>%
+      inner_join(rev_clean, by = c("contig", "start")) %>%
+      mutate(count = coalesce(count_fwd, 0) + coalesce(count_rev, 0))
     
     # Focus on top 11 contigs, sort by length, descending to arrange for plotting
     top_contigs <- combined %>%
