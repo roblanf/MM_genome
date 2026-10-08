@@ -250,7 +250,8 @@ These include filtering out small contigs, organelle removal to work on nuclear 
 
 Looking for motifs in the assemblies with `tidk explore`, the following output was observed. Note that a run is recorded as 100 or more sequential repeats of the motif.
 
-#### Motifs Output:
+#### Motifs Output
+
 | Motif | Runs in Primary Assembly | Runs in Haplotype 1 | Runs in Haplotype 2 |
 | :--- | :---: | :---: | :---: |
 | **`AAACCCT`** | **1,572** | **5,822** | **6,164** |
@@ -264,6 +265,25 @@ The following script combines the `tidk explore` and `tidk search` steps to look
 ```
 bash 03_assembly/scripts/telomere_check.sh
 ```
+
+Then the following scripts make plot outputs that record the number of occurrences of the AAACCCT telomere in the top 11 contigs for each of the primary, haplotype 1 and haplotype 2 assemblies. This gives a good picture of whether the contigs are T2T or not.
+
+```
+bash 03_assembly/scripts/t2t_plots.R
+```
+Gives individual plots for each assembly:
+
+| Primary Assembly | Haplotype 1 | Haplotype 2 |
+| :---: | :---: | :---: |
+| [![Primary](03_assembly/results/tidk/plots/primary.p_ctg_AAACCCT_fingerprint.png)](03_assembly/results/tidk/plots/primary.p_ctg_AAACCCT_fingerprint.png) | [![Hap1](03_assembly/results/tidk/plots/hap1.p_ctg_AAACCCT_fingerprint.png)](03_assembly/results/tidk/plots/hap1.p_ctg_AAACCCT_fingerprint.png) | [![Hap2](03_assembly/results/tidk/plots/hap2.p_ctg_AAACCCT_fingerprint.png)](03_assembly/results/tidk/plots/hap2.p_ctg_AAACCCT_fingerprint.png) |
+| *Click to enlarge* | *Click to enlarge* | *Click to enlarge* |
+
+```
+bash 03_assembly/scripts/plot_t2t_telomeres_combined.R
+```
+Gives side-by-side plot for comparison between assemblies:
+
+![T2T Side-by-Side Comparison](03_assembly/results/tidk/plots/t2t_telomere_side_by_side_comparison.png)
 
 
 ### Organelle removal
