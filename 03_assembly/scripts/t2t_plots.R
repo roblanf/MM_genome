@@ -27,22 +27,22 @@ for (asm in assemblies) {
 
     # Filter out non-numeric header rows if present and parse counts
     fwd_clean <- fwd %>%
-      filter(!is.na(as.numeric(start))) %>%
-      mutate(start = as.numeric(start), count_fwd = as.numeric(count_fwd))
+      filter(!is.na(suppressWarnings(as.numeric(start)))) %>%
+      mutate(start = as.numeric(start), end = as.numeric(end), count_fwd = as.numeric(count_fwd))
       
     rev_clean <- rev %>%
-      filter(!is.na(as.numeric(start))) %>%
-      mutate(start = as.numeric(start), count_rev = as.numeric(count_rev))
+      filter(!is.na(suppressWarnings(as.numeric(start)))) %>%
+      mutate(start = as.numeric(start), end = as.numeric(end), count_rev = as.numeric(count_rev))
 
     # Merge forward & reverse counts
     combined <- fwd_clean %>%
-      inner_join(rev_clean, by = c("contig", "start")) %>%
+      inner_join(rev_clean, by = c("contig", "start", "end")) %>%
       mutate(count = coalesce(count_fwd, 0) + coalesce(count_rev, 0))
     
     # Focus on top 11 contigs, sort by length, descending to arrange for plotting
     top_contigs <- combined %>%
       group_by(contig) %>%
-      summarise(max_len = max(end)) %>%
+      summarise(max_len = max(end, na.rm = TRUE)) %>%
       arrange(desc(max_len)) %>%
       slice_head(n = 11) %>%
       pull(contig)
