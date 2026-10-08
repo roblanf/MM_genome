@@ -288,9 +288,9 @@ Note that BUSCO completedness is the addition of single-copy (S) and duplicated 
 The results are promising, as results above 95% are typical of published eucalyptus and hybrid species genomes and above 99% is excellent. The same metrics will be computed after parental assignment, when the current haplotype assemblies which are a patchwork of contigs from both parents will be arranged into two parental haplotypes. If the metrics remain at a similar level or improve, this genome is likely worthy of publication.
 
 
-## Assembly Cleanup
+## Post Assembly Tools and Checks
 
-Performing parental binning to achieve post-assembly phasing and a haplotype-resolved genome assembly is the main goal from here. However, before doing this there are more checks and tools that can be used to improve and clean up remaining issues in the current assembly I have.
+Performing parental binning to achieve post-assembly phasing and a haplotype-resolved genome assembly is the main goal of the project. However, before doing this there are more checks and tools that can be used to improve and clean up remaining issues in the current assembly I have.
 These include filtering out small contigs, organelle removal to work on nuclear genome, investigating contamination with BlobTools and a telomere-to-telomere check.
 
 ### Telomere Checks
@@ -316,7 +316,7 @@ bash 03_assembly/scripts/telomere_check.sh
 Then the following scripts make plot outputs that record the number of occurrences of the AAACCCT telomere in the top 11 contigs for each of the primary, haplotype 1 and haplotype 2 assemblies. This gives a good picture of whether the contigs are T2T or not.
 
 ```
-bash 03_assembly/scripts/t2t_plots.R
+Rscript 03_assembly/scripts/t2t_plots.R
 ```
 Gives individual plots for each assembly:
 
@@ -326,17 +326,37 @@ Gives individual plots for each assembly:
 | *Click to enlarge* | *Click to enlarge* | *Click to enlarge* |
 
 ```
-bash 03_assembly/scripts/plot_t2t_telomeres_combined.R
+Rscript 03_assembly/scripts/plot_t2t_telomeres_combined.R
 ```
 Gives side-by-side plot for comparison between assemblies:
 
 ![T2T Side-by-Side Comparison](03_assembly/results/tidk/plots/t2t_telomere_side_by_side_comparison.png)
 
+Most of the contigs have peaks on both ends in the amount of telomere motifs recorded, which is a positive sign that the longest contigs in the assemblies are T2T! This means we already have a near chromosome-level assembly on our hands in terms of scale of contigs. Some contigs are missing one end but this is typical and can be seen to occur in many other published genomes as well at this stage.
 
-### Organelle removal
+### Haplotype Alignment
 
+By aligning the haplotype 1 and haplotype 2 assemblies, information about synteny can be attained. This lets us visualise which contigs in haplotype 1 map to which contigs in haplotype 2. The alignment plot is also useful for visually detecting inversions, translocations, duplications and more.
+
+Aligning haplotypes with minimap2:
+```
+bash 03_assembly/scripts/h1h2_alignment.sh
+```
+
+Using these alignments, I made a dotplot for the top 11 longest contigs in each haplotype in order to look at how it mapped, synteny and other noticeable features.
+```
+Rscript 03_assembly/scripts/h1h2_dotplot.R
+```
+#### Synteny dotplot for pairwise alignment of 11 longest contigs in haplotype 1 and 2:
+![Hap1 vs Hap2 Dotplot](03_assembly/results/h1h2/hap1_vs_hap2_top11_dotplot.png)
+
+The strong main diagonal here is evidence of good syntenic conservation by the assembly, as every haplotype 1 contig mapped uniquely to a corresponding haplotype 2 contig. This is a good indication that the top 11 contigs from the haplotype assemblies indeed represent the 11 haplotype chromosomes quite closely.
+As for percent identity, in most cases it is lower (around 30%) meaning not that many of the bases match in the alignments. This is justifiable as there is high divergence between the parent species (as seen in GenomeScope heterozygosity), and minimap2 also makes indels that drag down the score in the alignment process. However, one of the alignments has a large section of high percent identity (~75%, yellow) which could represent a highly conserved block in the chromosome with very similar structure in both parents - interesting.
 
 ### Contamination screening
+
+
+### Organelle removal
 
 
 ### Filter for contig size
