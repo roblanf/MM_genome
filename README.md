@@ -355,6 +355,25 @@ As for percent identity, in most cases it is lower (around 30%) meaning not that
 
 ### Contamination screening
 
+Using BlobTools, screening can be performed on the haplotype assemblies. It combines three aspects: GC content (examined in QC with conspicuous bump at 55% GC), coverage from mapping reads to the assemblies, and taxonomic assignment (interested in if the bump was caused by a specific microbial/fungal contaminant).
+
+I made some scripts to get the relevant parts prepared for using BlobTools.
+Firstly mapping the filtered reads that went into assembly against haplotype 1 and haplotype 2 (for coverage in BlobTools):
+```
+bash 03_assembly/scripts/blob_map_ont.sh
+```
+Then to run a taxonomic search on the haplotype assemblies with DIAMOND:
+```
+bash 03_assembly/blob_taxonomy.sh
+```
+To get the DIAMOND database I used run this first!
+```
+bash 00_databases/scripts/setup_diamond_sprot.sh
+```
+Now combining this work, BlobTools can create databases and output BlobPlots of coverage vs GC content and contig taxonomy summary tables for each haplotype assembly - ideal for screening:
+```
+bash 03_assembly/scripts/blob_create_and_plot.sh
+```
 
 ### Organelle removal
 
