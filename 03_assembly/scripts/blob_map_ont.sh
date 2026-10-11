@@ -14,10 +14,10 @@ mkdir -p "${blob_dir}"
 
 # map post-filtering reads to haplotype 1 assembly with minimap, samtools to get right format for BlobTools
 minimap2 -ax map-ont -t 16 "${hap1_fa}" "${filtered_fastq}" | \
-    samtools sort -@ 16 -o "${blob_dir}/hap1_ont.bam" -
-samtools index -@ 16 "${blob_dir}/hap1_ont.bam"
+    samtools sort -@ 8 -m 2G -T "${blob_dir}/hap1_tmp" -o "${blob_dir}/hap1_ont.bam" -
+samtools index -@ 8 "${blob_dir}/hap1_ont.bam"
 
 # same idea for haplotype 2 assembly
 minimap2 -ax map-ont -t 16 "${hap2_fa}" "${filtered_fastq}" | \
-    samtools sort -@ 16 -o "${blob_dir}/hap2_ont.bam" -
-samtools index -@ 16 "${blob_dir}/hap2_ont.bam"
+    samtools sort -@ 8 -m 2G -T "${blob_dir}/hap2_tmp" -o "${blob_dir}/hap2_ont.bam" -
+samtools index -@ 8 "${blob_dir}/hap2_ont.bam"
