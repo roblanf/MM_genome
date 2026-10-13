@@ -25,16 +25,12 @@ blobtools create \
     --names 00_databases/uniprot/names.dmp \
     --out "${out_dir}/hap1_blobDB"
 
-# Generate BlobPlot (GC vs Coverage colored by Phylum)
-blobtools plot \
-    --input "${out_dir}/hap1_blobDB.json" \
-    --taxlevel phylum \
-    --out "${out_dir}/hap1"
-
-# Generate contig taxonomy summary table
+# Generate BlobPlot (GC vs coverage, colour coded by phylum) and contig taxonomy summary table using blobtools view
 blobtools view \
-    --input "${out_dir}/hap1_blobDB.json" \
-    --out "${out_dir}/hap1"
+    --view blob \
+    --format png \
+    --out "${out_dir}/hap1" \
+    "${out_dir}/hap1_blobDB"
 
 # Repeating the steps for haplotype 2
 blobtools create \
@@ -47,11 +43,8 @@ blobtools create \
     --names 00_databases/uniprot/names.dmp \
     --out "${out_dir}/hap2_blobDB"
 
-blobtools plot \
-    --input "${out_dir}/hap2_blobDB.json" \
-    --taxlevel phylum \
-    --out "${out_dir}/hap2"
-
 blobtools view \
-    --input "${out_dir}/hap2_blobDB.json" \
-    --out "${out_dir}/hap2"
+    --view blob \
+    --format png \
+    --out "${out_dir}/hap2" \
+    "${out_dir}/hap2_blobDB"
