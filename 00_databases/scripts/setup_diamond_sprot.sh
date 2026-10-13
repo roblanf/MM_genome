@@ -15,8 +15,8 @@ gunzip -f uniprot_sprot.fasta.gz
 wget -N --no-check-certificate https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz
 wget -N --no-check-certificate https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/new_taxdump/new_taxdump.tar.gz
 
-# 3. Extract taxonomy nodes and names
-tar -xzf new_taxdump.tar.gz nodes.dmp names.dmp
+# 3. Extract all lineage and node .dmp files so they're available for BlobToolsv2
+tar -xzf new_taxdump.tar.gz
 
 # 4. Build binary DIAMOND database with integrated taxonomy (no hyphen in 'makedb')
 diamond makedb \
