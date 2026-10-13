@@ -13,11 +13,12 @@ blob_dir="03_assembly/results/blobtools/mapping"
 mkdir -p "${blob_dir}"
 
 # map post-filtering reads to haplotype 1 assembly with minimap, samtools to get right format for BlobTools
-minimap2 -ax map-ont -t 16 "${hap1_fa}" "${filtered_fastq}" | \
-    samtools sort -@ 8 -m 2G -T "${blob_dir}/hap1_tmp" -o "${blob_dir}/hap1_ont.bam" -
-samtools index -@ 8 "${blob_dir}/hap1_ont.bam"
+# Uses -c to make .csi files not .bai for the later blob_create_and_plot.sh script
+minimap2 -ax map-ont -t 64 "${hap1_fa}" "${filtered_fastq}" | \
+    samtools sort -@ 32 -m 2G -T "${blob_dir}/hap1_tmp" -o "${blob_dir}/hap1_ont.bam" -
+samtools index -c -@ 32 "${blob_dir}/hap1_ont.bam"
 
 # same idea for haplotype 2 assembly
-minimap2 -ax map-ont -t 16 "${hap2_fa}" "${filtered_fastq}" | \
-    samtools sort -@ 8 -m 2G -T "${blob_dir}/hap2_tmp" -o "${blob_dir}/hap2_ont.bam" -
-samtools index -@ 8 "${blob_dir}/hap2_ont.bam"
+minimap2 -ax map-ont -t 64 "${hap2_fa}" "${filtered_fastq}" | \
+    samtools sort -@ 32 -m 2G -T "${blob_dir}/hap2_tmp" -o "${blob_dir}/hap2_ont.bam" -
+samtools index -c -@ 32 "${blob_dir}/hap2_ont.bam"
