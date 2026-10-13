@@ -13,10 +13,10 @@ gunzip -f uniprot_sprot.fasta.gz
 
 # 2. Download NCBI taxonomy mapping files via HTTPS
 wget -N https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz
-wget -N https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/taxdump.tar.gz
+wget -N https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/new_taxdump/new_taxdump.tar.gz
 
 # 3. Extract taxonomy nodes and names
-tar -xzf taxdump.tar.gz nodes.dmp names.dmp
+tar -xzf new_taxdump.tar.gz nodes.dmp names.dmp
 
 # 4. Build binary DIAMOND database with integrated taxonomy (no hyphen in 'makedb')
 diamond makedb \
