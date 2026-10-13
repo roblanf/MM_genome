@@ -16,8 +16,9 @@ mkdir -p "${out_dir}"
 
 # Create database for haplotype 1
 blobtools create \
-    --input "${asm_dir}/MM_assembly.hap1.p_ctg.fa" \
-    --bam "${bam_dir}/hap1_ont.bam" \
+    --create \
+    --fasta "${asm_dir}/MM_assembly.hap1.p_ctg.fa" \
+    --cov "${bam_dir}/hap1_ont.bam" \
     --hits "${tax_dir}/hap1_diamond.out" \
     --taxfmt diamond \
     --nodes 00_databases/uniprot/nodes.dmp \
@@ -37,8 +38,9 @@ blobtools view \
 
 # Repeating the steps for haplotype 2
 blobtools create \
-    --input "${asm_dir}/MM_assembly.hap2.p_ctg.fa" \
-    --bam "${bam_dir}/hap2_ont.bam" \
+    --create \
+    --fasta "${asm_dir}/MM_assembly.hap2.p_ctg.fa" \
+    --cov "${bam_dir}/hap2_ont.bam" \
     --hits "${tax_dir}/hap2_diamond.out" \
     --taxfmt diamond \
     --nodes 00_databases/uniprot/nodes.dmp \
