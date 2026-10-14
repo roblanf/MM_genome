@@ -15,8 +15,8 @@ mkdir -p "${tax_dir}"
 # refer to 00_databases/setup_diamond_sprot.sh to get this path.
 db_path="00_databases/uniprot/uniprot_sprot.dmnd"
 
-# BlobTools standard BLAST output format
-diamond_fmt="6 qseqid staxids bitscore qstart qend sstart send pident evalue length"
+# BlobToolsv2 output format
+diamond_fmt="6 qseqid staxids bitscore qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore"
 
 # Run diamond blastx for haplotype 1
 diamond blastx \
@@ -25,8 +25,8 @@ diamond blastx \
     --outfmt ${diamond_fmt} \
     --evalue 1e-25 \
     --max-hsps 1 \
-    --max-target-seqs 10 \
-    --threads 16 \
+    --max-target-seqs 1 \
+    --threads 128 \
     --out "${tax_dir}/hap1_diamond.out"
 
 # Run for haplotype 2
@@ -36,6 +36,6 @@ diamond blastx \
     --outfmt ${diamond_fmt} \
     --evalue 1e-25 \
     --max-hsps 1 \
-    --max-target-seqs 10 \
-    --threads 16 \
+    --max-target-seqs 1 \
+    --threads 128 \
     --out "${tax_dir}/hap2_diamond.out"
