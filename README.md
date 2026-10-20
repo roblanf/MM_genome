@@ -366,11 +366,12 @@ Then to run a taxonomic search on the haplotype assemblies with DIAMOND:
 ```
 bash 03_assembly/blob_taxonomy.sh
 ```
-To get the DIAMOND database I used run this first!
+To get the Uniprot database I used run this first!
 ```
 bash 00_databases/scripts/setup_diamond_sprot.sh
 ```
-Now combining this work, BlobTools can create databases and output BlobPlots of coverage vs GC content and contig taxonomy summary tables for each haplotype assembly - ideal for screening:
+Now combining this work, BlobTools can create databases and output BlobPlots of coverage vs GC content for each contig, colour coded by taxonomic hits. This is ideal for screening, and further metrics can be viewed in the other files produced.
+
 ```
 bash 03_assembly/scripts/blob_create_and_plot.sh
 ```
@@ -382,7 +383,11 @@ bash 03_assembly/scripts/blob_create_and_plot.sh
 | ![Hap1 Blobplot](03_assembly/results/blobtools/plots/hap1/hap1_blobDB.blob.circle.png) | ![Hap2 BlobPlot](03_assembly/results/blobtools/plots/hap2/hap2_blobDB.blob.circle.png) |
 | *Click to enlarge* | *Click to enlarge* |
 
-# 04_parental_assignment: Obtaining parental haplotype assemblies via mapping, k-mer profiling
+Interpreting the taxonomic search results, we see that Streptophyta is the most commonly identified phylum in both haplotypes of the phased assembly. This phylum includes all land plants and so is the expected result for contigs coming from *E. phylacis*. Meanwhile, a range of other phyla were identified. Ascomycota are fungi, Artverviricota are viruses, Chordata are animals (includes humans) and so are Arthropoda (includes insects). Contigs labelled as no-hit are those without significant matches in the reference Uniprot database (could not be matched with confidence).
+221 out of 287 haplotype 1 assembly contigs were identified as Streptophyta in the taxonomic search (77%) and 248 out of 317 (78%) for haplotype 2, based on the UniProt database downloaded. The diameter of the dots in the plot represent sequence length, and with this knowledge it can be observed that almost all of the large contigs are successfully labelled as streptophyta. In both haplotype assemblies, one of the larger contigs is labelled as Artverviricota (h1tg000014l, 7th longest in Hap1 and h2tg000013l, 12th longest in Hap2) which are worth flagging and potentially removing, along with other non-Streptophyta contigs. Note that the Hap1 contig mentioned here featured in the top 11 longest contigs and was the one that sat off the diagonal on the Haplotype 1 vs Haplotype 2 alignment dotplot. This result gives an explanation of why it would have failed to map uniquely to a hap2 top 11 contig - it doesn't represent a *E. phylacis* chromosome!
+Based on the taxonomic search findings discussed as well as length, coverage, GC% can be used to filter out more contigs for a more refined, publication-worthy set of contigs for the haplotype-resolved assembly after parental assignment.
+
+# 04_parental_assignment: Alignments against parent genomes for haplotype-resolved assembly
 
 
 
