@@ -26,7 +26,7 @@ BEGIN {
    # $1 is query, $6 is target chromosome from parent reference genome. Matches line adds matching bases in split blocks if alignment is broken up
     key = $1"|"$6;
     matches[key] += $10;
-    t_len[key] = $7;
+    t_len[key] = $2; #query contig length
     score[key] = as;
 }
 #Score saved!
@@ -37,10 +37,10 @@ END {
         split(k, names, "|");
         cov = (matches[k] / t_len[k]) * 100;
         if (cov > 1) {
-            printf "| %s | %s | %d | %.2f%% | %d |\n", names[1], names[2], matches[k], cov, score[k];
+            printf "%s | %s | %d | %.2f%% | %d |\n", names[1], names[2], matches[k], cov, score[k];
         }
     } # Finally, sort by contig ID and coverage, descending, avoid duplication by using first (best) matches
-}' "${paf_dir}/hap1_vs_decipiens.paf" | sort -t'|' -k1,1 -k3,3nr | awk -F'|' '!seen[$1]++' > "${out_dir}/hap1_best_vs_decipiens.md"
+}' "${paf_dir}/hap1_vs_decipiens.paf" | sort -t'|' -k1,1 -k4,4nr | awk -F'|' '!seen[$1]++' > "${out_dir}/hap1_best_vs_decipiens.md"
 
 # --- Haplotype 1 vs E. virginea ---
 awk '
@@ -53,7 +53,7 @@ BEGIN {
     for(i=13; i<=NF; i++) { if($i ~ /^AS:i:/) { split($i, a, ":"); as = a[3]; } }
     key = $1"|"$6;
     matches[key] += $10;
-    t_len[key] = $7;
+    t_len[key] = $2;
     score[key] = as;
 }
 END {
@@ -61,7 +61,7 @@ END {
         split(k, names, "|");
         cov = (matches[k] / t_len[key]) * 100;
         if (cov > 1) {
-            printf "| %s | %s | %d | %.2f%% | %d |\n", names[1], names[2], matches[key], cov, score[key];
+            printf "%s | %s | %d | %.2f%% | %d |\n", names[1], names[2], matches[key], cov, score[key];
         }
     }
-}' "${paf_dir}/hap1_vs_virginea.paf" | sort -t'|' -k1,1 -k3,3nr | awk -F'|' '!seen[$1]++' > "${out_dir}/hap1_best_vs_virginea.md"
+}' "${paf_dir}/hap1_vs_virginea.paf" | sort -t'|' -k1,1 -k4,4nr | awk -F'|' '!seen[$1]++' > "${out_dir}/hap1_best_vs_virginea.md"
