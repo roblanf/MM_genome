@@ -375,11 +375,12 @@ Now combining this work, BlobTools can create databases and output BlobPlots of 
 bash 03_assembly/scripts/blob_create_and_plot.sh
 ```
 
-### Organelle removal
+#### BlobPlots
 
-
-### Filter for contig size
-
+| Haplotype 1 | Haplotype 2 |
+| :---: | :---: |
+| ![Hap1 Blobplot](03_assembly/results/blobtools/plots/hap1/hap1_blobDB.blob.circle.png) | ![Hap2 BlobPlot](03_assembly/results/blobtools/plots/hap2/hap2_blobDB.blob.circle.png) |
+| *Click to enlarge* | *Click to enlarge* |
 
 # 04_parental_assignment: Obtaining parental haplotype assemblies via mapping, k-mer profiling
 
