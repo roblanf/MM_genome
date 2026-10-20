@@ -65,3 +65,19 @@ blobtools view \
     --format png \
     --out "${out_dir}/hap2" \
     "${out_dir}/hap2_blobDB"
+
+# Making tables to investigate contigs in each haplotype assembly:
+# These will show contig IDs, lengths, GC%, coverage and phylum identified. 
+blobtools filter \
+    --table 03_assembly/results/blobtools/plots/hap1_stats.tsv \
+    03_assembly/results/blobtools/plots/hap1_blobDB
+
+blobtools filter \
+    --table 03_assembly/results/blobtools/plots/hap2_stats.tsv \
+    03_assembly/results/blobtools/plots/hap2_blobDB
+
+# See all the stats with this line:
+# less -S 03_assembly/results/blobtools/plots/hap1_stats.tsv
+
+# Or sort by specific columns, e.g. sequence length high to low:
+# sort -k4,4nr -t$'\t' 03_assembly/results/blobtools/plots/hap1_stats.tsv | less -S
