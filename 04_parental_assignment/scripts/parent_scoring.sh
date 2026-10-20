@@ -17,14 +17,21 @@ BEGIN {
     print "| Hap1 ID | Decipiens ID | Total Matches | Coverage % | Alignment Score |";
     print "| :--- | :--- | :--- | :--- | :--- |";
 }
-{
+{   #Extract alignment score tag by searching through columns, defaulting to match score count $10 if not found
     as = $10;
-    for(i=13; i<=NF; i++) { if($i ~ /^AS:i:/) { split($i, a, ":"); as = a[3]; } }
+    #
+    for(i=13; i<=NF; i++) {
+        if($i ~ /^AS:i:/) { split($i, a, ":"); as = a[3]; }
+     }
+   # $1 is query, $6 is target chromosome from parent reference genome. Matches line adds matching bases in split blocks if alignment is broken up
     key = $1"|"$6;
     matches[key] += $10;
     t_len[key] = $7;
     score[key] = as;
 }
+#Score saved!
+
+# Calculate coverage percentage to drop insignificant alignment fragments
 END {
     for (k in matches) {
         split(k, names, "|");
@@ -32,7 +39,7 @@ END {
         if (cov > 1) {
             printf "| %s | %s | %d | %.2f%% | %d |\n", names[1], names[2], matches[k], cov, score[k];
         }
-    }
+    } # Finally, sort by contig ID and coverage, descending, avoid duplication by using first (best) matches
 }' "${paf_dir}/hap1_vs_decipiens.paf" | sort -t'|' -k1,1 -k3,3nr | awk -F'|' '!seen[$1]++' > "${out_dir}/hap1_best_vs_decipiens.md"
 
 # --- Haplotype 1 vs E. virginea ---
