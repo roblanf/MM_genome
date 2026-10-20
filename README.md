@@ -384,10 +384,22 @@ bash 03_assembly/scripts/blob_create_and_plot.sh
 | *Click to enlarge* | *Click to enlarge* |
 
 Interpreting the taxonomic search results, we see that Streptophyta is the most commonly identified phylum in both haplotypes of the phased assembly. This phylum includes all land plants and so is the expected result for contigs coming from *E. phylacis*. Meanwhile, a range of other phyla were identified. Ascomycota are fungi, Artverviricota are viruses, Chordata are animals (includes humans) and so are Arthropoda (includes insects). Contigs labelled as no-hit are those without significant matches in the reference Uniprot database (could not be matched with confidence).
+
 221 out of 287 haplotype 1 assembly contigs were identified as Streptophyta in the taxonomic search (77%) and 248 out of 317 (78%) for haplotype 2, based on the UniProt database downloaded. The diameter of the dots in the plot represent sequence length, and with this knowledge it can be observed that almost all of the large contigs are successfully labelled as streptophyta. In both haplotype assemblies, one of the larger contigs is labelled as Artverviricota (h1tg000014l, 7th longest in Hap1 and h2tg000013l, 12th longest in Hap2) which are worth flagging and potentially removing, along with other non-Streptophyta contigs. Note that the Hap1 contig mentioned here featured in the top 11 longest contigs and was the one that sat off the diagonal on the Haplotype 1 vs Haplotype 2 alignment dotplot. This result gives an explanation of why it would have failed to map uniquely to a hap2 top 11 contig - it doesn't represent a *E. phylacis* chromosome!
+
 Based on the taxonomic search findings discussed as well as length, coverage, GC% can be used to filter out more contigs for a more refined, publication-worthy set of contigs for the haplotype-resolved assembly after parental assignment.
 
 # 04_parental_assignment: Alignments against parent genomes for haplotype-resolved assembly
 
+In order to move from the phased assembly made with Hifiasm to sets of contigs that can be conifdently assigned by parent (*E. decipiens*, *E. virginea*), knowledge of common sequences in the parent genomes is required to assess likelihood of each contig being from a given parent. Thankfully, NCBI datasets have publicly available assemblies for *E. decipiens* and *E. virginea* which can be downloaded for use in this project with the following script:
 
+```
+bash 04_parental_assignment/scripts/get_parents.sh
+```
+
+The approach I chose to perform parental assignment was to align Haplotype 1 and Haplotype 2 assemblies each against **both** parent genomes. Then by analysing the alignment scores of every contig within them, most/all contigs should clearly be better aligned to one parent. Grouping *E. decipiens* contigs and *E. virginea* contigs will then be a solid representation of the true parental haplotype genomes for *E. phylacis*. The alignments are performed with this script, again using minimap2 with a similar method to the earlier Haplotype 1 vs Haplotype 2 alignment:
+
+```
+bash 04_parental_assignment/scripts/align_parents.sh
+```
 
