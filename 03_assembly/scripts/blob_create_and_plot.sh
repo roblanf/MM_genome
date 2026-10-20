@@ -14,6 +14,8 @@ out_dir="03_assembly/results/blobtools/plots"
 taxdump_dir="00_databases/uniprot"
 
 mkdir -p "${out_dir}"
+mkdir -p "${out_dir}/hap1"
+mkdir -p "${out_dir}/hap2"
 
 # Create database for haplotype 1
 blobtools add \
@@ -28,11 +30,9 @@ blobtools add \
     --threads 32 \
     --hits "${tax_dir}/hap1_diamond.out" \
     --taxdump "${taxdump_dir}" \
-    "${out_dir}/hap1_blobDB"
-
-# Generate summary table for haplotype 1 assembly
-blobtools table \
-    --out "${out_dir}/hap1" \
+# Uncomment these to test my bitscore cutoff - see which hits are less confident
+#    --bitscore 250 \
+#    --replace
     "${out_dir}/hap1_blobDB"
 
 # Generate BlobPlot (GC vs coverage, colour coded by phylum)
@@ -55,10 +55,8 @@ blobtools add \
     --threads 32 \
     --hits "${tax_dir}/hap2_diamond.out" \
     --taxdump "${taxdump_dir}" \
-    "${out_dir}/hap2_blobDB"
-
-blobtools table \
-    --out "${out_dir}/hap2" \
+#    --bitscore 250 \
+#    --replace
     "${out_dir}/hap2_blobDB"
 
 blobtools view \
