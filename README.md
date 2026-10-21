@@ -405,37 +405,38 @@ bash 04_parental_assignment/scripts/align_parents.sh
 
 Now each contig in the haplotype assemblies has been mapped to a best-matching chromosome from decipiens and virginea. To assess the alignments and make conclusions on parental origin of each haplotig, I made the following scripts to produce tables comparing coverage percentage and identity percentage of alignments to each parent. Better coverage in alignment to one parent species chromosome and large gap in identity percentages between alignments to each parent are strong signs that the contig belongs to a specific parent.
 
+The following script computes tables that compare the useful metrics for both haplotype assemblies:
+
 ```
 bash 04_parental_assignment/scripts/dv_scoring.sh
 ```
 
 ### E. decipiens vs E. virginea alignments with Haplotype 1 contigs:
-| Hap1 Contig | *E. decipiens* Ref | *E. virginea* Ref | *decipiens* Matches | *virginea* Matches | *decipiens* Cov | *virginea* Cov | *decipiens* Identity | *virginea* Identity | Coverage Ratio | $\Delta$ Identity |
+| Hap1 Contig | *E. decipiens* Match | *E. virginea* Match | *decipiens* Target Coverage | *virginea* Terget Coverage | *decipiens* Query Coverage | *virginea* Query Coverage | *decipiens* Identity | *virginea* Identity | Coverge Ratio | $\Delta$ Identity |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| h1tg000001l | CM024610.1 | CM024515.1 | 12,243,687 | 6,702,739 | **35.85%** | 19.63% | **60.14%** | 42.37% | 1.83 | +17.77% |
-| h1tg000002l | CM024616.1 | CM024521.1 | 8,082,802 | 3,976,207 | **12.30%** | 6.05% | **50.13%** | 32.96% | 2.03 | +17.17% |
-| h1tg000003l | CM024617.1 | CM024522.1 | 2,972,274 | 10,352,051 | 8.14% | **28.37%** | 36.07% | **68.51%** | 0.29 | -32.43% |
-| h1tg000004l | CM024615.1 | CM024520.1 | 6,417,944 | 4,496,678 | **12.50%** | 8.76% | **62.69%** | 39.48% | 1.43 | +23.21% |
-| h1tg000005l | CM024609.1 | CM024514.1 | 3,740,114 | 3,827,151 | 8.56% | **8.76%** | **57.10%** | 26.04% | 0.98 | +31.06% |
-| h1tg000006l | CM024612.1 | CM024517.1 | 2,930,784 | 6,202,175 | 8.16% | **17.26%** | 29.38% | **73.27%** | 0.47 | -43.88% |
-| h1tg000007l | CM024618.1 | CM024523.1 | 4,849,133 | 4,266,312 | **12.59%** | 11.07% | **62.79%** | 37.77% | 1.14 | +25.02% |
-| h1tg000008l | CM024614.1 | CM024519.1 | 4,353,705 | 3,709,292 | **16.67%** | 14.20% | **43.81%** | 31.56% | 1.17 | +12.25% |
-| h1tg000009l | CM024614.1 | CM024519.1 | 3,246,372 | 5,442,671 | 11.32% | **18.97%** | 42.20% | **67.20%** | 0.60 | -25.00% |
-| h1tg000010l | CM024619.1 | CM024524.1 | 3,756,909 | 3,104,971 | **8.91%** | 7.36% | **62.34%** | 23.99% | 1.21 | +38.35% |
-| h1tg000011l | CM024613.1 | CM024518.1 | 2,702,738 | 3,192,802 | 4.39% | **5.18%** | 48.70% | **52.49%** | 0.85 | -3.79% |
-| h1tg000012l | CM024611.1 | CM024516.1 | 689,530 | 234,614 | **65.42%** | 22.26% | **57.98%** | 25.60% | 2.94 | +32.38% |
-| h1tg000013l | CM024610.1 | CM024515.1 | 4,566,198 | 1,794,178 | **22.37%** | 8.79% | **45.87%** | 30.47% | 2.55 | +15.40% |
-| h1tg000014l | CM024613.1 | CM024518.1 | 3,784,074 | 1,338,681 | **9.90%** | 3.50% | **49.99%** | 22.10% | 2.83 | +27.89% |
-| h1tg000015l | CM024610.1 | CM024515.1 | 34,224 | 28,251 | **47.85%** | 39.50% | 33.39% | **51.84%** | 1.21 | -18.45% |
-| h1tg000016l | CM024611.1 | CM024516.1 | 2,491,788 | 3,551,382 | 7.10% | **10.12%** | 31.03% | **55.13%** | 0.70 | -24.10% |
-| h1tg000017l | CM024611.1 | CM024516.1 | 332,816 | 458,618 | 36.37% | **50.11%** | 28.17% | **62.79%** | 0.73 | -34.61% |
-| h1tg000018l | CM024611.1 | CM024516.1 | 1,167,300 | 2,048,462 | 24.49% | **42.98%** | 26.06% | **50.66%** | 0.57 | -24.61% |
-| h1tg000019l | CM024612.1 | CM024517.1 | 109,361 | 41,371 | **68.27%** | 25.83% | **57.31%** | 25.00% | 2.64 | +32.31% |
-| h1tg000020l | CM024610.1 | CM024515.1 | 46,883 | 28,279 | **15.83%** | 9.55% | 20.65% | **63.60%** | 1.66 | -42.95% |
-| h1tg000021l | CM024614.1 | CM024519.1 | 93,218 | 127,789 | 62.92% | **86.26%** | 60.26% | **76.84%** | 0.73 | -16.59% |
-| h1tg000022l | CM024611.1 | CM024521.1 | 2,957 | 6,165 | 6.27% | **13.07%** | **53.47%** | 32.13% | 0.48 | +21.34% |
-| h1tg000023l | CM024616.1 | CM024521.1 | 103,727 | 47,368 | **11.13%** | 5.08% | 28.22% | **42.51%** | 2.19 | -14.28% |
-| h1tg000024l | CM024610.1 | CM024515.1 | 49,316 | 27,260 | **39.17%** | 21.65% | 26.19% | **52.08%** | 1.81 | -25.88% |
-| h1tg000025l | CM024614.1 | CM024520.1 | 196,173 | 540,874 | 16.32% | **44.99%** | 31.24% | **37.62%** | 0.36 | -6.38% |
+| h1tg000001l | CM024610.1 | CM024515.1 | **23.20%** | 14.25% | **35.85%** | 19.63% | **60.14%** | 42.37% | 1.63 | +17.77% |
+| h1tg000002l | CM024616.1 | CM024521.1 | **12.35%** | 6.13% | **12.30%** | 6.05% | **50.13%** | 32.96% | 2.02 | +17.17% |
+| h1tg000003l | CM024617.1 | CM024522.1 | 6.71% | **31.42%** | 8.14% | **28.37%** | 36.07% | **68.51%** | 0.21 | -32.43% |
+| h1tg000004l | CM024615.1 | CM024520.1 | **10.66%** | 7.85% | **12.50%** | 8.76% | **62.69%** | 39.48% | 1.36 | +23.21% |
+| h1tg000005l | CM024609.1 | CM024514.1 | 7.85% | **9.28%** | 8.56% | **8.76%** | **57.10%** | 26.04% | 0.85 | +31.06% |
+| h1tg000006l | CM024612.1 | CM024517.1 | 6.80% | **19.15%** | 8.16% | **17.26%** | 29.38% | **73.27%** | 0.36 | -43.88% |
+| h1tg000007l | CM024618.1 | CM024523.1 | **12.69%** | 11.59% | **12.59%** | 11.07% | **62.79%** | 37.77% | 1.10 | +25.02% |
+| h1tg000008l | CM024614.1 | CM024519.1 | **7.19%** | 6.61% | **16.67%** | 14.20% | **43.81%** | 31.56% | 1.09 | +12.25% |
+| h1tg000009l | CM024614.1 | CM024519.1 | 5.36% | **9.69%** | 11.32% | **18.97%** | 42.20% | **67.20%** | 0.55 | -25.00% |
+| h1tg000010l | CM024619.1 | CM024524.1 | **8.01%** | 6.59% | **8.91%** | 7.36% | **62.34%** | 23.99% | 1.21 | +38.35% |
+| h1tg000011l | CM024613.1 | CM024518.1 | 4.37% | **5.60%** | 4.39% | **5.18%** | 48.70% | **52.49%** | 0.78 | -3.79% |
+| h1tg000012l | CM024611.1 | CM024516.1 | **1.03%** | 0.39% | **65.42%** | 22.26% | **57.98%** | 25.60% | 2.62 | +32.38% |
+| h1tg000013l | CM024610.1 | CM024515.1 | **8.65%** | 3.81% | **22.37%** | 8.79% | **45.87%** | 30.47% | 2.27 | +15.40% |
+| h1tg000014l | CM024613.1 | CM024518.1 | **6.12%** | 2.35% | **9.90%** | 3.50% | **49.99%** | 22.10% | 2.61 | +27.89% |
+| h1tg000015l | CM024610.1 | CM024515.1 | **0.06%** | 0.06% | **47.85%** | 39.50% | 33.39% | **51.84%** | 1.08 | -18.45% |
+| h1tg000016l | CM024611.1 | CM024516.1 | 3.72% | **5.95%** | 7.10% | **10.12%** | 31.03% | **55.13%** | 0.63 | -24.10% |
+| h1tg000017l | CM024611.1 | CM024516.1 | 0.50% | **0.77%** | 36.37% | **50.11%** | 28.17% | **62.79%** | 0.65 | -34.61% |
+| h1tg000018l | CM024611.1 | CM024516.1 | 1.74% | **3.43%** | 24.49% | **42.98%** | 26.06% | **50.66%** | 0.51 | -24.61% |
+| h1tg000019l | CM024612.1 | CM024517.1 | **0.25%** | 0.13% | **68.27%** | 25.83% | **57.31%** | 25.00% | 1.99 | +32.31% |
+| h1tg000020l | CM024610.1 | CM024515.1 | **0.09%** | 0.06% | **15.83%** | 9.55% | 20.65% | **63.60%** | 1.48 | -42.95% |
 
-*Note there are many more contigs, but this uses the 25 longest ones.
+*Note there are many more contigs, but this uses the first 20 (all of the top 11 longest contigs are here, all of these are quite large)
+
+Displayed in the table is the chromosomes from *E. decipiens* and *E. virginea* that the haplotype 1 contigs best aligned to. Then the target coverages represent the proportion of the reference chromosome covered by the contig, while the query coverages represent the proportion of the contig that was able to successfully align with the parent chromosome. Note that the target coverages were used for the coverage ratios, as working based on parent chromosome coverage makes more sense for identifying which contigs come from which parent. The parent identity columns are calculated by dividing number of base matches by alignment block length.
+
+The results very clearly distinguish which parent the contig comes from in most cases. This is because either the coverage ratios are far from 1.00 and/or the difference in identity percentages are striking. For example, the first two contigs belong to the *E. decipiens* parent haplotype genome, as their *decipiens*/*virginea* coverage ratio is clearly *decipiens* favoured. The third contig is of *E. virginea* parental origin due to the coverage ratio well under 1 and negative percent identity (*decipiens* - *virginea*). In some cases such as the eighth contig identity is less obvious, but investigating alignment matches from the h1/h2 dotplot earlier can be used to confirm the parental origin.
