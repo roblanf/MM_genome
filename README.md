@@ -435,8 +435,35 @@ bash 04_parental_assignment/scripts/dv_scoring.sh
 | h1tg000019l | CM024612.1 | CM024517.1 | **0.25%** | 0.13% | **68.27%** | 25.83% | **57.31%** | 25.00% | 1.99 | +32.31% |
 | h1tg000020l | CM024610.1 | CM024515.1 | **0.09%** | 0.06% | **15.83%** | 9.55% | 20.65% | **63.60%** | 1.48 | -42.95% |
 
-*Note there are many more contigs, but this uses the first 20 (all of the top 11 longest contigs are here, all of these are quite large)
+*Note there are many more contigs, but this uses the first 20 (all of the largest contigs that are near-chromosome level are here)
 
 Displayed in the table is the chromosomes from *E. decipiens* and *E. virginea* that the haplotype 1 contigs best aligned to. Then the target coverages represent the proportion of the reference chromosome covered by the contig, while the query coverages represent the proportion of the contig that was able to successfully align with the parent chromosome. Note that the target coverages were used for the coverage ratios, as working based on parent chromosome coverage makes more sense for identifying which contigs come from which parent. The parent identity columns are calculated by dividing number of base matches by alignment block length.
 
 The results very clearly distinguish which parent the contig comes from in most cases. This is because either the coverage ratios are far from 1.00 and/or the difference in identity percentages are striking. For example, the first two contigs belong to the *E. decipiens* parent haplotype genome, as their *decipiens*/*virginea* coverage ratio is clearly *decipiens* favoured. The third contig is of *E. virginea* parental origin due to the coverage ratio well under 1 and negative percent identity (*decipiens* - *virginea*). In some cases such as the eighth contig identity is less obvious, but investigating alignment matches from the h1/h2 dotplot earlier can be used to confirm the parental origin.
+
+### E. decipiens vs E. virginea alignments with Haplotype 2 contigs:
+| Hap2 Contig | *E. decipiens* Match | *E. virginea* Match | *decipiens* Target Coverage | *virginea* Target Coverage | *decipiens* Query Coverage | *virginea* Query Coverage | *decipiens* Identity | *virginea* Identity | Coverage Ratio | $\Delta$ Identity |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| h2tg000001l | CM024610.1 | CM024515.1 | 5.49% | **8.77%** | 16.84% | **24.00%** | 28.45% | **45.30%** | 0.63 | -16.84% |
+| h2tg000002l | CM024609.1 | CM024514.1 | 8.01% | **16.94%** | 9.10% | **16.65%** | 32.92% | **71.32%** | 0.47 | -38.40% |
+| h2tg000003l | CM024616.1 | CM024521.1 | 5.26% | **9.36%** | 5.58% | **9.84%** | 26.10% | **55.99%** | 0.56 | -29.89% |
+| h2tg000004l | CM024613.1 | CM024518.1 | 2.64% | **14.60%** | 2.75% | **14.03%** | 30.12% | **60.52%** | 0.18 | -30.41% |
+| h2tg000005l | CM024617.1 | CM024522.1 | 10.97% | **20.22%** | 12.20% | **16.74%** | **61.65%** | 38.87% | 0.54 | +22.77% |
+| h2tg000006l | CM024614.1 | CM024519.1 | 8.34% | **10.66%** | 9.61% | **11.38%** | **73.92%** | 58.39% | 0.78 | +15.53% |
+| h2tg000007l | CM024610.1 | CM024515.1 | 9.48% | **28.31%** | 14.99% | **39.89%** | 33.85% | **68.37%** | 0.33 | -34.52% |
+| h2tg000008l | CM024619.1 | CM024524.1 | 4.83% | **13.04%** | 5.71% | **15.49%** | 35.29% | **61.70%** | 0.37 | -26.41% |
+| h2tg000009l | CM024611.1 | CM024516.1 | **8.64%** | 5.36% | **11.14%** | 6.16% | 43.52% | **51.10%** | 1.61 | -7.58% |
+| h2tg000010l | CM024612.1 | CM024517.1 | 5.52% | **12.36%** | 6.25% | **10.53%** | **55.49%** | 42.14% | 0.45 | +13.35% |
+| h2tg000011l | CM024618.1 | CM024523.1 | 7.22% | **20.97%** | 7.97% | **22.29%** | 33.95% | **70.99%** | 0.34 | -37.04% |
+| h2tg000012l | CM024615.1 | CM024520.1 | 6.94% | **10.84%** | 9.23% | **13.72%** | 39.88% | **63.67%** | 0.64 | -23.79% |
+| h2tg000013l | CM024611.1 | CM024516.1 | 2.79% | **4.75%** | 7.45% | **11.32%** | **32.45%** | 23.07% | 0.59 | +9.38% |
+| h2tg000014l | CM024617.1 | CM024522.1 | 0.07% | **0.11%** | 51.79% | **67.65%** | 44.72% | **58.30%** | 0.57 | -13.58% |
+| h2tg000015l | CM024613.1 | CM024519.1 | **2.40%** | 0.64% | **50.02%** | 12.07% | **43.61%** | 33.82% | 3.76 | +9.79% |
+| h2tg000016l | CM024617.1 | CM024524.1 | 0.10% | **0.17%** | 30.10% | **54.12%** | 31.49% | **48.82%** | 0.59 | -17.33% |
+| h2tg000017l | CM024610.1 | CM024515.1 | **0.15%** | 0.02% | **77.72%** | 8.97% | **87.78%** | 14.18% | 7.72 | +73.60% |
+| h2tg000018l | CM024615.1 | CM024520.1 | **0.02%** | 0.01% | **17.80%** | 6.53% | 24.07% | **34.85%** | 2.59 | -10.78% |
+| h2tg000019l | CM024610.1 | CM024515.1 | **0.08%** | 0.03% | **65.98%** | 26.39% | **65.12%** | 29.39% | 2.23 | +35.73% |
+| h2tg000020l | CM024619.1 | CM024521.1 | **0.01%** | 0.00% | 3.41% | **3.87%** | 42.78% | **60.60%** | 1.22 | -17.82% |
+
+Again there is strong evidence to support assignment of almost every major contig from the haplotype 2 assembly. It appears that the Hifiasm phased assembly ended up stringing together more *E. virginea* origin contigs here in the Haplotype 2 assembly and more *E. decipiens*-derived contigs in the Haplotype 1 assembly.
+
