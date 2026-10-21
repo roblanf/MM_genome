@@ -76,12 +76,12 @@ BEGIN {
         cov_ratio = (v_cov > 0) ? (d_cov / v_cov) : (d_cov > 0 ? 99 : 1);
         id_delta = d_id - v_id;
 
-        # Thresholds: Cov Ratio >= 1.20 & ID Delta >= +2.0 -> decipiens
-        #             Cov Ratio <= 0.83 & ID Delta <= -2.0 -> virginea
+        # Thresholds: Cov Ratio >= 1.20 or ID Delta >= +5.0 -> decipiens
+        #             Cov Ratio <= 0.80 or ID Delta <= -5.0 -> virginea
         #             Otherwise -> ambiguous
-        if (cov_ratio >= 1.20 && id_delta >= 2.0) {
+        if (cov_ratio >= 1.20 || id_delta >= 5.0) {
             print q "\tdecipiens";
-        } else if (cov_ratio <= 0.83 && id_delta <= -2.0) {
+        } else if (cov_ratio <= 0.80 || id_delta <= -5.0) {
             print q "\tvirginea";
         } else {
             print q "\tambiguous";
@@ -90,6 +90,8 @@ BEGIN {
 }' "$decip_paf" "$virg_paf" > "${out_dir}/contig_classes.tsv"
 
 # Next Step: Stream through the FASTA file once using Awk to split sequences into respective files
+
+# Step 2: Stream through FASTA and split securely
 awk -v cfile="${out_dir}/contig_classes.tsv" \
     -v decip_file="${decip_out}" \
     -v virg_file="${virg_out}" \
@@ -99,7 +101,7 @@ BEGIN {
         class[$1] = $2;
     }
     close(cfile);
-    target = ambig_file; # Default fallback
+    target = ambig_file;
 }
 /^>/ {
     header = $0;
@@ -109,10 +111,7 @@ BEGIN {
 
     bin = (contig_id in class) ? class[contig_id] : "ambiguous";
     target = (bin == "decipiens") ? decip_file : ((bin == "virginea") ? virg_file : ambig_file);
-    print header > target;
-    sub(/^/, ">", header); # restore header formatting if needed, or just print $0
-    next;
 }
 {
-    print > target;
+    print $0 >> target;
 }' "$assembly_fa"
