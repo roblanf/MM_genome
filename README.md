@@ -467,3 +467,30 @@ The results very clearly distinguish which parent the contig comes from in most 
 
 Again there is strong evidence to support assignment of almost every major contig from the haplotype 2 assembly. It appears that the Hifiasm phased assembly ended up stringing together more *E. virginea* origin contigs here in the Haplotype 2 assembly and more *E. decipiens*-derived contigs in the Haplotype 1 assembly.
 
+All of the contigs in these assemblies were then assigned to *E. decipiens* or *E. virginea* via thresholding. I chose to set any contigs with >1.20x coverage ratio or over +5% identity into the *E. decipiens* parental haplotype group, and any with <0.8x coverage ratio or under -5% identity into the *E. virginea* group. Remaining contigs that didn't pass either of these thresholds were put into an ambiguous file, where analysis of the haplotype 1 vs haplotype 2 alignment matches can be used to determine the parent based on the parent group assigned to its match.
+
+```
+bash 04_parental_assignment/scripts/parent_contig_binning.sh \
+    03_assembly/results/hifiasm/MM_assembly.hap1.p_ctg.fa \
+    04_parental_assignment/results/hap1_vs_decipiens.paf \
+    04_parental_assignment/results/hap1_vs_virginea.paf \
+    04_parental_assignment/results/binned_hap1
+```
+
+```
+bash 04_parental_assignment/scripts/parent_contig_binning.sh \
+    03_assembly/results/hifiasm/MM_assembly.hap2.p_ctg.fa \
+    04_parental_assignment/results/hap2_vs_decipiens.paf \
+    04_parental_assignment/results/hap2_vs_virginea.paf \
+    04_parental_assignment/results/binned_hap2
+```
+
+### Parental Assignment Outcomes for All Contigs
+| Haplotype | *E. decipiens* Contigs | *E. virginea* Contigs | Ambiguous Contigs | Total Contigs |
+| :--- | :---: | :---: | :---: | :---: |
+| **Hap1** | 136 | 143 | 8 | 287 |
+| **Hap2** | 220 | 92 | 5 | 317 |
+| **Total** | **356** | **235** | **13** | **604** |
+
+This was run without filtering out those which are smaller in length, were labelled as contaminants etc. so it is not surprising to see a mismatch of *E. decipiens* vs *E. virginea* assigned contigs. Now I will make filtering choices to wittle down the contigs and re-run these steps to get parental assignment of contigs deemed suitable for the final haplotype-resolved assembly:
+
