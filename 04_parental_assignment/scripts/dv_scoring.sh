@@ -10,12 +10,19 @@ paf_dir="04_parental_assignment/results"
 out_dir="${paf_dir}/parent_mapping"
 mkdir -p "${out_dir}"
 
-# Function to generate a parental comparison table for any haplotype
-generate_table() {
+combined_table="${out_dir}/combined_parental_comparison.md"
+
+# Establish combined_table structure:
+{
+    echo "| Haplotype | Contig | *E. decipiens* Ref | *E. virginea* Ref | *decipiens* Target Cov | *virginea* Target Cov | *decipiens* Query Cov | *virginea* Query Cov | *decipiens* Identity | *virginea* Identity | Cov Ratio | Δ Identity |"
+    echo "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
+} > "${combined_table}"
+
+# Function adapted to add rows to combined_table
+append_rows() {
     local decip_paf="$1"
     local virgin_paf="$2"
-    local out_table="$3"
-    local hap_label="$4"
+    local hap_label="$3"
 
     awk -v hap="$hap_label" '
     function load_paf(filename,   is_primary, as, i, a) {
@@ -69,10 +76,6 @@ generate_table() {
 
         load_paf(virgin_paf);
 
-        # Header including both Target and Query Coverages
-        print "| " hap " Contig | *E. decipiens* Ref | *E. virginea* Ref | *decipiens* Target Cov | *virginea* Target Cov | *decipiens* Query Cov | *virginea* Query Cov | *decipiens* Identity | *virginea* Identity | Cov Ratio | Δ Identity |";
-        print "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |";
-
         for (id in d_matches) {
             v_chrom = (id in chrom) ? chrom[id] : "N/A";
             v_matches = (id in best_matches) ? best_matches[id] : 0;
@@ -118,11 +121,11 @@ generate_table() {
                 id, d_chrom[id], v_chrom,
                 d_tcov_str, v_tcov_str, d_qcov_str, v_qcov_str, d_id_str, v_id_str, cov_ratio, id_delta;
         }
-    }' "${decip_paf}" "${virgin_paf}" | sort -k1,1 > "${out_table}"
+    }' "${decip_paf}" "${virgin_paf}" | sort -k2,2 > "${combined_table}"
 }
 
-# Haplotype 1 Table
-generate_table "${paf_dir}/hap1_vs_decipiens.paf" "${paf_dir}/hap1_vs_virginea.paf" "${out_dir}/hap1_parental_comparison.md" "Hap1"
+# Add rows for haplotype 1 contigs
+append_rows "${paf_dir}/hap1_vs_decipiens.paf" "${paf_dir}/hap1_vs_virginea.paf" "Hap1"
 
 # Haplotype 2 Table
-generate_table "${paf_dir}/hap2_vs_decipiens.paf" "${paf_dir}/hap2_vs_virginea.paf" "${out_dir}/hap2_parental_comparison.md" "Hap2"
+append_rows "${paf_dir}/hap2_vs_decipiens.paf" "${paf_dir}/hap2_vs_virginea.paf" "Hap2"
