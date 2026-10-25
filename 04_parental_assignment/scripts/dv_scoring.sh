@@ -10,12 +10,13 @@ paf_dir="04_parental_assignment/results"
 out_dir="${paf_dir}/parent_mapping"
 mkdir -p "${out_dir}"
 
+hap1_hap2_paf="03_assembly/results/h1h2/hap1_vs_hap2.paf"
 combined_table="${out_dir}/combined_parental_comparison.md"
 
 # Establish combined_table structure:
 {
-    echo "| Contig | *decipiens* chromosome match | *virginea* chromosome match | *decipiens* Target Cov | *virginea* Target Cov | *decipiens* Query Cov | *virginea* Query Cov | *decipiens* Identity | *virginea* Identity | Cov Ratio | Δ Identity |"
-    echo "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
+    echo "| Contig | *decipiens* chromosome match | *virginea* chromosome match | *decipiens* Target Cov | *virginea* Target Cov | *decipiens* Query Cov | *virginea* Query Cov | *decipiens* Identity | *virginea* Identity | Cov Ratio | Δ Identity | Hap Match |"
+    echo "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
 } > "${combined_table}"
 
 # Function adapted to add rows to combined_table
@@ -25,6 +26,28 @@ append_rows() {
     local hap_label="$3"
 
     awk -v hap="$hap_label" '
+    # Parse hap1_vs_hap2.paf using aggregate total length for robust matching like I did in h1/h2 alignment dotplot Rscript
+    NR == FNR {
+        q = $1;
+        t = $6;
+        alen = $11;
+
+        # Track best Hap2 for each Hap1
+        sum_h1_h2[q, t] += alen;
+        if (sum_h1_h2[q, t] > max_h1_h2[q]) {
+            max_h1_h2[q] = sum_h1_h2[q, t];
+            best_h2_for_h1[q] = t;
+        }
+
+        # Track best Hap1 for each Hap2
+        sum_h2_h1[t, q] += alen;
+        if (sum_h2_h1[t, q] > max_h2_h1[t]) {
+            max_h2_h1[t] = sum_h2_h1[t, q];
+            best_h1_for_h2[t] = q;
+        }
+        next;
+    }
+
     function load_paf(filename,   is_primary, as, i, a) {
         while ((getline < filename) > 0) {
             is_primary = 0;
@@ -117,11 +140,18 @@ append_rows() {
             cov_ratio = (v_tcov > 0) ? (d_tcov[id] / v_tcov) : 0;
             id_delta = d_id[id] - v_id;
 
-            printf "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %.2f | %+.2f%% |\n",
+            # Get haplotype matches, fallback "-" if no match
+            if (hap == "Hap1") {
+                hap_match_val = (id in best_h2_for_h1) ? best_h2_for_h1[id] : "-";
+            } else {
+                hap_match_val = (id in best_h1_for_h2) ? best_h1_for_h2[id] : "-";
+            }
+
+            printf "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %.2f | %+.2f%% | %s |\n",
                 id, d_chrom[id], v_chrom,
-                d_tcov_str, v_tcov_str, d_qcov_str, v_qcov_str, d_id_str, v_id_str, cov_ratio, id_delta;
+                d_tcov_str, v_tcov_str, d_qcov_str, v_qcov_str, d_id_str, v_id_str, cov_ratio, id_delta, hap_match_val;
         }
-    }' "${decip_paf}" "${virgin_paf}" | sort -k2,2 >> "${combined_table}"
+    }' "${hap1_hap2_paf}" "${decip_paf}" "${virgin_paf}" | sort -k3,3 >> "${combined_table}"
 }
 
 # Add rows for haplotype 1 contigs
