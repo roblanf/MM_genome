@@ -121,7 +121,7 @@ append_rows() {
                 id, d_chrom[id], v_chrom,
                 d_tcov_str, v_tcov_str, d_qcov_str, v_qcov_str, d_id_str, v_id_str, cov_ratio, id_delta;
         }
-    }' "${decip_paf}" "${virgin_paf}" | sort -k2,2 > "${combined_table}"
+    }' "${decip_paf}" "${virgin_paf}" | sort -k2,2 >> "${combined_table}"
 }
 
 # Add rows for haplotype 1 contigs
