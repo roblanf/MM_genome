@@ -117,7 +117,7 @@ append_rows() {
             cov_ratio = (v_tcov > 0) ? (d_tcov[id] / v_tcov) : 0;
             id_delta = d_id[id] - v_id;
 
-            printf "| %s | %s | %s | %s | %s | %s | %s | %s | %.2f | %+.2f%% |\n",
+            printf "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %.2f | %+.2f%% |\n",
                 id, d_chrom[id], v_chrom,
                 d_tcov_str, v_tcov_str, d_qcov_str, v_qcov_str, d_id_str, v_id_str, cov_ratio, id_delta;
         }
