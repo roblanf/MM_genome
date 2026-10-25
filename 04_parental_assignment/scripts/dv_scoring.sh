@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Script: 04_parental_assignment/scripts/parent_scoring.sh
-# Purpose: Generate a unified parental assignment table with both Target and Query coverages, identities, ratios, and deltas.
+# Script: 04_parental_assignment/scripts/dv_scoring.sh
+# Purpose: Generate a unified parental assignment table with all metrics of interest.
 
 set -euo pipefail
 
@@ -11,151 +11,336 @@ out_dir="${paf_dir}/parent_mapping"
 mkdir -p "${out_dir}"
 
 hap1_hap2_paf="03_assembly/results/h1h2/hap1_vs_hap2.paf"
+h1_dec_paf="${paf_dir}/hap1_vs_decipiens.paf"
+h1_vir_paf="${paf_dir}/hap1_vs_virginea.paf"
+h2_dec_paf="${paf_dir}/hap2_vs_decipiens.paf"
+h2_vir_paf="${paf_dir}/hap2_vs_virginea.paf"
+
 combined_table="${out_dir}/combined_parental_comparison.md"
 
 # Establish combined_table structure:
 {
-    echo "| Contig | *decipiens* chromosome match | *virginea* chromosome match | *decipiens* Target Cov | *virginea* Target Cov | *decipiens* Query Cov | *virginea* Query Cov | *decipiens* Identity | *virginea* Identity | Cov Ratio | Δ Identity | Hap Match |"
-    echo "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
+    echo "| Contig | Hap Match | *decipiens* chrom | *virginea* chrom | *decipiens* T-Cov | *virginea* T-Cov | *decipiens* ID | *virginea* ID | Cov Ratio | Δ ID | Partner *decipiens* T-Cov | Partner *virginea* T-Cov | Partner *decipiens* ID | Partner *virginea* ID | Partner Cov Ratio | Partner Δ ID |"
+    echo "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
 } > "${combined_table}"
 
-# Function adapted to add rows to combined_table
-append_rows() {
-    local decip_paf="$1"
-    local virgin_paf="$2"
-    local hap_label="$3"
+# Pre-compute cross-haplotype best matches and parental metrics for all contigs - saves compute time
+h1_h2_map=$(mktemp)
+h2_h1_map=$(mktemp)
+metrics_cache=$(mktemp)
 
-    awk -v hap="$hap_label" '
-    # Parse hap1_vs_hap2.paf using aggregate total length for robust matching like I did in h1/h2 alignment dotplot Rscript
-    NR == FNR {
-        q = $1;
-        t = $6;
-        alen = $11;
-
-        # Track best Hap2 for each Hap1
-        sum_h1_h2[q, t] += alen;
-        if (sum_h1_h2[q, t] > max_h1_h2[q]) {
-            max_h1_h2[q] = sum_h1_h2[q, t];
-            best_h2_for_h1[q] = t;
+# a) Compute Hap1 vs Hap2 best matches
+awk '
+{
+    q = $1; t = $6; alen = $11;
+    sum_h1_h2[q, t] += alen;
+    sum_h2_h1[t, q] += alen;
+}
+END {
+    for (pair in sum_h1_h2) {
+        split(pair, p, SUBSEP);
+        if (sum_h1_h2[pair] > max_h1[p[1]]) {
+            max_h1[p[1]] = sum_h1_h2[pair];
+            best_h2[p[1]] = p[2];
         }
-
-        # Track best Hap1 for each Hap2
-        sum_h2_h1[t, q] += alen;
-        if (sum_h2_h1[t, q] > max_h2_h1[t]) {
-            max_h2_h1[t] = sum_h2_h1[t, q];
-            best_h1_for_h2[t] = q;
-        }
-        next;
     }
+    for (q in best_h2) print q, best_h2[q] > "'"${h1_h2_map}"'";
 
-    function load_paf(filename,   is_primary, as, i, a) {
+    for (pair in sum_h2_h1) {
+        split(pair, p, SUBSEP);
+        if (sum_h2_h1[pair] > max_h2[p[1]]) {
+            max_h2[p[1]] = sum_h2_h1[pair];
+            best_h1[p[1]] = p[2];
+        }
+    }
+    for (q in best_h1) print q, best_h1[q] > "'"${h2_h1_map}"'";
+}' "${hap1_hap2_paf}"
+
+# b) Helper function to calculate parental scores (coverage ratios, identity differences), add to metrics cache for use in table
+calc_parental_scores() {
+    local dec_paf="$1"
+    local vir_paf="$2"
+
+    awk '
+    function load_paf(filename, is_primary, as, i, a) {
         while ((getline < filename) > 0) {
             is_primary = 0;
-            for(i=13; i<=NF; i++) {
-                if($i == "tp:A:P") { is_primary = 1; }
-            }
+            for(i=13; i<=NF; i++) if($i == "tp:A:P") is_primary = 1;
             if (is_primary) {
                 as = $10;
-                for(i=13; i<=NF; i++) {
-                    if($i ~ /^AS:i:/) { split($i, a, ":"); as = a[3]; }
-                }
+                for(i=13; i<=NF; i++) if($i ~ /^AS:i:/) { split($i, a, ":"); as = a[3]; }
                 if ($10 > best_matches[$1]) {
                     best_matches[$1] = $10;
                     chrom[$1] = $6;
-                    t_len[$1] = $7;    # Target Chromosome Length (Col 7)
-                    q_len[$1] = $2;    # Query Contig Length (Col 2)
-                    aln_len[$1] = $11;  # Alignment Block Length for Identity (Col 11)
+                    t_len[$1] = $7;
+                    aln_len[$1] = $11;
                 }
             }
         }
         close(filename);
     }
-
     BEGIN {
         decip_paf = ARGV[1];
-        virgin_paf = ARGV[2];
-
+        vir_paf = ARGV[2];
         ARGV[1] = ""; ARGV[2] = "";
 
         load_paf(decip_paf);
-
-        # Store decipiens values
         for (id in best_matches) {
             d_chrom[id] = chrom[id];
             d_matches[id] = best_matches[id];
             d_tlen[id] = t_len[id];
-            d_qlen[id] = q_len[id];
-            d_aln[id] = aln_len[id];
-
-            # Coverages
             d_tcov[id] = (d_tlen[id] > 0) ? (d_matches[id] / d_tlen[id]) * 100 : 0;
-            d_qcov[id] = (d_qlen[id] > 0) ? (d_matches[id] / d_qlen[id]) * 100 : 0;
-
-            # Identity
-            d_id[id] = (d_aln[id] > 0) ? (d_matches[id] / d_aln[id]) * 100 : 0;
+            d_id[id] = (aln_len[id] > 0) ? (d_matches[id] / aln_len[id]) * 100 : 0;
         }
 
-        delete best_matches; delete chrom; delete t_len; delete q_len; delete aln_len;
+        delete best_matches; delete chrom; delete t_len; delete aln_len;
 
-        load_paf(virgin_paf);
-
-        for (id in d_matches) {
+        load_paf(vir_paf);
+        for (id in d_tcov) {
             v_chrom = (id in chrom) ? chrom[id] : "N/A";
             v_matches = (id in best_matches) ? best_matches[id] : 0;
             v_tlen = (id in t_len) ? t_len[id] : 1;
-            v_qlen = (id in q_len) ? q_len[id] : d_qlen[id];
-            v_aln = (id in aln_len) ? aln_len[id] : 1;
-
             v_tcov = (v_tlen > 0) ? (v_matches / v_tlen) * 100 : 0;
-            v_qcov = (v_qlen > 0) ? (v_matches / v_qlen) * 100 : 0;
-            v_id = (v_aln > 0) ? (v_matches / v_aln) * 100 : 0;
+            v_id = (aln_len[id] > 0) ? (v_matches / aln_len[id]) * 100 : 0;
 
-            # Bold highlight higher Target Coverage
-            d_tcov_str = sprintf("%.2f%%", d_tcov[id]);
-            v_tcov_str = sprintf("%.2f%%", v_tcov);
-            if (d_tcov[id] >= v_tcov) {
-                d_tcov_str = "**" d_tcov_str "**";
-            } else {
-                v_tcov_str = "**" v_tcov_str "**";
-            }
-
-            # Bold highlight higher Query Coverage
-            d_qcov_str = sprintf("%.2f%%", d_qcov[id]);
-            v_qcov_str = sprintf("%.2f%%", v_qcov);
-            if (d_qcov[id] >= v_qcov) {
-                d_qcov_str = "**" d_qcov_str "**";
-            } else {
-                v_qcov_str = "**" v_qcov_str "**";
-            }
-
-            # Bold highlight higher Identity
-            d_id_str = sprintf("%.2f%%", d_id[id]);
-            v_id_str = sprintf("%.2f%%", v_id);
-            if (d_id[id] >= v_id) {
-                d_id_str = "**" d_id_str "**";
-            } else {
-                v_id_str = "**" v_id_str "**";
-            }
-
-            cov_ratio = (v_tcov > 0) ? (d_tcov[id] / v_tcov) : 0;
-            id_delta = d_id[id] - v_id;
-
-            # Get haplotype matches, fallback "-" if no match
-            if (hap == "Hap1") {
-                hap_match_val = (id in best_h2_for_h1) ? best_h2_for_h1[id] : "-";
-            } else {
-                hap_match_val = (id in best_h1_for_h2) ? best_h1_for_h2[id] : "-";
-            }
-
-            printf "| %s | %s | %s | %s | %s | %s | %s | %s | %s | %.2f | %+.2f%% | %s |\n",
-                id, d_chrom[id], v_chrom,
-                d_tcov_str, v_tcov_str, d_qcov_str, v_qcov_str, d_id_str, v_id_str, cov_ratio, id_delta, hap_match_val;
+            # Output format: id \t d_chrom \t v_chrom \t d_tcov \t v_tcov \t d_id \t v_id
+            print id, d_chrom[id], v_chrom, d_tcov[id], v_tcov, d_id[id], v_id >> "'"${metrics_cache}"'";
         }
-    }' "${hap1_hap2_paf}" "${decip_paf}" "${virgin_paf}" | sort -k3,3 >> "${combined_table}"
+    }' "$dec_paf" "$vir_paf"
 }
 
-# Add rows for haplotype 1 contigs
-append_rows "${paf_dir}/hap1_vs_decipiens.paf" "${paf_dir}/hap1_vs_virginea.paf" "Hap1"
+# Run parental assignment metrics for Hap1 and Hap2
+calc_parental_scores "${h1_dec_paf}" "${h1_vir_paf}"
+calc_parental_scores "${h2_dec_paf}" "${h2_vir_paf}"
 
-# Haplotype 2 Table
-append_rows "${paf_dir}/hap2_vs_decipiens.paf" "${paf_dir}/hap2_vs_virginea.paf" "Hap2"
+# Process and output rows using the pre-computed metrics and maps
+process_hap() {
+    local hap_label="$1"
+
+    awk -v hap="$hap_label" -v h1_h2_file="${h1_h2_map}" -v h2_h1_file="${h2_h1_map}" -v cache_file="${metrics_cache}" '
+    BEGIN {
+        # Load cross-hap mapping
+        if (hap == "Hap1") {
+            while ((getline < h1_h2_file) > 0) best_map[$1] = $2;
+        } else {
+            while ((getline < h2_h1_file) > 0) best_map[$1] = $2;
+        }
+        close(h1_h2_file); close(h2_h1_file);
+
+        # Load parental metrics cache for ALL contigs
+  paf_dir="04_parental_assignment/results"
+out_dir="${paf_dir}/parent_mapping"
+mkdir -p "${out_dir}"
+
+hap1_hap2_paf="03_assembly/results/h1h2/hap1_vs_hap2.paf"
+h1_dec_paf="${paf_dir}/hap1_vs_decipiens.paf"
+h1_vir_paf="${paf_dir}/hap1_vs_virginea.paf"
+h2_dec_paf="${paf_dir}/hap2_vs_decipiens.paf"
+h2_vir_paf="${paf_dir}/hap2_vs_virginea.paf"
+
+combined_table="${out_dir}/combined_parental_comparison.md"
+
+# 1. Establish combined_table structure (Query coverage removed, Partner metrics expanded):
+{
+    echo "| Contig | Hap Match | *decipiens* chrom | *virginea* chrom | *decipiens* T-Cov | *virginea* T-Cov | *decipiens* ID | *virginea* ID | Cov Ratio | Δ ID | Partner *decipiens* T-Cov | Partner *virginea* T-Cov | Partner *decipiens* ID | Partner *virginea* ID | Partner Cov Ratio | Partner Δ ID |"
+    echo "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
+} > "${combined_table}"
+
+# 2. Pre-compute cross-haplotype best matches AND parental metrics for ALL contigs upfront
+echo "Pre-computing cross-haplotype maps and parental metrics..."
+h1_h2_map=$(mktemp)
+h2_h1_map=$(mktemp)
+metrics_cache=$(mktemp)
+
+# A. Compute Hap1 vs Hap2 best matches
+awk '
+{
+    q = $1; t = $6; alen = $11;
+    sum_h1_h2[q, t] += alen;
+    sum_h2_h1[t, q] += alen;
+}
+END {
+    for (pair in sum_h1_h2) {
+        split(pair, p, SUBSEP);
+        if (sum_h1_h2[pair] > max_h1[p[1]]) {
+            max_h1[p[1]] = sum_h1_h2[pair];
+            best_h2[p[1]] = p[2];
+        }
+    }
+    for (q in best_h2) print q, best_h2[q] > "'"${h1_h2_map}"'";
+
+    for (pair in sum_h2_h1) {
+        split(pair, p, SUBSEP);
+        if (sum_h2_h1[pair] > max_h2[p[1]]) {
+            max_h2[p[1]] = sum_h2_h1[pair];
+            best_h1[p[1]] = p[2];
+        }
+    }
+    for (q in best_h1) print q, best_h1[q] > "'"${h2_h1_map}"'";
+}' "${hap1_hap2_paf}"
+
+# B. Helper function to calculate parental scores for a given set of PAFs and write to metrics cache
+calc_parental_scores() {
+    local dec_paf="$1"
+    local vir_paf="$2"
+    
+    awk '
+    function load_paf(filename, is_primary, as, i, a) {
+        while ((getline < filename) > 0) {
+            is_primary = 0;
+            for(i=13; i<=NF; i++) if($i == "tp:A:P") is_primary = 1;
+            if (is_primary) {
+                as = $10;
+                for(i=13; i<=NF; i++) if($i ~ /^AS:i:/) { split($i, a, ":"); as = a[3]; }
+                if ($10 > best_matches[$1]) {
+                    best_matches[$1] = $10;
+                    chrom[$1] = $6;
+                    t_len[$1] = $7;
+                    aln_len[$1] = $11;
+                }
+            }
+        }
+        close(filename);
+    }
+    BEGIN {
+        decip_paf = ARGV[1];
+        vir_paf = ARGV[2];
+        ARGV[1] = ""; ARGV[2] = "";
+
+        load_paf(decip_paf);
+        for (id in best_matches) {
+            d_chrom[id] = chrom[id];
+            d_matches[id] = best_matches[id];
+            d_tlen[id] = t_len[id];
+            d_tcov[id] = (d_tlen[id] > 0) ? (d_matches[id] / d_tlen[id]) * 100 : 0;
+            d_id[id] = (aln_len[id] > 0) ? (d_matches[id] / aln_len[id]) * 100 : 0;
+        }
+
+        delete best_matches; delete chrom; delete t_len; delete aln_len;
+
+        load_paf(vir_paf);
+        for (id in d_tcov) {
+            v_chrom = (id in chrom) ? chrom[id] : "N/A";
+            v_matches = (id in best_matches) ? best_matches[id] : 0;
+            v_tlen = (id in t_len) ? t_len[id] : 1;
+            v_tcov = (v_tlen > 0) ? (v_matches / v_tlen) * 100 : 0;
+            v_id = (aln_len[id] > 0) ? (v_matches / aln_len[id]) * 100 : 0;
+
+            # Output format: id \t d_chrom \t v_chrom \t d_tcov \t v_tcov \t d_id \t v_id
+            print id, d_chrom[id], v_chrom, d_tcov[id], v_tcov, d_id[id], v_id >> "'"${metrics_cache}"'";
+        }
+    }' "$dec_paf" "$vir_paf"
+}
+
+# Run calculation for Hap1 and Hap2
+calc_parental_scores "${h1_dec_paf}" "${h1_vir_paf}"
+calc_parental_scores "${h2_dec_paf}" "${h2_vir_paf}"
+
+# 3. Process and output rows using the pre-computed metrics and maps
+process_hap() {
+    local hap_label="$1"
+
+    awk -v hap="$hap_label" -v h1_h2_file="${h1_h2_map}" -v h2_h1_file="${h2_h1_map}" -v cache_file="${metrics_cache}" '
+    BEGIN {
+        # Load cross-hap mapping
+        if (hap == "Hap1") {
+            while ((getline < h1_h2_file) > 0) best_map[$1] = $2;
+        } else {
+            while ((getline < h2_h1_file) > 0) best_map[$1] = $2;
+        }
+        close(h1_h2_file); close(h2_h1_file);
+
+        # Load parental metrics cache for all contigs
+        while ((getline < cache_file) > 0) {
+            id = $1;
+            dc[id] = $2;
+            vc[id] = $3;
+            dtc[id] = $4;
+            vtc[id] = $5;
+            did[id] = $6;
+            vid[id] = $7;
+        }
+        close(cache_file);
+
+        # Iterate through all loaded contigs that belong to this haplotype group
+        for (id in dtc) {
+            d_chrom = dc[id];
+            v_chrom = vc[id];
+            d_tcov = dtc[id];
+            v_tcov = vtc[id];
+            d_id = did[id];
+            v_id = vid[id];
+
+            cov_ratio = (v_tcov > 0) ? (d_tcov / v_tcov) : 0;
+            id_delta = d_id - v_id;
+
+            hap_match = (id in best_map) ? best_map[id] : "-";
+
+            # Partner metrics lookup and derived metrics
+            p_dtc = (hap_match != "-" && hap_match in dtc) ? dtc[hap_match] : 0;
+            p_vtc = (hap_match != "-" && hap_match in vtc) ? vtc[hap_match] : 0;
+            p_did = (hap_match != "-" && hap_match in did) ? did[hap_match] : 0;
+            p_vid = (hap_match != "-" && hap_match in vid) ? vid[hap_match] : 0;
+
+            p_cov_ratio = (p_vtc > 0) ? (p_dtc / p_vtc) : 0;
+            p_id_delta = p_did - p_vid;
+
+            printf "| %s | %s | %s | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% |\n",
+                id, hap_match, d_chrom, v_chrom,
+                d_tcov, v_tcov, d_id, v_id, cov_ratio, id_delta,
+                p_dtc, p_vtc, p_did, p_vid, p_cov_ratio, p_id_delta;
+        }
+    }' | sort -k1,1 >> "${combined_table}"
+}
+
+process_hap "Hap1"
+process_hap "Hap2"
+
+# Clean up temporary files
+rm -f "${h1_h2_map}" "${h2_h1_map}" "${metrics_cache}"      while ((getline < cache_file) > 0) {
+            id = $1;
+            dc[id] = $2;
+            vc[id] = $3;
+            dtc[id] = $4;
+            vtc[id] = $5;
+            did[id] = $6;
+            vid[id] = $7;
+        }
+        close(cache_file);
+
+        # Iterate through all loaded contigs that belong to this haplotype group
+        for (id in dtc) {
+            d_chrom = dc[id];
+            v_chrom = vc[id];
+            d_tcov = dtc[id];
+            v_tcov = vtc[id];
+            d_id = did[id];
+            v_id = vid[id];
+
+            cov_ratio = (v_tcov > 0) ? (d_tcov / v_tcov) : 0;
+            id_delta = d_id - v_id;
+
+            hap_match = (id in best_map) ? best_map[id] : "-";
+
+            # Partner metrics lookup and derived metrics
+            p_dtc = (hap_match != "-" && hap_match in dtc) ? dtc[hap_match] : 0;
+            p_vtc = (hap_match != "-" && hap_match in vtc) ? vtc[hap_match] : 0;
+            p_did = (hap_match != "-" && hap_match in did) ? did[hap_match] : 0;
+            p_vid = (hap_match != "-" && hap_match in vid) ? vid[hap_match] : 0;
+
+            p_cov_ratio = (p_vtc > 0) ? (p_dtc / p_vtc) : 0;
+            p_id_delta = p_did - p_vid;
+
+            printf "| %s | %s | %s | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% |\n",
+                id, hap_match, d_chrom, v_chrom,
+                d_tcov, v_tcov, d_id, v_id, cov_ratio, id_delta,
+                p_dtc, p_vtc, p_did, p_vid, p_cov_ratio, p_id_delta;
+        }
+    }' | sort -k1,1 >> "${combined_table}"
+}
+
+process_hap "Hap1"
+process_hap "Hap2"
+
+# Clean up temporary files
+rm -f "${h1_h2_map}" "${h2_h1_map}" "${metrics_cache}"
