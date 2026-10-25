@@ -559,10 +559,10 @@ The final step of assigning contigs as being from *E. decipiens*, *E. virginea* 
 
 ```
 bash 04_parental_assignment/scripts/parent_contig_binning.sh \
-    03_assembly/results/hifiasm/filtered_hap1.fa \
+    04_parental_assignment/results/filtered_hap1.fa \
     04_parental_assignment/results/hap1_vs_decipiens.paf \
     04_parental_assignment/results/hap1_vs_virginea.paf \
-    04_parental_assignment/results/binned_hap1
+    04_parental_assignment/results/binned_hap1_filtered
 ```
 
 ```
@@ -570,8 +570,16 @@ bash 04_parental_assignment/scripts/parent_contig_binning.sh \
     03_assembly/results/hifiasm/filtered_hap2.fa \
     04_parental_assignment/results/hap2_vs_decipiens.paf \
     04_parental_assignment/results/hap2_vs_virginea.paf \
-    04_parental_assignment/results/binned_hap2
+    04_parental_assignment/results/binned_hap2_filtered
 ```
+
+### Parental Assignment Outcomes for Selected Contigs
+| Haplotype | *E. decipiens* Contigs | *E. virginea* Contigs | Ambiguous Contigs | Total Contigs |
+| :--- | :---: | :---: | :---: | :---: |
+| **Hap1** | 11 | 7 | 0 | 18 |
+| **Hap2** | 7 | 8 | 0 | 15 |
+| **Total** | **18** | **15** | **0** | **33** |
+
 
 
 
