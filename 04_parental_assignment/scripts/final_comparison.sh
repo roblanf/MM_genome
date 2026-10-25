@@ -166,6 +166,10 @@ process_hap() {
         close(c_file);
 
         for (id in dtc) {
+            # Ensure Hap1 function only processes h1tg, and Hap2 only processes h2tg
+            if (hap == "Hap1" && id !~ /^h1tg/) continue;
+            if (hap == "Hap2" && id !~ /^h2tg/) continue;
+
             d_chrom = dc[id];
             v_chrom = vc[id];
             d_tcov = dtc[id];
@@ -197,7 +201,7 @@ process_hap() {
                 (hap_match != "-" && hap_match in cphyl) ? cphyl[hap_match] : "N/A",
                 p_dtc, p_vtc, p_did, p_vid, p_cov_ratio, p_id_delta;
         }
-    } ' | sort -k1,1 "${combined_table}"
+    } ' | sort -k1,1 >> "${combined_table}"
 }
 
 process_hap "Hap1"
