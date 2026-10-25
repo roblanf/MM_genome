@@ -659,15 +659,32 @@ bash 04_parental_assignment/scripts/busco_parents_unfiltered.sh
 ### Metrics for assemblies of parental haplotype genomes (all contigs):
 | Metric | **Decipiens** | **Virginea** |
 | :--- | :---: | :---: |
-| **Total Length (bp)** | 573,918,730 | 536,882,982 |
-| **Total Contigs** | 18 | 15 |
-| **Contig N50 (bp)** | 42,182,117 | 41,926,117 |
-| **BUSCO Genome Completeness** | 96.86% | 94.23% |
-| Single-copy (S) | 88.48% | 86.81% |
-| Duplicated (D) | 8.38% | 7.42% |
-| Fragmented (F) | 0.57% | 0.50% |
-| Missing (M) | 2.57% | 5.28% |
+| **Total Length (bp)** | 605,300,436 | 556,442,681 |
+| **Total Contigs** | 340 | 233 |
+| **Contig N50 (bp)** | 42,182,117 | 39,661,829 |
+| **BUSCO Genome Completeness** | 96.86% | 94.69% |
+| Single-copy (S) | 84.81% | 85.85% |
+| Duplicated (D) | 12.05% | 8.84% |
+| Fragmented (F) | 0.57% | 0.46% |
+| Missing (M) | 2.57% | 4.85% |
 
+#### Analysis: Comparing final quality control metrics for the parental assemblies (all vs filtered)
+
+The *E. decipiens* and *E. virginea* assemblies were only reduced in length by about 30Mbp and 20Mbp respectively after filtering out the unwanted contigs. This means that the large contigs kept for the final assemblies make up a large majority of the genome, a positive outcome. The Contig N50 is identical for *decipiens* and about 2.5Mbp lower for *virginea*. This means the shortest contig to cover 50% of the total genome length either didn't or barely changed, reinforcing that filtering did not drastically take away from the genome size as it only removed smaller fragmented and/or contaminant/unwanted contigs.
+
+In terms of genome completeness, the *E. decipiens* parental haplotype assembly after filtering had the exact same completeness score of 96.86%. The difference is that in the filtered version, less of the genes were duplicated and instead were found in single copies more, which is even better. The *E. virginea* parental haplotype assembly had a minor reduction in completeness from 94.69% to 94.23% from the filtering, due to a few more preserved single-copy genes going missing (M) which were perhaps contained in fragmented contigs that were removed.
+
+#### Comparing parental haplotype assemblies to the Hifiasm phased assemblies:
+
+The phased 'Haplotype 1' and 'Haplotype 2' assemblies had ~591Mbp and ~572Mbp lengths respectively, where it was observed later that 'Haplotype 1' had more of the *E. decipiens* parent contigs (makes sense it was larger as there is size gap for final parental haploptype assemblies). The contig N50s were similar at ~38.5Mbp and ~42Mbp respectively, where actually the final assembly did as good or better (similar or higher N50s for *decipiens*, *virginea* assembly contigs).
+
+Then the genome completeness was 98.47% for 'Haplotype 1' and 99.61% for 'Haplotype 2'. These are very high and a few percentage points better than the final parental assemblies ate 96.86% for *E. decipiens* parental haplotype genome and  94.23% for *E. virginea* parental haplotype genome. The duplicated rate (D) is not much higher in the final assemblies than for the phased assemblies, indicating that splitting contigs into parent assemblies during assignment did not cause much collapse. However, the missing (M) percentages go from 1.14% and 0.04% for Hap1/2 to 2.57% and 5.28% for the filtered (final) parent assemblies. This is the main reason for the BUSCO genome completeness dropping. That outcome stems from the fact that the 31 ambiguous contigs from parental assignment were not included in the unfiltered or final assemblies for *E. decipiens* or *E. virginea* contigs. It is likely the case that some of these ambiguous contigs contained known preserved single-copy genes that should be in the genome, but they were on small/fragmented contigs that were unable to be assigned confidently by my thresholding in parental assignment.
+
+In future, one could cross-reference the partner matches from the parental metrics tables to manually assign all ambiguous contigs to either parent, and re-run
+```
+bash 04_parental_assignment/scripts/busco_parents_unfiltered.sh
+```
+on the contigs which include the 31 ambiguous contigs now assigned to either group. If the BUSCO completeness percentages are much closer to those from the Hifiasm phased assembly, then the difference is explained.
 
 
 
