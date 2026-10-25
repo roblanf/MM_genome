@@ -8,7 +8,14 @@ assembly_fa="$1"      # e.g., 03_assembly/results/hifiasm/MM_assembly.hap1.p_ctg
 blob_tsv="$2"        # e.g., 03_assembly/results/blobtools/plots/hap1_stats.tsv
 out_fa="$3"          # e.g., 04_parental_assignment/results/filtered_hap1.fa
 
-awk '
+# To run this, specify the above for hap1 files or hap2 files like so:
+#bash 04_parental_assignment/scripts/filter_haplotigs.sh \
+#    03_assembly/results/hifiasm/MM_assembly.hap1.p_ctg.fa \
+#    03_assembly/results/blobtools/plots/hap1_stats.tsv \
+#    04_parental_assignment/results/filtered_hap1.fa
+
+awk -v b_file="${blob_tsv}" \
+    -v out_fasta="${out_fa}" '
 BEGIN {
     # 1. Load and filter BlobTools stats
     while ((getline < b_file) > 0) {
@@ -55,5 +62,5 @@ BEGIN {
         print $0 >> out_fasta;
     }
 }
-' b_file="${blob_tsv}" out_fasta="${out_fa}" "${assembly_fa}"
+' "${assembly_fa}"
 
