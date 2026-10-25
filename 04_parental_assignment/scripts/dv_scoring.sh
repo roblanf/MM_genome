@@ -20,7 +20,7 @@ combined_table="${out_dir}/combined_parental_comparison.md"
 
 # 1. Establish combined_table structure:
 {
-    echo "| Contig | Hap Match | *decipiens* chrom | *virginea* chrom | *decipiens* T-Cov | *virginea* T-Cov | *decipiens* ID | *virginea* ID | Cov Ratio | Δ ID | Partner *decipiens* T-Cov | Partner *virginea* T-Cov | Partner *decipiens* ID | Partner *virginea* ID | Partner Cov Ratio | Partner Δ ID |"
+    echo "| Contig | *decipiens* chrom | *virginea* chrom | *decipiens* T-Cov | *virginea* T-Cov | *decipiens* ID | *virginea* ID | Cov Ratio | Δ ID | Hap Match | Partner *decipiens* T-Cov | Partner *virginea* T-Cov | Partner *decipiens* ID | Partner *virginea* ID | Partner Cov Ratio | Partner Δ ID |"
     echo "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
 } > "${combined_table}"
 
@@ -147,9 +147,9 @@ process_hap() {
             p_cov_ratio = (p_vtc > 0) ? (p_dtc / p_vtc) : 0;
             p_id_delta = p_did - p_vid;
 
-            printf "| %s | %s | %s | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% |\n",
-                id, hap_match, d_chrom, v_chrom,
-                d_tcov, v_tcov, d_id, v_id, cov_ratio, id_delta,
+            printf "| %s | %s | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% |\n",
+                id, d_chrom, v_chrom,
+                d_tcov, v_tcov, d_id, v_id, cov_ratio, id_delta, hap_match,
                 p_dtc, p_vtc, p_did, p_vid, p_cov_ratio, p_id_delta;
         }
     }' | sort -k1,1 >> "${combined_table}"
