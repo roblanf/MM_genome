@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Script: 04_parental_assignment/scripts/dv_scoring.sh
-# Purpose: Generate a unified parental assignment table with robust pre-computation.
+# Purpose: Generate a unified parental assignment table with all the key metrics
 
 set -euo pipefail
 
@@ -15,17 +15,18 @@ h1_dec_paf="${paf_dir}/hap1_vs_decipiens.paf"
 h1_vir_paf="${paf_dir}/hap1_vs_virginea.paf"
 h2_dec_paf="${paf_dir}/hap2_vs_decipiens.paf"
 h2_vir_paf="${paf_dir}/hap2_vs_virginea.paf"
+hap1_blob_tsv="03_assembly/results/blobtools/plots/hap1_stats.tsv"
+hap2_blob_tsv="03_assembly/results/blobtools/plots/hap2_stats.tsv"
 
 combined_table="${out_dir}/combined_parental_comparison.md"
 
 # 1. Establish combined_table structure:
 {
-    echo "| Contig | *decipiens* chrom | *virginea* chrom | *decipiens* T-Cov | *virginea* T-Cov | *decipiens* ID | *virginea* ID | Cov Ratio | Δ ID | Hap Match | Partner *decipiens* T-Cov | Partner *virginea* T-Cov | Partner *decipiens* ID | Partner *virginea* ID | Partner Cov Ratio | Partner Δ ID |"
-    echo "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
+    echo "| Contig | Length | GC% | Cov | Phylum | *decipiens* chrom | *virginea* chrom | *decipiens* T-Cov | *virginea* T-Cov | *decipiens* ID | *virginea* ID | Cov Ratio | Δ ID | Hap Match | Partner | Partner Length | Partner GC% | Partner Cov | Partner Phylum | Partner *decipiens* T-Cov | Partner *virginea* T-Cov | Partner *decipiens* ID | Partner *virginea* ID | Partner Cov Ratio | Partner Δ ID |"
+    echo "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
 } > "${combined_table}"
 
 # 2. Pre-compute cross-haplotype maps using sort/awk pipeline (Zero loops, zero quote errors)
-echo "Pre-computing cross-haplotype maps and parental metrics..."
 h1_h2_map=$(mktemp)
 h2_h1_map=$(mktemp)
 metrics_cache=$(mktemp)
@@ -42,7 +43,9 @@ awk '{sum[$1 "\t" $6] += $11} END {for (k in sum) print k, sum[k]}' "${hap1_hap2
 calc_parental_scores() {
     local dec_paf="$1"
     local vir_paf="$2"
+    local blob_tsv="$3"
     export metrics_file="${metrics_cache}"
+    export blob_file_path="${blob_tsv}"
 
     awk '
     function load_paf(filename, is_primary, as, i, a) {
@@ -67,6 +70,17 @@ calc_parental_scores() {
         vir_paf = ARGV[2];
         ARGV[1] = ""; ARGV[2] = "";
         m_file = ENVIRON["metrics_file"];
+        b_file = ENVIRON["blob_file_path"];
+
+        while ((getline < b_file) > 0) {
+            if ($1 == "index") continue;
+            b_id = $2;
+            b_gc[b_id] = $3;
+            b_len[b_id] = $4;
+            b_cov[b_id] = $5;
+            b_phyl[b_id] = $6;
+        }
+        close(b_file);
 
         load_paf(decip_paf);
         for (id in best_matches) {
@@ -87,13 +101,18 @@ calc_parental_scores() {
             v_tcov = (v_tlen > 0) ? (v_matches / v_tlen) * 100 : 0;
             v_id = (aln_len[id] > 0) ? (v_matches / aln_len[id]) * 100 : 0;
 
-            print id, d_chrom[id], v_chrom, d_tcov[id], v_tcov, d_id[id], v_id >> m_file;
+            c_len = (id in b_len) ? b_len[id] : 0;
+            c_gc = (id in b_gc) ? b_gc[id] * 100 : 0;
+            c_cov = (id in b_cov) ? b_cov[id] : 0;
+            c_phyl = (id in b_phyl) ? b_phyl[id] : "N/A";
+
+            print id, d_chrom[id], v_chrom, d_tcov[id], v_tcov, d_id[id], v_id, c_len, c_gc, c_cov, c_phyl >> m_file;
         }
     }' "$dec_paf" "$vir_paf"
 }
 
-calc_parental_scores "${h1_dec_paf}" "${h1_vir_paf}"
-calc_parental_scores "${h2_dec_paf}" "${h2_vir_paf}"
+calc_parental_scores "${h1_dec_paf}" "${h1_vir_paf}" "${hap1_blob_tsv}"
+calc_parental_scores "${h2_dec_paf}" "${h2_vir_paf}" "${hap2_blob_tsv}"
 
 # 4. Process and output rows
 process_hap() {
@@ -123,6 +142,10 @@ process_hap() {
             vtc[id] = $5;
             did[id] = $6;
             vid[id] = $7;
+            clen[id] = $8;
+            cgc[id] = $9;
+            ccov[id] = $10;
+            cphyl[id] = $11;
         }
         close(c_file);
 
@@ -147,9 +170,16 @@ process_hap() {
             p_cov_ratio = (p_vtc > 0) ? (p_dtc / p_vtc) : 0;
             p_id_delta = p_did - p_vid;
 
-            printf "| %s | %s | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% |\n",
-                id, d_chrom, v_chrom,
+            printf "| %s | %d | %.2f%% | %.2f | %s | %s | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% | %s | %s | %d | %.2f%% | %.2f | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% |\n",
+                id,
+                clen[id], cgc[id], ccov[id], cphyl[id],
+                d_chrom, v_chrom,
                 d_tcov, v_tcov, d_id, v_id, cov_ratio, id_delta, hap_match,
+                hap_match,
+                (hap_match != "-" && hap_match in clen) ? clen[hap_match] : 0,
+                (hap_match != "-" && hap_match in cgc) ? cgc[hap_match] : 0,
+                (hap_match != "-" && hap_match in ccov) ? ccov[ccov[hap_match] ? hap_match : ""] : 0, # safe fallback handled below
+                (hap_match != "-" && hap_match in cphyl) ? cphyl[hap_match] : "N/A",
                 p_dtc, p_vtc, p_did, p_vid, p_cov_ratio, p_id_delta;
         }
     }' | sort -k1,1 >> "${combined_table}"
@@ -159,4 +189,3 @@ process_hap "Hap1"
 process_hap "Hap2"
 
 rm -f "${h1_h2_map}" "${h2_h1_map}" "${metrics_cache}"
-echo "Unified comparison report generated successfully at ${combined_table}!"
