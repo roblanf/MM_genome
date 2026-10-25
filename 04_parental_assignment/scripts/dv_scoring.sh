@@ -182,7 +182,7 @@ process_hap() {
                 (hap_match != "-" && hap_match in cphyl) ? cphyl[hap_match] : "N/A",
                 p_dtc, p_vtc, p_did, p_vid, p_cov_ratio, p_id_delta;
         }
-    }' | sort -k4,4nr >> "${combined_table}"
+    }' | sort -k1,1 >> "${combined_table}"
 }
 
 process_hap "Hap1"
