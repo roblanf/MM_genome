@@ -407,6 +407,8 @@ Now each contig in the haplotype assemblies has been mapped to a best-matching c
 
 The following script computes tables that compare the useful metrics for both haplotype assemblies:
 
+**NOTE:** This was ran on an outdated version of the script, but the results and interpretation are still useful if you are interested in reading.
+
 ```
 bash 04_parental_assignment/scripts/dv_scoring.sh
 ```
@@ -493,4 +495,16 @@ bash 04_parental_assignment/scripts/parent_contig_binning.sh \
 | **Total** | **356** | **235** | **13** | **604** |
 
 This was run without filtering out those which are smaller in length, were labelled as contaminants etc. so it is not surprising to see a mismatch of *E. decipiens* vs *E. virginea* assigned contigs. Now I will make filtering choices to wittle down the contigs and re-run these steps to get parental assignment of contigs deemed suitable for the final haplotype-resolved assembly:
+
+## Scoring, Assignment updated to include all useful metrics
+
+Now the following is for the updated version of the script to make the table. It utilises the information and metrics gathered from aligning the Haplotype 1 assembly against the Haplotype 2 assembly as well as the stats generated from using BlobTools to include much more info about the contigs. The table now includes the contig from the other haplotype assembly it best matched to during Hap1/Hap2 alignment (Partner match) and then the target coverage and identity percentages of that partner contig against both *E. decipiens* and *E. virginea* (also gets the useful coverage ratio and delta identity columns). Then the taxonomy hit, GC%, coverage and length of the contig and its partner contig are also given for every row. This provides a comprehensive overview of everything we know about the contigs from the assembly and work so far. Additionally, ambiguous contigs post-assignment can now easily be checked for their match, and if the match is clearly *E. virginea*-sourced for example then it must be an *E. decipiens* parental contig. Another update is that chromosome numbers were found from the accessions and so the IDs were replaced with the chromosome number from the parent species (Pltd is plastid aka chloroplast).
+
+```
+bash 04_parental_assignment/scripts/dv_scoring.sh
+```
+
+You can view the final table [here](https://github.com/roblanf/MM_genome/blob/genome_assembly/04_parental_assignment/results/parent_mapping/combined_parental_comparison.md) for all contigs.
+
+
 
