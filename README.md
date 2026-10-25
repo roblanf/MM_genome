@@ -536,5 +536,42 @@ More contigs are ambiguous now because of the steep increase in the strictness o
 
 ## Filtering Assembly Contigs
 
+In this step, I had to make informed choices on the thresholds used to filter out contigs based on my available information. The BlobPlot combined with the final table were crucial for doing this. I chose to remove all non-streptophyta labelled contigs, **except** for the two large Artverviricota contigs (one in each haplotype assembly) which are mislabelled due to summation of viral hits outweighing the top streptophyta hit. Then I chose to filter out all contigs under 1 Mbp in length, as this seemed appropriate given the final table (around 35 contigs over this limit) and the estimated genome size of ~500-600Mbp (under 1Mbp is probably not going to represent a chromosome or large chromosomal arm). Lastly I also filtered by coverage, using the 28x heterozygous peak coverage per haplotype from assembly and the BlobPlot distribution of coverage as a guide. I ruled out any contigs with coverage under 20x (much lower than target coverage, probably not useful) or over 90x (~3x target coverage peak, even contigs from homozygous peak area that show up in both parents shouldn't get this high).
+The filtering can be run by using the script below on all contigs from both haplotype assemblies:
+
+```
+bash 04_parental_assignment/scripts/filter_haplotigs.sh \
+    03_assembly/results/hifiasm/MM_assembly.hap1.p_ctg.fa \
+    03_assembly/results/blobtools/plots/hap1_stats.tsv \
+    04_parental_assignment/results/filtered_hap1.fa
+```
+
+```
+bash 04_parental_assignment/scripts/filter_haplotigs.sh \
+    03_assembly/results/hifiasm/MM_assembly.hap2.p_ctg.fa \
+    03_assembly/results/blobtools/plots/hap2_stats.tsv \
+    04_parental_assignment/results/filtered_hap2.fa
+```
+
+## Parental Assignment for Selected Contigs
+
+The final step of assigning contigs as being from *E. decipiens*, *E. virginea* or ambiguous was run for the refined set of contigs left after the filtering above. These represent either full chromosomes inherited from the parents or chromosomal arms, which may represent remaining chromosomes in a few pieces. As such, getting clear assignment of these means that most/all chromosome locations in the *E. phylacis* genome can be known to come from one parent or the other.
+
+```
+bash 04_parental_assignment/scripts/parent_contig_binning.sh \
+    03_assembly/results/hifiasm/filtered_hap1.fa \
+    04_parental_assignment/results/hap1_vs_decipiens.paf \
+    04_parental_assignment/results/hap1_vs_virginea.paf \
+    04_parental_assignment/results/binned_hap1
+```
+
+```
+bash 04_parental_assignment/scripts/parent_contig_binning.sh \
+    03_assembly/results/hifiasm/filtered_hap2.fa \
+    04_parental_assignment/results/hap2_vs_decipiens.paf \
+    04_parental_assignment/results/hap2_vs_virginea.paf \
+    04_parental_assignment/results/binned_hap2
+```
+
 
 
