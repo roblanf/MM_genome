@@ -596,7 +596,7 @@ bash 04_parental_assignment/scripts/final_comparison.sh
 | h2tg000015l | 2972536 | 39.05% | 44.02 | Streptophyta | 5 | 6 | 2.40% | 0.64% | 43.61% | 33.82% | 3.76 | +9.79% | h1tg000014l | 38226956 | 39.19% | 42.54 | Artverviricota | 6.12% | 2.35% | 49.99% | 22.10% | 2.61 | +27.89% |
 | h2tg000038l | 1089896 | 38.79% | 55.30 | Streptophyta | 6 | 8 | 0.64% | 0.55% | 59.74% | 28.61% | 1.16 | +31.13% | h1tg000002l | 65707553 | 39.49% | 63.99 | Streptophyta | 12.35% | 6.13% | 50.13% | 32.96% | 2.02 | +17.17% |
 
-
+All of these contigs are able to be assigned now!
 
 ## Parental Assignment for Selected Contigs
 
@@ -624,6 +624,23 @@ bash 04_parental_assignment/scripts/parent_contig_binning.sh \
 | **Hap1** | 11 | 7 | 0 | 18 |
 | **Hap2** | 7 | 8 | 0 | 15 |
 | **Total** | **18** | **15** | **0** | **33** |
+
+This is an excellent result. All of the chosen contigs have been unambiguously assigned as either coming from the *E. decipiens* or the *E. virginea* parent species. By collecting all assigned contigs into `decipiens_assembly.fa` and `virginea_assembly.fa` a parental haplotype-resolved assembly has been accomplished!
+
+Now, to do some quality control on the final results:
+
+## BUSCO and Quality Control stats for the parental haplotype-resolved assembly
+
+I made the following script, adapted from `03_assembly/scripts/busco_compleasm.sh` to get genome completeness metrics for each of the parental haplotype assemblies:
+
+```
+bash 04_parental/assignment/scripts/busco_parents.sh
+```
+
+And combining this with known length and coverage from the final comparison table, plus N50 calculated with SeqKit, the following quality control metrics were recorded.
+
+### Metrics for final assemblies of parental haplotype genomes:
+
 
 
 
