@@ -469,7 +469,7 @@ The results very clearly distinguish which parent the contig comes from in most 
 
 Again there is strong evidence to support assignment of almost every major contig from the haplotype 2 assembly. It appears that the Hifiasm phased assembly ended up stringing together more *E. virginea* origin contigs here in the Haplotype 2 assembly and more *E. decipiens*-derived contigs in the Haplotype 1 assembly.
 
-All of the contigs in these assemblies were then assigned to *E. decipiens* or *E. virginea* via thresholding. I chose to set any contigs with >1.20x coverage ratio or over +5% identity into the *E. decipiens* parental haplotype group, and any with <0.8x coverage ratio or under -5% identity into the *E. virginea* group. Remaining contigs that didn't pass either of these thresholds were put into an ambiguous file, where analysis of the haplotype 1 vs haplotype 2 alignment matches can be used to determine the parent based on the parent group assigned to its match.
+All of the contigs in these assemblies were then assigned to *E. decipiens* or *E. virginea* via thresholding. I chose to set any contigs with >1.20x coverage ratio or over +2% identity into the *E. decipiens* parental haplotype group, and any with <0.8x coverage ratio or under -2% identity into the *E. virginea* group. Remaining contigs that didn't pass either of these thresholds were put into an ambiguous file, where analysis of the haplotype 1 vs haplotype 2 alignment matches can be used to determine the parent based on the parent group assigned to its match.
 
 ```
 bash 04_parental_assignment/scripts/parent_contig_binning.sh \
@@ -505,6 +505,36 @@ bash 04_parental_assignment/scripts/dv_scoring.sh
 ```
 
 You can view the final table [here](https://github.com/roblanf/MM_genome/blob/genome_assembly/04_parental_assignment/results/parent_mapping/combined_parental_comparison.md) for all contigs.
+
+Now performing parental assignment again on all contigs:
+Notable adjustments to thresholds - <0.8x coverage ratio assigning to *E. virginea* is not the opposite of >1.20x coverage ratio assigning to *E. decipiens*. It is instead 1/1.20 = 0.83333. I also updated the identity thresholds to be stricter as +/- 2% doesn't seem clear enough to be very confident in assignment, so I upped these requirements to +/-5%.
+
+```
+bash 04_parental_assignment/scripts/parent_contig_binning.sh \
+    03_assembly/results/hifiasm/MM_assembly.hap1.p_ctg.fa \
+    04_parental_assignment/results/hap1_vs_decipiens.paf \
+    04_parental_assignment/results/hap1_vs_virginea.paf \
+    04_parental_assignment/results/binned_hap1
+```
+
+```
+bash 04_parental_assignment/scripts/parent_contig_binning.sh \
+    03_assembly/results/hifiasm/MM_assembly.hap2.p_ctg.fa \
+    04_parental_assignment/results/hap2_vs_decipiens.paf \
+    04_parental_assignment/results/hap2_vs_virginea.paf \
+    04_parental_assignment/results/binned_hap2
+```
+
+### Parental Assignment Outcomes for All Contigs (Updated thresholds)
+| Haplotype | *E. decipiens* Contigs | *E. virginea* Contigs | Ambiguous Contigs | Total Contigs |
+| :--- | :---: | :---: | :---: | :---: |
+| **Hap1** | 125 | 142 | 20 | 287 |
+| **Hap2** | 215 | 91 | 11 | 317 |
+| **Total** | **340** | **233** | **31** | **604** |
+
+More contigs are ambiguous now because of the steep increase in the strictness of the delta identity requirement, however after filtering out the contigs which are too short in length, were found to be non-streptophyta or have coverage that is too low or too high, this number should drastically reduce. Then, any remaining ambiguous contigs can be assigned to the parent opposite to that assigned to its match. All suitable contigs after filtering can be assigned this way, assuming that none of the ambiguous contigs left are matched to another ambiguous contig (seems likely to work given low proportion of ambiguity already).
+
+## Filtering Assembly Contigs
 
 
 
