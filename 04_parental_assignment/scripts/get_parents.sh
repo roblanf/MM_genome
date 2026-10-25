@@ -12,13 +12,13 @@ cd "${pa_dir}/parental_genomes"
 # Download E. decipiens (GCA_014182575.1)"
 datasets download genome accession GCA_014182575.1 --filename e_decipiens.zip
 unzip e_decipiens.zip -d e_decipiens_dir
-mv e_decipiens_dir/ncbi_dataset/data/GCA_014182575.1/*.fna E_decipiens.fa
+mv e_decipiens_dir/ncbi_dataset/data/GCA_014182575.1/*.fna E_decipiens.raw.fa
 
 
 # Download E. virginea (GCA_014182375.1)"
 datasets download genome accession GCA_014182375.1 --filename e_virginea.zip
 unzip e_virginea.zip -d e_virginea_dir
-mv e_virginea_dir/ncbi_dataset/data/GCA_014182375.1/*.fna E_virginea.fa
+mv e_virginea_dir/ncbi_dataset/data/GCA_014182375.1/*.fna E_virginea.raw.fa
 
 # Rename chromosome IDs to chromosome numbers for easy interpretation of matches:
 
