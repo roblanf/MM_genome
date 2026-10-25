@@ -22,8 +22,8 @@ combined_table="${out_dir}/combined_parental_comparison.md"
 
 # 1. Establish combined_table structure:
 {
-    echo "| Contig | Length | GC% | Cov | Phylum | *decipiens* chrom | *virginea* chrom | *decipiens* T-Cov | *virginea* T-Cov | *decipiens* ID | *virginea* ID | Cov Ratio | Δ ID | Hap Match | Partner | Partner Length | Partner GC% | Partner Cov | Partner Phylum | Partner *decipiens* T-Cov | Partner *virginea* T-Cov | Partner *decipiens* ID | Partner *virginea* ID | Partner Cov Ratio | Partner Δ ID |"
-    echo "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
+    echo "| Contig | Length | GC% | Cov | Phylum | *decipiens* chrom | *virginea* chrom | *decipiens* T-Cov | *virginea* T-Cov | *decipiens* ID | *virginea* ID | Cov Ratio | Δ ID | Partner Match | Partner Length | Partner GC% | Partner Cov | Partner Phylum | Partner *decipiens* T-Cov | Partner *virginea* T-Cov | Partner *decipiens* ID | Partner *virginea* ID | Partner Cov Ratio | Partner Δ ID |"
+    echo "| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |"
 } > "${combined_table}"
 
 # 2. Pre-compute cross-haplotype maps using sort/awk pipeline (Zero loops, zero quote errors)
@@ -170,15 +170,14 @@ process_hap() {
             p_cov_ratio = (p_vtc > 0) ? (p_dtc / p_vtc) : 0;
             p_id_delta = p_did - p_vid;
 
-            printf "| %s | %d | %.2f%% | %.2f | %s | %s | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% | %s | %s | %d | %.2f%% | %.2f | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% |\n",
+            printf "| %s | %d | %.2f%% | %.2f | %s | %s | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% | %s | %d | %.2f%% | %.2f | %s | %.2f%% | %.2f%% | %.2f%% | %.2f%% | %.2f | %+.2f%% |\n",
                 id,
                 clen[id], cgc[id], ccov[id], cphyl[id],
                 d_chrom, v_chrom,
                 d_tcov, v_tcov, d_id, v_id, cov_ratio, id_delta, hap_match,
-                hap_match,
                 (hap_match != "-" && hap_match in clen) ? clen[hap_match] : 0,
                 (hap_match != "-" && hap_match in cgc) ? cgc[hap_match] : 0,
-                (hap_match != "-" && hap_match in ccov) ? ccov[ccov[hap_match] ? hap_match : ""] : 0, # safe fallback handled below
+                (hap_match != "-" && hap_match in ccov) ? ccov[hap_match] : 0,
                 (hap_match != "-" && hap_match in cphyl) ? cphyl[hap_match] : "N/A",
                 p_dtc, p_vtc, p_did, p_vid, p_cov_ratio, p_id_delta;
         }
