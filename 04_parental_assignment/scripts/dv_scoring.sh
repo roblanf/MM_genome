@@ -74,6 +74,7 @@ calc_parental_scores() {
 
         while ((getline < b_file) > 0) {
             if ($1 == "index") continue;
+            sub(/\r$/, "", $6); # Strip Windows carriage return from phylum
             b_id = $2;
             b_gc[b_id] = $3;
             b_len[b_id] = $4;
@@ -181,7 +182,7 @@ process_hap() {
                 (hap_match != "-" && hap_match in cphyl) ? cphyl[hap_match] : "N/A",
                 p_dtc, p_vtc, p_did, p_vid, p_cov_ratio, p_id_delta;
         }
-    }' | sort -k1,1 >> "${combined_table}"
+    }' | sort -k4,4nr >> "${combined_table}"
 }
 
 process_hap "Hap1"
