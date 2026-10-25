@@ -640,7 +640,18 @@ bash 04_parental/assignment/scripts/busco_parents.sh
 And combining this with known length and coverage from the final comparison table, plus N50 calculated with SeqKit, the following quality control metrics were recorded.
 
 ### Metrics for final assemblies of parental haplotype genomes:
+### Parental Assembly Metrics
 
+| Metric | **Decipiens** | **Virginea** |
+| :--- | :---: | :---: |
+| **Total Length (bp)** | 573,918,730 | 536,882,982 |
+| **Total Contigs** | 18 | 15 |
+| **Contig N50 (bp)** | 42,182,117 | 41,926,117 |
+| **BUSCO Genome Completeness** | 96.86% | 94.23% |
+| Single-copy (S) | 88.48% | 86.81% |
+| Duplicated (D) | 8.38% | 7.42% |
+| Fragmented (F) | 0.57% | 0.50% |
+| Missing (M) | 2.57% | 5.28% |
 
 
 
