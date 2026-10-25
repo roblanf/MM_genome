@@ -77,7 +77,7 @@ BEGIN {
         id_delta = d_id - v_id;
 
         # Thresholds: Cov Ratio >= 1.20 or ID Delta >= +5.0 -> decipiens
-        #             Cov Ratio <= 0.80 or ID Delta <= -5.0 -> virginea
+        #             Cov Ratio <= 0.833333 or ID Delta <= -5.0 -> virginea
         #             Otherwise -> ambiguous
         if (cov_ratio >= 1.20 || id_delta >= 5.0) {
             print q "\tdecipiens";
