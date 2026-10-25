@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Script: 03_assembly/scripts/busco_parents.sh
+# Script: 04_parental_assignment/scripts/busco_parents.sh
 # Purpose: Concatenate binned parental contigs and evaluate genome completeness using compleasm.
 
 set -euo pipefail
@@ -23,8 +23,8 @@ cat "${parent_results_dir}/binned_hap1_filtered/virginea.fa" \
 
 # Define assemblies for compleasm run
 ASSEMBLIES=(
-    "decipiens_all.fa"
-    "virginea_all.fa"
+    "decipiens_assembly.fa"
+    "virginea_assembly.fa"
 )
 
 out_dir="04_parental_assignment/results/compleasm_parents"
