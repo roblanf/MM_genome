@@ -81,7 +81,7 @@ BEGIN {
         #             Otherwise -> ambiguous
         if (cov_ratio >= 1.20 || id_delta >= 5.0) {
             print q "\tdecipiens";
-        } else if (cov_ratio <= 0.80 || id_delta <= -5.0) {
+        } else if (cov_ratio <= 0.833333 || id_delta <= -5.0) {
             print q "\tvirginea";
         } else {
             print q "\tambiguous";
