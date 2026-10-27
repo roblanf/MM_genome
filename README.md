@@ -46,7 +46,7 @@ Visualising the read length vs read quality results after running NanoPlot:
 |---|---|
 | **Total Reads** | 3,064,194 |
 | **Total Yield** | 44.327 Gb |
-| **Coverage (~522 Mb Genome)** | ~84.9× |
+| **Coverage** | ~84.9× |
 | **Median Read Length** | 12,334 bp |
 | **Mean Read Length** | 14,466.1 bp |
 | **Read N50** | 22,177 bp |
