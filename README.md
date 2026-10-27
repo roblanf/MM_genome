@@ -151,7 +151,7 @@ The same type of plot is displayed here, but this time on the filtered reads whi
 |---|---|
 | **Total Reads** | 1,258,992 |
 | **Total Yield** | 31.762 Gb |
-| **Coverage (~522 Mb Genome)** | ~60.85× |
+| **Coverage** | ~60.85× |
 | **Median Read Length** | 22,761 bp |
 | **Mean Read Length** | 25,228 bp |
 | **Read N50** | 25,591 bp |
