@@ -7,13 +7,14 @@ This branch is purposed to: (i) summarise the findings from the other two branch
 - <a href="#02">QC</a>
     - <a href="#02a">Running Chopper</a>
     - <a href="#02b">Running Kraken2</a>
+    - <a href="#02c">Running GenomeScope2</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
 ```
 conda create -n meelupmallee
 conda activate meelupmallee
-conda install -c conda-forge -c bioconda nanoplot chopper kraken2
+conda install -c conda-forge -c bioconda chopper genomescope2 kmc kraken2 nanoplot
 ```
 
 > [!NOTE]
@@ -36,7 +37,7 @@ bgzip -@ 128 > 01_qc/02_chopper/E_phylacis_filtered.fastq.gz
 NanoPlot -t 128 --fastq 01_qc/02_chopper/E_phylacis_filtered.fastq.gz -o 01_qc/03_nanoplot --title "E_phylacis_Filtered_ONT"
 ```
 
-<b>OUTPUT</b>
+### OUTPUT
 |        Metric       |         Raw       |      Filtered     |
 | :------------------ | -----------------:| -----------------:|
 | Total bases         | 44,326,974,907.0  | 33,967,234,187.0  |
@@ -82,7 +83,7 @@ kraken2 --db 01_qc/04_kraken/pluspfp --threads 128 \
     01_qc/02_chopper/E_phylacis_filtered.fastq.gz
 ```
 
-<b>OUTPUT</b>
+### OUTPUT
 | Category                        |  `--confidence 0`  |  `--confidence 0.2`  |
 | :------------------------------ | -----------------: | -------------------: |
 | Total reads                     | 1,345,923          | 1,345,923            |
@@ -101,6 +102,23 @@ kraken2 --db 01_qc/04_kraken/pluspfp --threads 128 \
 | **Unclassified**                | 133 (0.01%)        | 108,453 (8.06%)      |
 
 The proportion of foreign reads in the dataset is very low and unlikely to pass the depth criteria during contig formation, so I think we can go directly to the assembly step.
+
+### <a id="02c">Running GenomeScope2</a>
+I ran KMC and GenomeScope2 to estimate the heteozygosity and genome size based on the filtered ONT reads.
+```
+# store the path to the filtered reads
+find 01_qc/02_chopper/ -name "*.fastq.gz" > 01_qc/05_genomescope/files.txt
+
+# run KMC and create the histogram
+kmc -k21 -t128 -ci1 -cs10000 @01_qc/05_genomescope/files.txt 01_qc/05_genomescope/kmc_db 01_qc/05_genomescope/
+kmc_tools transform 01_qc/05_genomescope/kmc_db histogram 01_qc/05_genomescope/histogram.txt -ci1 -cs10000
+
+# run GenomeScope2
+genomescope2 -i 01_qc/05_genomescope/histogram.txt -o 01_qc/05_genomescope/ -k 21 -p 2
+```
+
+### OUTPUT
+![Figure 01. GenomeScope2 transformed linear plot on filtered ONT reads.](./figures/fig01.png)
 
 ---
 *Last update: 02 November 2026 by Jeremias Ivan*
