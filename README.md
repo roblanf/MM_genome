@@ -12,13 +12,14 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#03a">Using default parameters</a>
     - <a href="#03b">Adding the estimated genome size</a>
     - <a href="#03c">Estimating the peak homozygous coverage</a>
+    - <a href="#03d">Rerunning with `--hom-cov 56`</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
 ```
 conda create -n meelupmallee
 conda activate meelupmallee
-conda install -c conda-forge -c bioconda chopper genomescope2 hifiasm kmc kraken2 nanoplot
+conda install -c conda-forge -c bioconda chopper compleasm genomescope2 hifiasm kmc kraken2 mosdepth nanoplot
 ```
 
 > [!NOTE]
@@ -159,6 +160,68 @@ hifiasm \
 The homozygous read coverage threshold is now **63** (i.e., total read length / estimated genome size), while the peak heterozygous coverage is still **29**. It seems that we need a more objective way to set the threshold...
 
 ### <a id="03c">Estimating the peak homozygous coverage</a>
+To empirically set the homozygous peak coverage, I calculated the median BUSCO coverage across the two haplotypes. First, I concatenated the two haplotypes inferred from the default run and remapped the filtered ONT reads.
+```
+# change the working directory
+cd 02_assembly/default/
+
+# convert GFA to FASTA format
+awk '/^S/{print ">"$2; print $3}' E_phylacis_asm.bp.hap1.p_ctg.gfa > hap1.fa
+awk '/^S/{print ">"$2; print $3}' E_phylacis_asm.bp.hap2.p_ctg.gfa > hap2.fa
+
+# concatenate both haplotypes
+cat hap1.fa hap2.fa > both_haps.fa
+
+# map the filtered ONT reads to both haplotypes
+minimap2 \
+    -t 128 \
+    -ax lr:hq both_haps.fa \
+    ../../01_qc/02_chopper/E_phylacis_filtered.fastq.gz | \
+    samtools sort -@16 -o both_haps.bam
+samtools index both_haps.bam
+```
+
+I then ran compleasm on each haplotype, extracted single-copy BUSCO, and calculated the depth statistics across loci.
+```
+# download the ODB database
+compleasm download eudicotyledons --odb odb12 -L busco_lineages/
+
+# run compleasm on each haplotype
+compleasm run -a hap1.fa -o compleasm/compleasm_hap1 -l eudicotyledons --odb odb12 -t 128 -L busco_lineages/
+compleasm run -a hap2.fa -o compleasm/compleasm_hap2 -l eudicotyledons --odb odb12 -t 128 -L busco_lineages/
+
+# extract all single-copy BUSCO
+for h in hap1 hap2; do
+  awk -F'\t' 'NR>1 && $2=="Single"{print $3"\t"$4-1"\t"$5"\t"$1}' compleasm/compleasm_$h/eudicotyledons_odb12/full_table.tsv
+done | sort -k1,1 -k2,2n > compleasm/busco_single.bed
+
+# calculate the depth across BUSCO
+mosdepth -t 16 --by compleasm/busco_single.bed --no-per-base compleasm/busco both_haps.bam
+
+# extract the Q1, Q2, and Q3 depth across BUSCO
+zcat compleasm/busco.regions.bed.gz | \
+    cut -f5 | sort -n | \
+    awk '{a[NR]=$1} END{printf "n=%d  Q1=%.1f  median=%.1f  Q3=%.1f\n", NR, a[int(NR*0.25)], a[int(NR*0.5)], a[int(NR*0.75)]}'
+
+# change the working directory
+cd ../..
+```
+
+This command prints the following: `n=5173  Q1=23.6  median=27.9  Q3=32.2`. The median closely matches the heterozygosity peak from Hifiasm (see <a href="#03a">above</a>). Thus, we should redo the Hifiasm run with `--hom-cov 56`.
+
+### <a id="03d">Rerunning with `--hom-cov 56`</a>
+```
+hifiasm \
+    -o 02_assembly/final/E_phylacis_asm \
+    -t 128 \
+    --ont \
+    -l 3 \
+    --telo-m AAACCCT \
+    --hom-cov 56 \
+    --dual-scaf \
+    01_qc/02_chopper/E_phylacis_filtered.fastq.gz \
+    2>&1 | tee 02_assembly/final/hifiasm_restart.log
+```
 
 ---
 *Last update: 02 November 2026 by Jeremias Ivan*
