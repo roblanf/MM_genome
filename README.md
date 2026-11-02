@@ -8,17 +8,21 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#02a">Running Chopper</a>
     - <a href="#02b">Running Kraken2</a>
     - <a href="#02c">Running GenomeScope2</a>
+- <a href="#03">Assembly using Hifiasm</a>
+    - <a href="#03a">Using default parameters</a>
+    - <a href="#03b">Adding the estimated genome size</a>
+    - <a href="#03c">Estimating the peak homozygous coverage</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
 ```
 conda create -n meelupmallee
 conda activate meelupmallee
-conda install -c conda-forge -c bioconda chopper genomescope2 kmc kraken2 nanoplot
+conda install -c conda-forge -c bioconda chopper genomescope2 hifiasm kmc kraken2 nanoplot
 ```
 
 > [!NOTE]
-> The raw ONT (Oxford Nanopore Technologies) long reads are stored as 70 compressed FASTQ files and are located at `/home/raw_data/MM/2025_long_reads/ONT_gDNA192_1071_RL/E_Phylacis/20251117_1227_2C_PBE85256_e040940c/fastq_pass/`. Here, I refer to this folder as `00_raw_data/`.
+> The raw ONT (Oxford Nanopore Technologies) long reads are stored as 70 compressed FASTQ files at `00_raw_data/`.
 
 ## <a id="02">QC</a>
 
@@ -104,7 +108,7 @@ kraken2 --db 01_qc/04_kraken/pluspfp --threads 128 \
 The proportion of foreign reads in the dataset is very low and unlikely to pass the depth criteria during contig formation, so I think we can go directly to the assembly step.
 
 ### <a id="02c">Running GenomeScope2</a>
-I ran KMC and GenomeScope2 to estimate the heteozygosity and genome size based on the filtered ONT reads.
+I ran KMC and GenomeScope2 to estimate the heterozygosity and genome size of *E. x phylacis* based on the filtered ONT reads.
 ```
 # store the path to the filtered reads
 find 01_qc/02_chopper/ -name "*.fastq.gz" > 01_qc/05_genomescope/files.txt
@@ -119,6 +123,42 @@ genomescope2 -i 01_qc/05_genomescope/histogram.txt -o 01_qc/05_genomescope/ -k 2
 
 ### OUTPUT
 ![Figure 01. GenomeScope2 transformed linear plot on filtered ONT reads.](./figures/fig01.png)
+
+## <a id="03">Assembly using Hifiasm</a>
+
+### <a id="03a">Using default parameters</a>
+```
+hifiasm \
+    -o 02_assembly/default/E_phylacis_asm \
+    -t 128 \
+    --ont \
+    -l 3 \
+    --telo-m AAACCCT \
+    --dual-scaf \
+    01_qc/02_chopper/E_phylacis_filtered.fastq.gz \
+    2>&1 | tee 02_assembly/default/hifiasm_restart.log
+```
+
+After the third correction round, Hifiasm automatically sets the homozygous read coverage threshold to be **52**, even though the peak heterozygous coverage is **29**:
+![Figure 02. Corrected distribution of read coverage from Hifiasm with default parameters.](./figures/fig02.png)
+
+### <a id="03b">Adding the estimated genome size</a>
+```
+hifiasm \
+    -o 02_assembly/hgsize533/E_phylacis_asm \
+    -t 128 \
+    --ont \
+    -l 3 \
+    --telo-m AAACCCT \
+    --hg-size 533m \
+    --dual-scaf \
+    01_qc/02_chopper/E_phylacis_filtered.fastq.gz \
+    2>&1 | tee 02_assembly/hgsize533/hifiasm_restart.log
+```
+
+The homozygous read coverage threshold is now **63** (i.e., total read length / estimated genome size), while the peak heterozygous coverage is still **29**. It seems that we need a more objective way to set the threshold...
+
+### <a id="03c">Estimating the peak homozygous coverage</a>
 
 ---
 *Last update: 02 November 2026 by Jeremias Ivan*
