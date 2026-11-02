@@ -1,6 +1,5 @@
 # Project: Assembly of the Meelup Mallee genome.
-
-[give a brief intro to what this is, why, and the raw data]
+This project goes from the raw long reads made available from sequencing Meelup Mallee (*Eucalyptus phylacis*) leaf tissue, to a phased assembly, to parental assignment resulting in a haplotype-resolved assembly. The key goals of the project were to confirm that *E. decipiens* and *E. virginea* are the parent species of the *E. phylacis* hybrid, and to achieve a high-quality assembly of the Meelup Mallee genome which is split into haplotype genomes of chromosomes/contigs that come from each of the parent species. 
 
 # Environment
 
