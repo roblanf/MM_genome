@@ -13,13 +13,14 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#03b">Adding the estimated genome size</a>
     - <a href="#03c">Estimating the peak homozygous coverage</a>
     - <a href="#03d">Rerunning with `--hom-cov 56`</a>
+    - <a href="#03e">Trying lower `-s` values</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
 ```
 conda create -n meelupmallee
 conda activate meelupmallee
-conda install -c conda-forge -c bioconda chopper compleasm genomescope2 hifiasm kmc kraken2 mosdepth nanoplot
+conda install -c conda-forge -c bioconda chopper compleasm genomescope2 gfatools hifiasm kmc kraken2 mosdepth nanoplot
 ```
 
 > [!NOTE]
@@ -141,6 +142,7 @@ hifiasm \
 ```
 
 After the third correction round, Hifiasm automatically sets the homozygous read coverage threshold to be **52**, even though the peak heterozygous coverage is **29**:
+
 ![Figure 02. Corrected distribution of read coverage from Hifiasm with default parameters.](./figures/fig02.png)
 
 ### <a id="03b">Adding the estimated genome size</a>
@@ -166,8 +168,8 @@ To empirically set the homozygous peak coverage, I calculated the median BUSCO c
 cd 02_assembly/default/
 
 # convert GFA to FASTA format
-awk '/^S/{print ">"$2; print $3}' E_phylacis_asm.bp.hap1.p_ctg.gfa > hap1.fa
-awk '/^S/{print ">"$2; print $3}' E_phylacis_asm.bp.hap2.p_ctg.gfa > hap2.fa
+gfatools gfa2fa E_phylacis_asm.bp.hap1.p_ctg.gfa > hap1.fa
+gfatools gfa2fa E_phylacis_asm.bp.hap2.p_ctg.gfa > hap2.fa
 
 # concatenate both haplotypes
 cat hap1.fa hap2.fa > both_haps.fa
@@ -207,21 +209,105 @@ zcat compleasm/busco.regions.bed.gz | \
 cd ../..
 ```
 
-This command prints the following: `n=5173  Q1=23.6  median=27.9  Q3=32.2`. The median closely matches the heterozygosity peak from Hifiasm (see <a href="#03a">above</a>). Thus, we should redo the Hifiasm run with `--hom-cov 56`.
+This command prints the following: `n=5173  Q1=23.6  median=27.9  Q3=32.2`. The median closely matches the heterozygosity peak from <a href="#03a">Hifiasm</a> and <a href="#03b">GenomeScope2</a>. Thus, we should redo the Hifiasm run with **`--hom-cov 55`**.
 
-### <a id="03d">Rerunning with `--hom-cov 56`</a>
+### <a id="03d">Rerunning with `--hom-cov 55`</a>
 ```
 hifiasm \
-    -o 02_assembly/final/E_phylacis_asm \
+    -o 02_assembly/homcov55/E_phylacis_asm \
     -t 128 \
     --ont \
     -l 3 \
     --telo-m AAACCCT \
-    --hom-cov 56 \
+    --hom-cov 55 \
     --dual-scaf \
     01_qc/02_chopper/E_phylacis_filtered.fastq.gz \
-    2>&1 | tee 02_assembly/final/hifiasm_restart.log
+    2>&1 | tee 02_assembly/homcov55/hifiasm_restart.log
+```
+
+The next question is whether we need to adjust the `-s` flag, which reflects the *"similarity threshold for duplicate haplotigs that should be purged"*. At `-l 3`, the default threshold is 0.55, meaning that a pair of contigs need to have at least 55% cross-parent overlap to be considered as homologous. This might be too strict for an F1 hybrid genome.
+
+### <a id="03e">Trying lower `-s` values</a>
+Let's try five different `-s` values (0.50, 0.45, 0.40, 0.35, 0.30) based on the corrected reads from the Hifiasm run. Here's the example code for one Hifiasm run:
+```
+# change the working directory
+cd 02_assembly/homcov55
+
+# set path to the original run
+ORIG=/home/jeremias/meelupmallee/long_reads/02_assembly/homcov55/E_phylacis_asm
+
+# set output path
+NEW=E_phylacis_s050.asm
+
+# create a new directory and shortcuts
+mkdir -p hifiasm_s050 && cd hifiasm_s050
+for f in ec.bin ovlp.source.bin ovlp.reverse.bin; do
+    ln -s ${ORIG}.${f} ${NEW}.${f}
+done
+
+# re-run Hifiasm under the new parameter
+hifiasm --ont -t 128 -o ${NEW} --hom-cov 55 -l 3 -s 0.50 --dual-scaf --telo-m AAACCCT /dev/null 2> ${NEW}.log
+
+# change the working directory
+cd ../../..
+```
+
+I converted all GFA outputs to FASTA format, then calculated the sequence statistics:
+```
+# iterate over all GFA files
+for g in 02_assembly/homcov55/hifiasm_s0*/*.p_ctg.gfa; do
+    gfatools gfa2fa "$g" > "${g%.gfa}.fa"
+done
+
+# calculate the statistics of all FASTA files
+seqkit stats 02_assembly/homcov55/hifiasm_s0*/*.p_ctg.fa > hifiasm_s0XX_seqkit.txt
+```
+
+### OUTPUT
+
+### Haplotype 1
+| `-s` | Contigs | Total length (bp) | Min (bp) | Mean (bp) | Max (bp)   |
+| :--: | ------: | ----------------: | -------: | --------: | ---------: |
+| 0.30 |     449 |       583,208,380 |   30,917 | 1,298,905 | 65,682,487 |
+| 0.35 |     405 |       579,832,984 |   24,809 | 1,431,686 | 65,682,487 |
+| 0.40 |     421 |       573,216,200 |   24,809 | 1,361,559 | 65,682,487 |
+| 0.45 |     431 |       576,202,291 |   24,809 | 1,336,896 | 65,682,487 |
+| 0.50 |     402 |       574,198,743 |   24,809 | 1,428,355 | 65,682,487 |
+| 0.55 |     440 |       575,869,290 |   24,809 | 1,308,794 | 65,682,487 |
+
+### Haplotype 2
+| `-s` | Contigs | Total length (bp) | Min (bp) | Mean (bp) | Max (bp)   |
+| :--: | ------: | ----------------: | -------: | --------: | ---------: |
+| 0.30 |     308 |       563,732,156 |   24,809 | 1,830,299 | 61,702,390 |
+| 0.35 |     348 |       565,571,274 |   36,811 | 1,625,205 | 61,702,390 |
+| 0.40 |     319 |       571,160,799 |   36,811 | 1,790,473 | 61,702,390 |
+| 0.45 |     320 |       566,439,604 |   36,811 | 1,770,124 | 61,702,390 |
+| 0.50 |     305 |       560,735,642 |   36,811 | 1,838,478 | 61,702,390 |
+| 0.55 |     293 |       559,542,586 |   36,811 | 1,909,702 | 61,702,390 |
+
+### Union
+| `-s` | Contigs | Total length (bp) | Min (bp) | Mean (bp)  | Max (bp)   |
+| :--: | ------: | ----------------: | -------: | ---------: | ---------: |
+| 0.30 |      55 |       538,510,568 |   30,917 |  9,791,101 | 61,704,473 |
+| 0.35 |      54 |       538,043,526 |   30,917 |  9,963,769 | 61,704,473 |
+| 0.40 |      53 |       538,126,685 |   30,917 | 10,153,334 | 61,704,473 |
+| 0.45 |      52 |       538,070,186 |   30,917 | 10,347,504 | 61,704,473 |
+| 0.50 |      56 |       538,678,952 |   30,917 |  9,619,267 | 61,704,473 |
+| 0.55 |      58 |       545,448,847 |   30,917 |  9,404,291 | 61,704,473 |
+
+The results seem to be pretty consistent across runs, so let's check each haplotype's BUSCO completeness. Here's the example code for one set of haplotypes:
+```
+# change the working directory
+cd 02_assembly/homcov55/
+
+# run compleasm
+compleasm run -a hifiasm_s030/E_phylacis_s030.asm.bp.hap1.p_ctg.fa -o compleasm/s030_hap1 -l eudicotyledons --odb odb12 -t 128 -L ../default/busco_lineages/
+compleasm run -a hifiasm_s030/E_phylacis_s030.asm.bp.hap2.p_ctg.fa -o compleasm/s030_hap2 -l eudicotyledons --odb odb12 -t 128 -L ../default/busco_lineages/
+compleasm run -a hifiasm_s030/E_phylacis_s030.union.fa -o compleasm/s030_union -l eudicotyledons --odb odb12 -t 128 -L ../default/busco_lineages/
+
+# change the working directory
+cd ../..
 ```
 
 ---
-*Last update: 02 November 2026 by Jeremias Ivan*
+*Last update: 03 November 2026 by Jeremias Ivan*
