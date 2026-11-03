@@ -20,7 +20,7 @@ This analysis requires a number of software and R packages to run. Here, I am go
 ```
 conda create -n meelupmallee
 conda activate meelupmallee
-conda install -c conda-forge -c bioconda chopper compleasm genomescope2 gfatools hifiasm kmc kraken2 mosdepth nanoplot
+conda install -c conda-forge -c bioconda chopper compleasm genomescope2 gfatools hifiasm kmc kraken2 merqury meryl mosdepth nanoplot seqkit
 ```
 
 > [!NOTE]
@@ -295,8 +295,11 @@ seqkit stats 02_assembly/homcov55/hifiasm_s0*/*.p_ctg.fa > hifiasm_s0XX_seqkit.t
 | 0.50 |      56 |       538,678,952 |   30,917 |  9,619,267 | 61,704,473 |
 | 0.55 |      58 |       545,448,847 |   30,917 |  9,404,291 | 61,704,473 |
 
-The results seem to be pretty consistent across runs, so let's check each haplotype's BUSCO completeness. Here's the example code for one set of haplotypes:
+The results seem to be pretty consistent across runs, so let's check each haplotype's BUSCO completeness and k-mer completeness. Here's the example code for one set of haplotypes:
 ```
+# build the read k-mer database once
+meryl count k=21 threads=128 01_qc/02_chopper/E_phylacis_filtered.fastq.gz output 02_assembly/homcov55/merqury/reads.meryl
+
 # change the working directory
 cd 02_assembly/homcov55/
 
@@ -304,6 +307,21 @@ cd 02_assembly/homcov55/
 compleasm run -a hifiasm_s030/E_phylacis_s030.asm.bp.hap1.p_ctg.fa -o compleasm/s030_hap1 -l eudicotyledons --odb odb12 -t 128 -L ../default/busco_lineages/
 compleasm run -a hifiasm_s030/E_phylacis_s030.asm.bp.hap2.p_ctg.fa -o compleasm/s030_hap2 -l eudicotyledons --odb odb12 -t 128 -L ../default/busco_lineages/
 compleasm run -a hifiasm_s030/E_phylacis_s030.union.fa -o compleasm/s030_union -l eudicotyledons --odb odb12 -t 128 -L ../default/busco_lineages/
+
+# run merqury for haplotype 1
+mkdir -p merqury/s030_hap1 && cd merqury/s030_hap1
+merqury.sh ../reads.meryl ../../hifiasm_s030/E_phylacis_s030.asm.bp.hap1.p_ctg.fa s030_hap1_merq
+cd ../..
+
+# run merqury for haplotype 2
+mkdir -p merqury/s030_hap2 && cd merqury/s030_hap2
+merqury.sh ../reads.meryl ../../hifiasm_s030/E_phylacis_s030.asm.bp.hap2.p_ctg.fa s030_hap2_merq
+cd ../..
+
+# run merqury for the combined haplotypes
+mkdir -p merqury/s030_union && cd merqury/s030_union
+merqury.sh ../reads.meryl ../../hifiasm_s030/E_phylacis_s030.union.fa s030_union_merq
+cd ../..
 
 # change the working directory
 cd ../..
