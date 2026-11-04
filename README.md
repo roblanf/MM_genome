@@ -11,9 +11,10 @@ This branch is purposed to: (i) summarise the findings from the other two branch
 - <a href="#03">Assembly using Hifiasm</a>
     - <a href="#03a">Using default parameters</a>
     - <a href="#03b">Estimating the peak homozygous coverage</a>
-    - <a href="#03c">Rerunning with `--hom-cov 56`</a>
+    - <a href="#03c">Rerunning with `--hom-cov 55`</a>
     - <a href="#03d">Trying other `-s` values</a>
     - <a href="#03e">Conclusion</a>
+- <a href="#04">Scaffolding</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
@@ -519,8 +520,28 @@ cd ../..
 ### <a id="03e">Conclusion</a>
 From all these tests, it seems that `-l 3 -s 0.50` has the most consistent results and is never an outlier compared to other parameters.
 
-Dot plot between the two haplotypes generated using <a href="./scripts/pafCoordsDotPlotly.R">`pafCoordsDotPlotly.R`</a>:
-![Figure 04. Dot plot between hap1 and hap2 from s050.](./figures/fig04.png)
+Dotplot between the two haplotypes generated using <a href="./scripts/pafCoordsDotPlotly.R">`pafCoordsDotPlotly.R`</a>:
+```
+# change the working directory
+cd 02_assembly/homcov55/s050
+
+# map both haplotypes
+minimap2 -x asm20 -t 128 -N 1000 --secondary=no \
+    E_phylacis_s050.asm.bp.hap1.p_ctg.fa \
+    E_phylacis_s050.asm.bp.hap2.p_ctg.fa \
+    > hap1_vs_hap2.paf
+
+# generate the dotplot
+Rscript pafCoordsDotPlotly.R \
+    -i hap1_vs_hap2.paf \
+    -o hap1_vs_hap2_dotplot2 -s -t
+
+# change the working directory
+cd ../../..
+```
+![Figure 04. Dotplot between hap1 and hap2 from s050.](./figures/fig04.png)
+
+## <a id="04">Scaffolding</a>
 
 ---
 *Last update: 04 November 2026 by Jeremias Ivan*
