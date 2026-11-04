@@ -10,17 +10,29 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#02c">Running GenomeScope2</a>
 - <a href="#03">Assembly using Hifiasm</a>
     - <a href="#03a">Using default parameters</a>
-    - <a href="#03b">Adding the estimated genome size</a>
-    - <a href="#03c">Estimating the peak homozygous coverage</a>
-    - <a href="#03d">Rerunning with `--hom-cov 56`</a>
-    - <a href="#03e">Trying lower `-s` values</a>
+    - <a href="#03b">Estimating the peak homozygous coverage</a>
+    - <a href="#03c">Rerunning with `--hom-cov 56`</a>
+    - <a href="#03d">Trying other `-s` values</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
 ```
 conda create -n meelupmallee
 conda activate meelupmallee
-conda install -c conda-forge -c bioconda chopper compleasm genomescope2 gfatools hifiasm kmc kraken2 merqury meryl mosdepth nanoplot seqkit
+conda install -c conda-forge -c bioconda \
+    chopper \
+    compleasm \
+    quast \
+    genomescope2 \
+    gfatools \
+    hifiasm \
+    kmc \
+    kraken2 \
+    merqury \
+    meryl \
+    mosdepth \
+    nanoplot \
+    seqkit
 ```
 
 > [!NOTE]
@@ -32,7 +44,11 @@ conda install -c conda-forge -c bioconda chopper compleasm genomescope2 gfatools
 First, I filtered the raw ONT reads with Chopper with a minimum read length of **15kb** and read quality of **10**.
 ```
 # run NanoPlot pre-filtering
-NanoPlot -t 128 --fastq 00_raw_data/*.fastq.gz -o 01_qc/01_nanoplot --title "E_phylacis_Raw_ONT"
+NanoPlot \
+    -t 128 \
+    --fastq 00_raw_data/*.fastq.gz \
+    -o 01_qc/01_nanoplot \
+    --title "E_phylacis_Raw_ONT"
 
 # pipe pigz (decompression) -> Chopper (filtering) -> bgzip (compression)
 pigz -dc -p 16 00_raw_data/*.fastq.gz | \
@@ -40,7 +56,11 @@ chopper -q 10 -l 15000 | \
 bgzip -@ 128 > 01_qc/02_chopper/E_phylacis_filtered.fastq.gz
 
 # run NanoPlot post-filtering
-NanoPlot -t 128 --fastq 01_qc/02_chopper/E_phylacis_filtered.fastq.gz -o 01_qc/03_nanoplot --title "E_phylacis_Filtered_ONT"
+NanoPlot \
+    -t 128 \
+    --fastq 01_qc/02_chopper/E_phylacis_filtered.fastq.gz \
+    -o 01_qc/03_nanoplot \
+    --title "E_phylacis_Filtered_ONT"
 ```
 
 ### OUTPUT
@@ -70,7 +90,9 @@ tar -xzf k2_pluspfp_*.tar.gz
 I then ran Kraken2 with two confidence thresholds: **0** (default) and **0.2**. At default, a read is assigned to a taxonomic group on the basis of a single matching k-mer and thus might capture an increased proportion of false positives. Setting this threshold higher should better capture true positives from the dataset.
 ```
 # run Kraken2 with default parameter
-kraken2 --db 01_qc/04_kraken/pluspfp --threads 128 \
+kraken2 \
+    --db 01_qc/04_kraken/pluspfp \
+    --threads 128 \
     --gzip-compressed \
     --report 01_qc/04_kraken/default.kreport \
     --report-minimizer-data \
@@ -79,7 +101,9 @@ kraken2 --db 01_qc/04_kraken/pluspfp --threads 128 \
     01_qc/02_chopper/E_phylacis_filtered.fastq.gz
 
 # run Kraken2 with --conf 0.2
-kraken2 --db 01_qc/04_kraken/pluspfp --threads 128 \
+kraken2 \
+    --db 01_qc/04_kraken/pluspfp \
+    --threads 128 \
     --confidence 0.2 \
     --gzip-compressed \
     --report 01_qc/04_kraken/conf02.kreport \
@@ -116,11 +140,25 @@ I ran KMC and GenomeScope2 to estimate the heterozygosity and genome size of *E.
 find 01_qc/02_chopper/ -name "*.fastq.gz" > 01_qc/05_genomescope/files.txt
 
 # run KMC and create the histogram
-kmc -k21 -t128 -ci1 -cs10000 @01_qc/05_genomescope/files.txt 01_qc/05_genomescope/kmc_db 01_qc/05_genomescope/
-kmc_tools transform 01_qc/05_genomescope/kmc_db histogram 01_qc/05_genomescope/histogram.txt -ci1 -cs10000
+kmc \
+    -k21 \
+    -t128 \
+    -ci1 -cs10000 \
+    @01_qc/05_genomescope/files.txt \
+    01_qc/05_genomescope/kmc_db \
+    01_qc/05_genomescope/
+
+kmc_tools transform \
+    01_qc/05_genomescope/kmc_db \
+    histogram \
+    01_qc/05_genomescope/histogram.txt \
+    -ci1 -cs10000
 
 # run GenomeScope2
-genomescope2 -i 01_qc/05_genomescope/histogram.txt -o 01_qc/05_genomescope/ -k 21 -p 2
+genomescope2 \
+    -i 01_qc/05_genomescope/histogram.txt \
+    -o 01_qc/05_genomescope/ \
+    -k 21 -p 2
 ```
 
 ### OUTPUT
@@ -145,23 +183,7 @@ After the third correction round, Hifiasm automatically sets the homozygous read
 
 ![Figure 02. Corrected distribution of read coverage from Hifiasm with default parameters.](./figures/fig02.png)
 
-### <a id="03b">Adding the estimated genome size</a>
-```
-hifiasm \
-    -o 02_assembly/hgsize533/E_phylacis_asm \
-    -t 128 \
-    --ont \
-    -l 3 \
-    --telo-m AAACCCT \
-    --hg-size 533m \
-    --dual-scaf \
-    01_qc/02_chopper/E_phylacis_filtered.fastq.gz \
-    2>&1 | tee 02_assembly/hgsize533/hifiasm_restart.log
-```
-
-The homozygous read coverage threshold is now **63** (i.e., total read length / estimated genome size), while the peak heterozygous coverage is still **29**. It seems that we need a more objective way to set the threshold...
-
-### <a id="03c">Estimating the peak homozygous coverage</a>
+### <a id="03b">Estimating the peak homozygous coverage</a>
 To empirically set the homozygous peak coverage, I calculated the median BUSCO coverage across the two haplotypes. First, I concatenated the two haplotypes inferred from the default run and remapped the filtered ONT reads.
 ```
 # change the working directory
@@ -211,7 +233,7 @@ cd ../..
 
 This command prints the following: `n=5173  Q1=23.6  median=27.9  Q3=32.2`. The median closely matches the heterozygosity peak from <a href="#03a">Hifiasm</a> and <a href="#03b">GenomeScope2</a>. Thus, we should redo the Hifiasm run with **`--hom-cov 55`**.
 
-### <a id="03d">Rerunning with `--hom-cov 55`</a>
+### <a id="03c">Rerunning with `--hom-cov 55`</a>
 ```
 hifiasm \
     -o 02_assembly/homcov55/E_phylacis_asm \
@@ -227,8 +249,8 @@ hifiasm \
 
 The next question is whether we need to adjust the `-s` flag, which reflects the *"similarity threshold for duplicate haplotigs that should be purged"*. At `-l 3`, the default threshold is 0.55, meaning that a pair of contigs need to have at least 55% cross-parent overlap to be considered as homologous. This might be too strict for an F1 hybrid genome.
 
-### <a id="03e">Trying lower `-s` values</a>
-Let's try five different `-s` values (0.50, 0.45, 0.40, 0.35, 0.30) based on the corrected reads from the Hifiasm run. Here's the example code for one Hifiasm run:
+### <a id="03d">Trying other `-s` values</a>
+Let's try different `-s` values (0.30, 0.35, 0.40, 0.45, 0.50, 0.60, 0.65, 0.70, 0.75) based on the corrected reads from the Hifiasm run. I also tried a stricter `-l 2` with four different `-s` values (0.45, 0.55, 0.65, 0.75). Here's the example code for one Hifiasm run:
 ```
 # change the working directory
 cd 02_assembly/homcov55
@@ -252,54 +274,80 @@ hifiasm --ont -t 128 -o ${NEW} --hom-cov 55 -l 3 -s 0.50 --dual-scaf --telo-m AA
 cd ../../..
 ```
 
-I converted all GFA outputs to FASTA format, then calculated the sequence statistics:
+I then converted all GFA outputs to FASTA format:
 ```
-# iterate over all GFA files
 for g in 02_assembly/homcov55/hifiasm_s0*/*.p_ctg.gfa; do
     gfatools gfa2fa "$g" > "${g%.gfa}.fa"
 done
-
-# calculate the statistics of all FASTA files
-seqkit stats 02_assembly/homcov55/hifiasm_s0*/*.p_ctg.fa > hifiasm_s0XX_seqkit.txt
 ```
 
-### OUTPUT
-
-### Haplotype 1
-| `-s` | Contigs | Total length (bp) | Min (bp) | Mean (bp) | Max (bp)   |
-| :--: | ------: | ----------------: | -------: | --------: | ---------: |
-| 0.30 |     449 |       583,208,380 |   30,917 | 1,298,905 | 65,682,487 |
-| 0.35 |     405 |       579,832,984 |   24,809 | 1,431,686 | 65,682,487 |
-| 0.40 |     421 |       573,216,200 |   24,809 | 1,361,559 | 65,682,487 |
-| 0.45 |     431 |       576,202,291 |   24,809 | 1,336,896 | 65,682,487 |
-| 0.50 |     402 |       574,198,743 |   24,809 | 1,428,355 | 65,682,487 |
-| 0.55 |     440 |       575,869,290 |   24,809 | 1,308,794 | 65,682,487 |
-
-### Haplotype 2
-| `-s` | Contigs | Total length (bp) | Min (bp) | Mean (bp) | Max (bp)   |
-| :--: | ------: | ----------------: | -------: | --------: | ---------: |
-| 0.30 |     308 |       563,732,156 |   24,809 | 1,830,299 | 61,702,390 |
-| 0.35 |     348 |       565,571,274 |   36,811 | 1,625,205 | 61,702,390 |
-| 0.40 |     319 |       571,160,799 |   36,811 | 1,790,473 | 61,702,390 |
-| 0.45 |     320 |       566,439,604 |   36,811 | 1,770,124 | 61,702,390 |
-| 0.50 |     305 |       560,735,642 |   36,811 | 1,838,478 | 61,702,390 |
-| 0.55 |     293 |       559,542,586 |   36,811 | 1,909,702 | 61,702,390 |
-
-### Primary
-| `-s` | Contigs | Total length (bp) | Min (bp) | Mean (bp)  | Max (bp)   |
-| :--: | ------: | ----------------: | -------: | ---------: | ---------: |
-| 0.30 |      55 |       538,510,568 |   30,917 |  9,791,101 | 61,704,473 |
-| 0.35 |      54 |       538,043,526 |   30,917 |  9,963,769 | 61,704,473 |
-| 0.40 |      53 |       538,126,685 |   30,917 | 10,153,334 | 61,704,473 |
-| 0.45 |      52 |       538,070,186 |   30,917 | 10,347,504 | 61,704,473 |
-| 0.50 |      56 |       538,678,952 |   30,917 |  9,619,267 | 61,704,473 |
-| 0.55 |      58 |       545,448,847 |   30,917 |  9,404,291 | 61,704,473 |
-
-The results seem to be pretty consistent across runs, so let's check each haplotype's BUSCO completeness and k-mer completeness. Here's the example code for one set of haplotypes:
+### SeqKit
 ```
-# build the read k-mer database once
+seqkit stats 02_assembly/homcov55/hifiasm_s0*/*.p_ctg.fa > hifiasm_all_seqkit.txt
+```
+
+<b><u>Haplotype 1</b></u>
+| `-l` | `-s` | Contigs | Total length (bp) | Min (bp) | Mean (bp) |   Max (bp) |
+| :--: | :--: | ------: | ----------------: | -------: | --------: | ---------: |
+|  3   | 0.30 |     449 |       583,208,380 |   30,917 | 1,298,905 | 65,682,487 |
+|  3   | 0.35 |     405 |       579,832,984 |   24,809 | 1,431,686 | 65,682,487 |
+|  3   | 0.40 |     421 |       573,216,200 |   24,809 | 1,361,559 | 65,682,487 |
+|  3   | 0.45 |     431 |       576,202,291 |   24,809 | 1,336,896 | 65,682,487 |
+|  3   | 0.50 |     402 |       574,198,743 |   24,809 | 1,428,355 | 65,682,487 |
+|  3   | 0.55 |     440 |       575,869,290 |   24,809 | 1,308,794 | 65,682,487 |
+|  3   | 0.60 |     402 |       570,069,076 |   24,809 | 1,418,082 | 65,682,487 |
+|  3   | 0.65 |     414 |       546,652,395 |   24,809 | 1,320,416 | 65,682,487 |
+|  3   | 0.70 |     413 |       601,523,016 |   30,917 | 1,456,472 | 61,713,612 |
+|  3   | 0.75 |     329 |       697,630,498 |   30,917 | 2,120,457 | 65,682,489 |
+|  2   | 0.45 |     423 |       581,017,343 |   24,809 | 1,373,564 | 65,682,487 |
+|  2   | 0.55 |     406 |       570,533,238 |   30,917 | 1,405,254 | 65,682,487 |
+|  2   | 0.65 |     418 |       596,630,555 |   30,917 | 1,427,346 | 65,682,487 |
+|  2   | 0.75 |     410 |       620,392,369 |   30,917 | 1,513,152 | 65,682,489 |
+
+<b><u>Haplotype 2</b></u>
+| `-l` | `-s` | Contigs | Total length (bp) | Min (bp) | Mean (bp) |   Max (bp) |
+| :--: | :--: | ------: | ----------------: | -------: | --------: | ---------: |
+|  3   | 0.30 |     308 |       563,732,156 |   24,809 | 1,830,299 | 61,702,390 |
+|  3   | 0.35 |     348 |       565,571,274 |   36,811 | 1,625,205 | 61,702,390 |
+|  3   | 0.40 |     319 |       571,160,799 |   36,811 | 1,790,473 | 61,702,390 |
+|  3   | 0.45 |     320 |       566,439,604 |   36,811 | 1,770,124 | 61,702,390 |
+|  3   | 0.50 |     305 |       560,735,642 |   36,811 | 1,838,478 | 61,702,390 |
+|  3   | 0.55 |     293 |       559,542,586 |   36,811 | 1,909,702 | 61,702,390 |
+|  3   | 0.60 |     351 |       567,535,942 |   43,064 | 1,616,912 | 61,702,390 |
+|  3   | 0.65 |     329 |       589,961,923 |   41,601 | 1,793,197 | 61,702,390 |
+|  3   | 0.70 |     285 |       638,319,662 |   24,809 | 2,239,718 | 65,543,494 |
+|  3   | 0.75 |     325 |       587,982,618 |   35,019 | 1,809,177 | 65,543,479 |
+|  2   | 0.45 |     328 |       560,484,069 |   36,811 | 1,708,793 | 61,702,390 |
+|  2   | 0.55 |     321 |       564,637,389 |   42,060 | 1,758,995 | 61,702,390 |
+|  2   | 0.65 |     330 |       539,894,173 |   36,811 | 1,636,043 | 61,702,390 |
+|  2   | 0.75 |     266 |       669,882,354 |   35,019 | 2,518,355 | 65,543,479 |
+
+<b><u>Primary</b></u>
+| `-l` | `-s` | Contigs | Total length (bp) | Min (bp) |  Mean (bp) |   Max (bp) |
+| :--: | :--: | ------: | ----------------: | -------: | ---------: | ---------: |
+|  3   | 0.30 |      55 |       538,510,568 |   30,917 |  9,791,101 | 61,704,473 |
+|  3   | 0.35 |      54 |       538,043,526 |   30,917 |  9,963,769 | 61,704,473 |
+|  3   | 0.40 |      53 |       538,126,685 |   30,917 | 10,153,334 | 61,704,473 |
+|  3   | 0.45 |      52 |       538,070,186 |   30,917 | 10,347,504 | 61,704,473 |
+|  3   | 0.50 |      56 |       538,678,952 |   30,917 |  9,619,267 | 61,704,473 |
+|  3   | 0.55 |      58 |       545,448,847 |   30,917 |  9,404,290 | 61,704,473 |
+|  3   | 0.60 |      57 |       608,733,002 |   30,917 | 10,679,526 | 61,704,473 |
+|  3   | 0.65 |      58 |       633,708,634 |   30,917 | 10,926,011 | 61,704,473 |
+|  3   | 0.70 |      63 |       844,781,570 |   30,917 | 13,409,231 | 61,713,612 |
+|  3   | 0.75 |      64 |       960,983,357 |   30,917 | 15,015,365 | 65,682,489 |
+|  2   | 0.45 |      56 |       544,895,664 |   30,917 |  9,730,280 | 61,704,473 |
+|  2   | 0.55 |      56 |       545,452,896 |   30,917 |  9,740,230 | 61,704,473 |
+|  2   | 0.65 |      58 |       635,269,094 |   30,917 | 10,952,915 | 61,704,473 |
+|  2   | 0.75 |      64 |       961,221,210 |   30,917 | 15,019,081 | 65,682,489 |
+
+### Compleasm + Merqury
+First, we need to create a k-mer database from the filtered ONT reads:
+```
 meryl count k=21 threads=128 01_qc/02_chopper/E_phylacis_filtered.fastq.gz output 02_assembly/homcov55/merqury/reads.meryl
+```
 
+Now, let's check each haplotype's BUSCO completeness and k-mer completeness. Here's the example code for one set of haplotypes:
+```
 # change the working directory
 cd 02_assembly/homcov55/
 
@@ -329,75 +377,146 @@ cd ../..
 
 I asked Claude to generate a python <a href="./scripts/summarise_s_sweep.py">script</a> to summarise the results. The following tables show the statistics across 2,805 BUSCOs (for Compleasm) and 601,145,508 solid read k-mers (for Merqury) per run:
 
-### Haplotype 1
-| Metric                 |        0.30 |        0.35 |        0.40 |        0.45 |        0.50 |        0.55 |
-| ---------------------- | ----------: | ----------: | ----------: | ----------: | ----------: | ----------: |
-| BUSCO S (%)            |       92.16 |       93.05 |       92.55 |       92.73 |       93.44 |       92.69 |
-| BUSCO D (%)            |        7.42 |        6.56 |        7.09 |        6.88 |        6.20 |        6.95 |
-| BUSCO F (%)            |        0.39 |        0.36 |        0.32 |        0.36 |        0.32 |        0.32 |
-| BUSCO M (%)            |        0.04 |        0.04 |        0.04 |        0.04 |        0.04 |        0.04 |
-| k-mer completeness (%) |     66.6775 |     66.2871 |     65.9580 |     66.1271 |     65.9356 |     66.1318 |
-| QV                     |     64.3232 |     64.5597 |     64.2477 |     64.4424 |     64.4342 |     64.4088 |
+<b><u>Haplotype 1</b></u>
+| Metric                 |  0.30 |  0.35 |  0.40 |  0.45 |  0.50 |  0.55 |  0.60 |  0.65 |  0.70 |  0.75 | 0.45 (l2) | 0.55 (l2) | 0.65 (l2) | 0.75 (l2) |
+| ---------------------- | ----: | ----: | ----: | ----: | ----: | ----: | ----: | ----: | ----: | ----: | --------: | --------: | --------: | --------: |
+| BUSCO S (%)            | 92.16 | 93.05 | 92.55 | 92.73 | 93.44 | 92.69 | 93.58 | 91.30 | 63.28 | 48.70 |     92.30 |     93.19 |     85.78 |     50.41 |
+| BUSCO D (%)            |  7.42 |  6.56 |  7.09 |  6.88 |  6.20 |  6.95 |  5.49 |  5.42 | 22.07 | 37.58 |      7.31 |      5.88 |     10.98 |     31.41 |
+| BUSCO F (%)            |  0.39 |  0.36 |  0.32 |  0.36 |  0.32 |  0.32 |  0.39 |  0.57 |  1.25 |  0.86 |      0.36 |      0.39 |      0.53 |      1.18 |
+| BUSCO M (%)            |  0.04 |  0.04 |  0.04 |  0.04 |  0.04 |  0.04 |  0.53 |  2.71 | 13.40 | 12.87 |      0.04 |      0.53 |      2.71 |     17.01 |
+| k-mer completeness (%) | 66.68 | 66.29 | 65.96 | 66.13 | 65.94 | 66.13 | 65.55 | 63.06 | 63.65 | 71.98 |     66.46 |     65.46 |     66.57 |     64.97 |
+| Solid k-mers found (M) | 400.8 | 398.5 | 396.5 | 397.5 | 396.4 | 397.5 | 394.1 | 379.1 | 382.6 | 432.7 |     399.5 |     393.5 |     400.2 |     390.6 |
+| QV                     | 64.32 | 64.56 | 64.25 | 64.44 | 64.43 | 64.41 | 64.55 | 64.47 | 64.35 | 64.93 |     64.60 |     64.58 |     64.40 |     64.62 |
+| Asm-only k-mers        | 4,521 | 4,243 | 4,507 | 4,332 | 4,326 | 4,357 | 4,197 | 4,093 | 4,614 | 4,702 |     4,203 |     4,156 |     4,546 |     4,478 |
 
-### Haplotype 2
-| Metric                 |        0.30 |        0.35 |        0.40 |        0.45 |        0.50 |        0.55 |
-| ---------------------- | ----------: | ----------: | ----------: | ----------: | ----------: | ----------: |
-| BUSCO S (%)            |       94.01 |       93.26 |       93.94 |       94.08 |       94.40 |       93.90 |
-| BUSCO D (%)            |        5.70 |        6.45 |        5.74 |        5.63 |        5.28 |        5.17 |
-| BUSCO F (%)            |        0.25 |        0.25 |        0.29 |        0.25 |        0.29 |        0.32 |
-| BUSCO M (%)            |        0.04 |        0.04 |        0.04 |        0.04 |        0.04 |        0.61 |
-| k-mer completeness (%) |     65.3983 |     65.6864 |     65.9052 |     65.6105 |     65.2542 |     64.9363 |
-| QV                     |     65.5825 |     65.3600 |     65.7464 |     65.4516 |     65.6166 |     65.9861 |
+<b><u>Haplotype 2</b></u>
+| Metric                 |  0.30 |  0.35 |  0.40 |  0.45 |  0.50 |  0.55 |  0.60 |  0.65 |  0.70 |  0.75 | 0.45 (l2) | 0.55 (l2) | 0.65 (l2) | 0.75 (l2) |
+| ---------------------- | ----: | ----: | ----: | ----: | ----: | ----: | ----: | ----: | ----: | ----: | --------: | --------: | --------: | --------: |
+| BUSCO S (%)            | 94.01 | 93.26 | 93.94 | 94.08 | 94.40 | 93.90 | 93.19 | 91.19 | 63.53 | 56.08 |     93.69 |     93.58 |     87.31 |     56.08 |
+| BUSCO D (%)            |  5.70 |  6.45 |  5.74 |  5.63 |  5.28 |  5.17 |  6.52 |  8.52 | 27.59 | 28.98 |      5.42 |      6.13 |      7.81 |     34.33 |
+| BUSCO F (%)            |  0.25 |  0.25 |  0.29 |  0.25 |  0.29 |  0.32 |  0.25 |  0.25 |  0.82 |  1.28 |      0.29 |      0.25 |      0.71 |      1.00 |
+| BUSCO M (%)            |  0.04 |  0.04 |  0.04 |  0.04 |  0.04 |  0.61 |  0.04 |  0.04 |  8.06 | 13.65 |      0.61 |      0.04 |      4.17 |      8.59 |
+| k-mer completeness (%) | 65.40 | 65.69 | 65.91 | 65.61 | 65.25 | 64.94 | 65.64 | 67.22 | 67.91 | 63.26 |     65.05 |     65.57 |     62.04 |     70.06 |
+| Solid k-mers found (M) | 393.1 | 394.9 | 396.2 | 394.4 | 392.3 | 390.4 | 394.6 | 404.1 | 408.3 | 380.3 |     391.0 |     394.2 |     373.0 |     421.2 |
+| QV                     | 65.58 | 65.36 | 65.75 | 65.45 | 65.62 | 65.99 | 65.43 | 65.61 | 65.56 | 65.15 |     65.32 |     65.53 |     65.67 |     65.33 |
+| Asm-only k-mers        | 3,265 | 3,457 | 3,193 | 3,389 | 3,227 | 2,961 | 3,401 | 3,387 | 3,695 | 3,775 |     3,455 |     3,321 |     3,058 |     4,122 |
 
-### Union (hap1 + hap2)
-| Metric                 |        0.30 |        0.35 |        0.40 |        0.45 |        0.50 |        0.55 |
-| ---------------------- | ----------: | ----------: | ----------: | ----------: | ----------: | ----------: |
-| BUSCO S (%)            |        2.96 |        2.96 |        2.89 |        2.92 |        2.92 |        2.85 |
-| BUSCO D (%)            |       96.83 |       96.83 |       96.90 |       96.86 |       96.86 |       96.93 |
-| BUSCO F (%)            |        0.18 |        0.18 |        0.18 |        0.18 |        0.18 |        0.18 |
-| BUSCO M (%)            |        0.04 |        0.04 |        0.04 |        0.04 |        0.04 |        0.04 |
-| k-mer completeness (%) |     99.3074 |     99.3073 |     99.3073 |     99.3073 |     99.3071 |     99.3071 |
-| QV                     |     64.8963 |     64.9374 |     64.9329 |     64.9145 |     64.9792 |     65.1172 |
+<b><u>Union (hap1 + hap2)</b></u>
+| Metric                 |  0.30 |  0.35 |  0.40 |  0.45 |  0.50 |  0.55 |  0.60 |  0.65 |  0.70 |  0.75 | 0.45 (l2) | 0.55 (l2) | 0.65 (l2) | 0.75 (l2) |
+| ---------------------- | ----: | ----: | ----: | ----: | ----: | ----: | ----: | ----: | ----: | ----: | --------: | --------: | --------: | --------: |
+| BUSCO S (%)            |  2.96 |  2.96 |  2.89 |  2.92 |  2.92 |  2.85 |  2.92 |  2.92 |  2.78 |  2.57 |      2.89 |      2.96 |      2.89 |      2.60 |
+| BUSCO D (%)            | 96.83 | 96.83 | 96.90 | 96.86 | 96.86 | 96.93 | 96.86 | 96.86 | 97.01 | 97.22 |     96.90 |     96.83 |     96.90 |     97.18 |
+| BUSCO F (%)            |  0.18 |  0.18 |  0.18 |  0.18 |  0.18 |  0.18 |  0.18 |  0.18 |  0.18 |  0.18 |      0.18 |      0.18 |      0.18 |      0.18 |
+| BUSCO M (%)            |  0.04 |  0.04 |  0.04 |  0.04 |  0.04 |  0.04 |  0.04 |  0.04 |  0.04 |  0.04 |      0.04 |      0.04 |      0.04 |      0.04 |
+| k-mer completeness (%) | 99.31 | 99.31 | 99.31 | 99.31 | 99.31 | 99.31 | 99.31 | 99.31 | 99.31 | 99.31 |     99.31 |     99.31 |     99.31 |     99.31 |
+| Solid k-mers found (M) | 597.0 | 597.0 | 597.0 | 597.0 | 597.0 | 597.0 | 597.0 | 597.0 | 597.0 | 597.0 |     597.0 |     597.0 |     597.0 |     597.0 |
+| QV                     | 64.90 | 64.94 | 64.93 | 64.91 | 64.98 | 65.12 | 64.96 | 65.02 | 64.93 | 65.03 |     64.94 |     65.02 |     64.95 |     64.98 |
+| Asm-only k-mers        | 7,786 | 7,700 | 7,700 | 7,721 | 7,553 | 7,318 | 7,598 | 7,480 | 8,309 | 8,477 |     7,658 |     7,477 |     7,604 |     8,600 |
 
 We also calculated the copy number of heterozygous peak (14–44x) and homozygous peak (44–69x) read k-mers in the assembly (from Merqury `spectra-cn.hist`):
 - For one haplotype, `het k-mers: 0x` and `het k-mers: 1x` should be ~50% each, while `hom k-mers: 1x` should be ~100%
 - For the union, `het k-mers: 1x` and `hom k-mers: 2x` should be ~100% each
 - `het k-mers: ≥2x` and `hom k-mers: ≥3x` mark regions present as both parental copies in both haplotypes
 
-### Haplotype 1
-| Metric           | 0.30 | 0.35 | 0.40 | 0.45 | 0.50 | 0.55 |
-| ---------------- | ---: | ---: | ---: | ---: | ---: | ---: |
-| het k-mers: 0x   | 44.4 | 44.8 | 45.2 | 45.0 | 45.3 | 45.0 |
-| het k-mers: 1x   | 55.2 | 54.7 | 54.4 | 54.6 | 54.3 | 54.6 |
-| het k-mers: ≥2x  |  0.4 |  0.4 |  0.4 |  0.4 |  0.4 |  0.4 |
-| hom k-mers: 0x   |  8.5 |  8.6 |  8.9 |  8.8 |  8.7 |  8.9 |
-| hom k-mers: 1x   | 77.6 | 78.2 | 77.6 | 77.7 | 78.5 | 77.5 |
-| hom k-mers: 2x   | 13.7 | 13.0 | 13.2 | 13.2 | 12.6 | 13.3 |
-| hom k-mers: ≥3x  |  0.3 |  0.3 |  0.2 |  0.3 |  0.3 |  0.3 |
+<b><u>Haplotype 1</b></u>
+| Metric          | 0.30 | 0.35 | 0.40 | 0.45 | 0.50 | 0.55 | 0.60 | 0.65 | 0.70 | 0.75 | 0.45 (l2) | 0.55 (l2) | 0.65 (l2) | 0.75 (l2) |
+| --------------- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --------: | --------: | --------: | --------: |
+| het k-mers: 0x  | 44.4 | 44.8 | 45.2 | 45.0 | 45.3 | 45.0 | 45.6 | 47.9 | 43.9 | 34.2 |      44.5 |      45.7 |      43.4 |      41.5 |
+| het k-mers: 1x  | 55.2 | 54.7 | 54.4 | 54.6 | 54.3 | 54.6 | 54.0 | 51.8 | 55.1 | 63.9 |      55.0 |      53.9 |      55.9 |      57.0 |
+| het k-mers: ≥2x |  0.4 |  0.4 |  0.4 |  0.4 |  0.4 |  0.4 |  0.4 |  0.4 |  1.0 |  1.8 |       0.4 |       0.4 |       0.6 |       1.5 |
+| hom k-mers: 0x  |  8.5 |  8.6 |  8.9 |  8.8 |  8.7 |  8.9 |  9.4 | 12.5 | 21.0 | 15.3 |       8.8 |       9.5 |      11.0 |      22.2 |
+| hom k-mers: 1x  | 77.6 | 78.2 | 77.6 | 77.7 | 78.5 | 77.5 | 78.0 | 75.6 | 50.6 | 43.1 |      77.3 |      78.1 |      70.3 |      42.6 |
+| hom k-mers: 2x  | 13.7 | 13.0 | 13.2 | 13.2 | 12.6 | 13.3 | 12.4 | 11.7 | 27.8 | 40.8 |      13.6 |      12.2 |      18.4 |      34.5 |
+| hom k-mers: ≥3x |  0.3 |  0.3 |  0.2 |  0.3 |  0.3 |  0.3 |  0.2 |  0.2 |  0.5 |  0.8 |       0.3 |       0.2 |       0.4 |       0.7 |
 
-### Haplotype 2
-| Metric           | 0.30 | 0.35 | 0.40 | 0.45 | 0.50 | 0.55 |
-| ---------------- | ---: | ---: | ---: | ---: | ---: | ---: |
-| het k-mers: 0x   | 45.8 | 45.4 | 45.2 | 45.6 | 46.0 | 46.3 |
-| het k-mers: 1x   | 53.8 | 54.2 | 54.4 | 54.0 | 53.7 | 53.3 |
-| het k-mers: ≥2x  |  0.4 |  0.4 |  0.4 |  0.4 |  0.4 |  0.4 |
-| hom k-mers: 0x   |  9.3 |  9.2 |  8.9 |  9.1 |  9.4 |  9.6 |
-| hom k-mers: 1x   | 78.3 | 77.9 | 78.5 | 78.5 | 78.7 | 78.8 |
-| hom k-mers: 2x   | 12.2 | 12.7 | 12.3 | 12.1 | 11.6 | 11.3 |
-| hom k-mers: ≥3x  |  0.3 |  0.3 |  0.3 |  0.3 |  0.3 |  0.2 |
+<b><u>Haplotype 2</b></u>
+| Metric          | 0.30 | 0.35 | 0.40 | 0.45 | 0.50 | 0.55 | 0.60 | 0.65 | 0.70 | 0.75 | 0.45 (l2) | 0.55 (l2) | 0.65 (l2) | 0.75 (l2) |
+| --------------- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --------: | --------: | --------: | --------: |
+| het k-mers: 0x  | 45.8 | 45.4 | 45.2 | 45.6 | 46.0 | 46.3 | 45.5 | 43.5 | 39.2 | 44.2 |      46.2 |      45.6 |      48.2 |      36.7 |
+| het k-mers: 1x  | 53.8 | 54.2 | 54.4 | 54.0 | 53.7 | 53.3 | 54.1 | 56.0 | 59.4 | 54.6 |      53.5 |      54.0 |      51.3 |      61.8 |
+| het k-mers: ≥2x |  0.4 |  0.4 |  0.4 |  0.4 |  0.4 |  0.4 |  0.4 |  0.5 |  1.4 |  1.2 |       0.4 |       0.4 |       0.5 |       1.5 |
+| hom k-mers: 0x  |  9.3 |  9.2 |  8.9 |  9.1 |  9.4 |  9.6 |  9.1 |  8.4 | 16.4 | 21.3 |       9.6 |       9.1 |      15.1 |      15.3 |
+| hom k-mers: 1x  | 78.3 | 77.9 | 78.5 | 78.5 | 78.7 | 78.8 | 78.2 | 76.0 | 50.4 | 49.0 |      78.2 |      78.1 |      71.1 |      47.4 |
+| hom k-mers: 2x  | 12.2 | 12.7 | 12.3 | 12.1 | 11.6 | 11.3 | 12.5 | 15.2 | 32.5 | 29.2 |      11.9 |      12.5 |      13.5 |      36.7 |
+| hom k-mers: ≥3x |  0.3 |  0.3 |  0.3 |  0.3 |  0.3 |  0.2 |  0.3 |  0.3 |  0.6 |  0.5 |       0.2 |       0.3 |       0.3 |       0.7 |
 
-### Union (hap1 + hap2)
-| Metric (%)       | 0.30 | 0.35 | 0.40 | 0.45 | 0.50 | 0.55 |
-| ---------------- | ---: | ---: | ---: | ---: | ---: | ---: |
-| het k-mers: 0x   |  0.6 |  0.6 |  0.6 |  0.6 |  0.6 |  0.6 |
-| het k-mers: 1x   | 88.5 | 88.6 | 88.8 | 88.9 | 89.6 | 89.6 |
-| het k-mers: ≥2x  | 10.9 | 10.8 | 10.7 | 10.5 |  9.8 |  9.8 |
-| hom k-mers: 0x   |  0.2 |  0.2 |  0.2 |  0.2 |  0.2 |  0.2 |
-| hom k-mers: 1x   |  4.1 |  4.1 |  4.2 |  4.2 |  4.2 |  4.3 |
-| hom k-mers: 2x   | 83.0 | 83.2 | 83.3 | 83.5 | 84.7 | 84.6 |
-| hom k-mers: ≥3x  | 12.7 | 12.5 | 12.3 | 12.1 | 10.9 | 11.0 |
+<b><u>Union (hap1 + hap2)</b></u>
+| Metric          | 0.30 | 0.35 | 0.40 | 0.45 | 0.50 | 0.55 | 0.60 | 0.65 | 0.70 | 0.75 | 0.45 (l2) | 0.55 (l2) | 0.65 (l2) | 0.75 (l2) |
+| --------------- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --------: | --------: | --------: | --------: |
+| het k-mers: 0x  |  0.6 |  0.6 |  0.6 |  0.6 |  0.6 |  0.6 |  0.6 |  0.6 |  0.6 |  0.6 |       0.6 |       0.6 |       0.6 |       0.6 |
+| het k-mers: 1x  | 88.5 | 88.6 | 88.8 | 88.9 | 89.6 | 89.6 | 89.4 | 89.6 | 80.6 | 75.8 |      89.0 |      89.6 |      89.6 |      75.5 |
+| het k-mers: ≥2x | 10.9 | 10.8 | 10.7 | 10.5 |  9.8 |  9.8 | 10.0 |  9.8 | 18.9 | 23.7 |      10.4 |       9.8 |       9.8 |      23.9 |
+| hom k-mers: 0x  |  0.2 |  0.2 |  0.2 |  0.2 |  0.2 |  0.2 |  0.2 |  0.2 |  0.2 |  0.2 |       0.2 |       0.2 |       0.2 |       0.2 |
+| hom k-mers: 1x  |  4.1 |  4.1 |  4.2 |  4.2 |  4.2 |  4.3 |  4.2 |  4.3 |  3.7 |  3.6 |       4.2 |       4.2 |       4.3 |       3.5 |
+| hom k-mers: 2x  | 83.0 | 83.2 | 83.3 | 83.5 | 84.7 | 84.6 | 84.4 | 84.6 | 76.3 | 68.9 |      83.7 |      84.6 |      84.6 |      68.5 |
+| hom k-mers: ≥3x | 12.7 | 12.5 | 12.3 | 12.1 | 10.9 | 11.0 | 11.2 | 11.0 | 19.8 | 27.4 |      11.9 |      11.0 |      11.0 |      27.8 |
 
-Based on these results, roughly 10% of the genome was duplicated within the first haplotype, and another 10% on the other haplotype. `-s 0.50` seems to be the most optimal parameter, with the highest number of single-copy BUSCO recovered for both haplotypes and comparable k-mer completeness. 
+### Quast
+```
+# change the working directory
+cd 02_assembly/homcov55/
+
+# run Quast
+mkdir -p quast
+for part in hap1 hap2; do
+    files=(); labels=()
+    for d in hifiasm_s0*/ hifiasm_l2_s0*/; do
+        d=${d%/}; label=${d#hifiasm_}
+        files+=("${d}/E_phylacis_${label}.asm.bp.${part}.p_ctg.fa")
+        labels+=("$label")
+    done
+    quast.py --large --est-ref-size 534000000 \
+        -o quast/${part} -l "$(IFS=,; echo "${labels[*]}")" "${files[@]}"
+done
+
+# change the working directory
+cd ../..
+```
+
+<b><u>Haplotype 1</b></u>
+
+![Figure 03a. Quast contig viewer for haplotype 1.](./figures/fig03_hap1.png)
+
+| `-l` | `-s` |   N50 (bp) | L50 |  NG50 (bp) |   N90 (bp) | L90 |  NG90 (bp) |   auN (bp) | N's per 100 kbp |
+| :--: | :--: | ---------: | --: | ---------: | ---------: | --: | ---------: | ---------: | --------------: |
+|  3   | 0.30 | 43,772,942 |   6 | 51,317,246 | 17,090,617 |  12 | 33,590,266 | 43,842,519 |           110.3 |
+|  3   | 0.35 | 51,317,246 |   5 | 51,317,246 | 20,641,050 |  12 | 34,632,737 | 45,079,273 |           428.9 |
+|  3   | 0.40 | 51,330,377 |   5 | 51,330,377 | 17,090,617 |  12 | 33,387,292 | 44,105,774 |           429.1 |
+|  3   | 0.45 | 41,957,526 |   6 | 51,317,246 | 17,090,617 |  12 | 33,387,292 | 44,313,252 |           426.8 |
+|  3   | 0.50 | 51,330,377 |   5 | 51,330,377 | 20,449,059 |  12 | 34,632,737 | 45,320,782 |           406.7 |
+|  3   | 0.55 | 41,957,526 |   6 | 51,359,987 | 18,186,819 |  12 | 33,662,322 | 44,075,504 |           567.1 |
+|  3   | 0.60 | 39,841,891 |   6 | 41,957,526 | 20,394,891 |  13 | 28,751,543 | 41,292,460 |           134.2 |
+|  3   | 0.65 | 39,841,891 |   6 | 41,957,526 | 20,394,891 |  12 | 28,751,543 | 41,997,972 |           236.6 |
+|  3   | 0.70 | 51,351,936 |   6 | 54,056,018 | 29,899,960 |  12 | 36,525,735 | 45,920,878 |           471.2 |
+|  3   | 0.75 | 51,317,246 |   6 | 56,292,571 | 20,394,891 |  14 | 36,525,735 | 45,842,407 |           109.6 |
+|  2   | 0.45 | 41,957,526 |   6 | 51,317,246 | 18,177,790 |  12 | 33,387,292 | 44,085,185 |           539.0 |
+|  2   | 0.55 | 39,841,891 |   6 | 43,799,538 | 18,352,263 |  13 | 28,751,543 | 41,751,729 |           528.5 |
+|  2   | 0.65 | 41,957,526 |   6 | 51,359,987 | 28,751,543 |  12 | 33,549,482 | 44,094,347 |           154.1 |
+|  2   | 0.75 | 51,144,740 |   6 | 51,317,246 | 17,320,306 |  13 | 34,632,737 | 44,526,071 |           325.9 |
+
+<b><u>Haplotype 2</b></u>
+
+![Figure 03b. Quast contig viewer for haplotype 2.](./figures/fig03_hap2.png)
+
+| `-l` | `-s` |   N50 (bp) | L50 |  NG50 (bp) |   N90 (bp) | L90 |  NG90 (bp) |   auN (bp) | N's per 100 kbp |
+| :--: | :--: | ---------: | --: | ---------: | ---------: | --: | ---------: | ---------: | --------------: |
+|  3   | 0.30 | 42,197,018 |   6 | 45,190,855 | 20,289,095 |  12 | 30,438,125 | 44,221,886 |           264.7 |
+|  3   | 0.35 | 43,786,684 |   6 | 45,190,855 | 17,142,888 |  12 | 30,327,973 | 43,077,801 |             0.0 |
+|  3   | 0.40 | 43,786,684 |   6 | 45,187,080 | 20,289,095 |  12 | 30,311,269 | 44,128,093 |            30.3 |
+|  3   | 0.45 | 43,786,684 |   6 | 45,190,855 | 20,289,095 |  12 | 30,311,269 | 44,029,941 |            30.6 |
+|  3   | 0.50 | 42,197,018 |   6 | 45,193,510 | 18,310,092 |  12 | 30,255,385 | 43,679,519 |           117.5 |
+|  3   | 0.55 | 42,197,018 |   6 | 42,197,018 | 24,839,503 |  12 | 24,839,503 | 41,131,917 |             0.0 |
+|  3   | 0.60 | 43,786,684 |   6 | 45,190,855 | 18,318,392 |  12 | 33,387,292 | 43,416,672 |           447.7 |
+|  3   | 0.65 | 43,786,684 |   6 | 46,025,662 | 31,562,876 |  12 | 33,387,292 | 43,494,742 |           525.0 |
+|  3   | 0.70 | 45,187,080 |   6 | 51,144,740 | 17,291,453 |  14 | 35,385,602 | 43,126,439 |           729.4 |
+|  3   | 0.75 | 42,197,018 |   6 | 45,190,855 | 29,899,960 |  12 | 38,016,435 | 45,700,235 |            11.1 |
+|  2   | 0.45 | 42,197,018 |   6 | 42,197,018 | 20,442,954 |  13 | 24,839,503 | 40,614,434 |             0.0 |
+|  2   | 0.55 | 42,197,018 |   6 | 45,190,855 | 20,627,072 |  12 | 33,387,292 | 43,479,232 |             0.0 |
+|  2   | 0.65 | 42,197,018 |   6 | 42,197,018 | 20,289,095 |  12 | 20,289,095 | 41,264,420 |           437.7 |
+|  2   | 0.75 | 45,190,855 |   6 | 54,056,018 | 30,311,269 |  13 | 38,519,572 | 46,639,921 |            40.7 |
+
+### Conclusion
+From all these results, it seems that `-l 3 -s 0.50` has the most consistent results and is never an outlier compared to other parameters.
 
 ---
-*Last update: 03 November 2026 by Jeremias Ivan*
+*Last update: 04 November 2026 by Jeremias Ivan*
