@@ -13,6 +13,7 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#03b">Estimating the peak homozygous coverage</a>
     - <a href="#03c">Rerunning with `--hom-cov 56`</a>
     - <a href="#03d">Trying other `-s` values</a>
+    - <a href="#03e">Conclusion</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
@@ -515,8 +516,11 @@ cd ../..
 |  2   | 0.65 | 42,197,018 |   6 | 42,197,018 | 20,289,095 |  12 | 20,289,095 | 41,264,420 |           437.7 |
 |  2   | 0.75 | 45,190,855 |   6 | 54,056,018 | 30,311,269 |  13 | 38,519,572 | 46,639,921 |            40.7 |
 
-### Conclusion
-From all these results, it seems that `-l 3 -s 0.50` has the most consistent results and is never an outlier compared to other parameters.
+### <a id="02e">Conclusion</a>
+From all these tests, it seems that `-l 3 -s 0.50` has the most consistent results and is never an outlier compared to other parameters.
+
+Dot plot between the two haplotypes generated using <a href="./scripts/pafCoordsDotPlotly.R">`pafCoordsDotPlotly.R`</a>:
+![Figure 04. Dot plot between hap1 and hap2 from s050.](./figures/fig04.png)
 
 ---
 *Last update: 04 November 2026 by Jeremias Ivan*
