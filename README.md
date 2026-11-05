@@ -14,7 +14,7 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#03c">Rerunning with `--hom-cov 55`</a>
     - <a href="#03d">Trying other `-s` values</a>
     - <a href="#03e">Conclusion</a>
-- <a href="#04">Assembly of organelle genome</a>
+- <a href="#04">Assembly of organelle genomes</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
@@ -35,6 +35,8 @@ conda install -c conda-forge -c bioconda \
     meryl \
     mosdepth \
     nanoplot \
+    oatk \
+    pycirclize \
     r-optparse \
     r-plotly \
     r-tidyverse \
@@ -667,9 +669,79 @@ blobtk plot -v snail      -d 03_qc/hap2_btk -o 03_qc/hap2_snail.svg
 | :-----------------------------------------: | :-----------------------------------------: |
 | ![Hap1 Blobplot](./figures/fig05_hap1.png)  | ![Hap2 BlobPlot](./figures/fig05_hap2.png)  |
 | ![Hap1 Snailplot](./figures/fig06_hap1.svg) | ![Hap2 Snailplot](./figures/fig06_hap2.svg) |
-| ![Hap1 Snailplot](./figures/fig06_hap1.svg) | ![Hap2 Snailplot](./figures/fig06_hap2.svg) |
 
-## <a id="04">Assembly of organelle genome</a>
+## <a id="04">Assembly of organelle genomes</a>
+First, we need to download the organelle database.
+```
+db_dir="04_organelle/db"
+base_url="https://raw.githubusercontent.com/c-zhou/OatkDB/main/v20230921"
+
+files=(
+    "magnoliopsida_mito.fam"
+    "magnoliopsida_mito.fam.h3f"
+    "magnoliopsida_mito.fam.h3i"
+    "magnoliopsida_mito.fam.h3m"
+    "magnoliopsida_mito.fam.h3p"
+    "magnoliopsida_pltd.fam"
+    "magnoliopsida_pltd.fam.h3f"
+    "magnoliopsida_pltd.fam.h3i"
+    "magnoliopsida_pltd.fam.h3m"
+    "magnoliopsida_pltd.fam.h3p"
+)
+
+# download individual files
+for file in "${files[@]}"; do
+    wget -q "${base_url}/${file}" -O "${db_dir}/${file}"
+    echo "  Downloaded: ${file}"
+done
+```
+
+Following the previous trials, we should run oatk with corrected reads from Hifiasm. I also asked Claude to generate a python <a href="./scripts/oatk_circular_map.py">script</a> to visualise the circular map of each organelle.
+```
+# create a new directory as not to overwrite the previous results
+cd 02_assembly/homcov55/hifiasm_s050 && mkdir -p ec_extract && cd ec_extract
+
+# extract Hifiasm corrected reads
+for s in ec.bin ovlp.source.bin ovlp.reverse.bin; do ln -s ../E_phylacis_s050.asm.$s .; done
+hifiasm -o E_phylacis_s050.asm -t 128 --ont --write-ec ../../../../01_qc/02_chopper/E_phylacis_filtered.fastq.gz
+
+# change directory
+cd ../../../..
+
+# run OatK
+oatk -k 1001 \
+     -c 30 \
+     -t 128 \
+     -p 04_organelle/db/magnoliopsida_pltd.fam \
+     -m 04_organelle/db/magnoliopsida_mito.fam \
+     -o 04_organelle/c30k1001/E_phylacis \
+     02_assembly/homcov55/hifiasm_s050/ec_extract/E_phylacis_s050.asm.ec.fq
+
+# save into PNG
+python scripts/oatk_circular_map.py \
+    04_organelle/c30k1001/E_phylacis.mito.ctg.fasta \
+    04_organelle/c30k1001/E_phylacis.mito.ctg.bed \
+    -o 04_organelle/c30k1001/mito_map.png
+
+python scripts/oatk_circular_map.py \
+    04_organelle/c30k1001/E_phylacis.pltd.ctg.fasta \
+    04_organelle/c30k1001/E_phylacis.pltd.ctg.bed \
+    -o 04_organelle/c30k1001/pltd_map.png
+```
+
+### mtDNA
+```
+>ctg000001l     length=355146 wlength=41066840.0 nv=11 circular=false path=u151-,u152+,u150-,u148-,u146-,u147+,u141-,u12277+,u139+,u146-,u138-
+>ctg000002l     length=23355 wlength=2312145.0 nv=1 circular=false path=u149+
+>ctg000003c     length=79427 wlength=7942700.0 nv=1 circular=true path=u12148-
+```
+![Figure 07. mtDNA Circular Map.](./figures/fig07.png)
+
+### ptDNA
+```
+>ctg000001c     length=160190 wlength=150009126.0 nv=12 circular=true path=u140+,u12277+,u137-,u7+,u12278-,u143-,u142+,u143+,u12278+,u7-,u137+,u12277-
+```
+![Figure 08. ptDNA Circular Map.](./figures/fig08.png)
 
 ---
 *Last update: 06 November 2026 by Jeremias Ivan*
