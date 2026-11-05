@@ -22,6 +22,7 @@ This analysis requires a number of software and R packages to run. Here, I am go
 conda create -n meelupmallee
 conda activate meelupmallee
 conda install -c conda-forge -c bioconda \
+    blobtoolkit \
     chopper \
     compleasm \
     quast \
@@ -34,6 +35,9 @@ conda install -c conda-forge -c bioconda \
     meryl \
     mosdepth \
     nanoplot \
+    r-optparse \
+    r-plotly \
+    r-tidyverse \
     seqkit
 ```
 
@@ -520,7 +524,7 @@ cd ../..
 ### <a id="03e">Conclusion</a>
 From all these tests, it seems that `-l 3 -s 0.50` has the most consistent results and is never an outlier compared to other parameters.
 
-Dotplot between the two haplotypes generated using <a href="./scripts/pafCoordsDotPlotly.R">`pafCoordsDotPlotly.R`</a>:
+### Dotplot
 ```
 # change the working directory
 cd 02_assembly/homcov55/s050
@@ -532,7 +536,7 @@ minimap2 -x asm20 -t 128 -N 1000 --secondary=no \
     > hap1_vs_hap2.paf
 
 # generate the dotplot
-Rscript pafCoordsDotPlotly.R \
+Rscript scripts/pafCoordsDotPlotly.R \
     -i hap1_vs_hap2.paf \
     -o hap1_vs_hap2_dotplot2 -s -t
 
@@ -540,6 +544,102 @@ Rscript pafCoordsDotPlotly.R \
 cd ../../..
 ```
 ![Figure 04. Dotplot between hap1 and hap2 from s050.](./figures/fig04.png)
+
+### Contamination check
+```
+# map the filtered ONT reads to the union
+minimap2 -ax map-ont -t 128 --secondary=no \
+    02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.union.fa \
+    01_qc/02_chopper/E_phylacis_filtered.fastq.gz \
+    | samtools sort -@8 -o 03_qc/diploid.bam - && samtools index 03_qc/diploid.bam
+
+# index each haplotype
+samtools faidx 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa
+samtools faidx 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa
+
+# split the BAM file
+samtools view -b 03_qc/diploid.bam $(cut -f1 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa.fai) > 03_qc/hap1.bam && samtools index 03_qc/hap1.bam
+samtools view -b 03_qc/diploid.bam $(cut -f1 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa.fai) > 03_qc/hap2.bam && samtools index 03_qc/hap2.bam
+
+# download the taxonomy metadata
+mkdir -p 03_qc/taxdump && cd 03_qc/taxdump
+curl -L https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/new_taxdump/new_taxdump.tar.gz | tar xzf -
+cd ../..
+
+# download core_nt database
+mkdir -p 03_qc/blastdb && cd 03_qc/blastdb
+update_blastdb.pl --decompress --num_threads 128 --source ncbi core_nt
+update_blastdb.pl --decompress --source ncbi taxdb
+cd ../..
+
+# download UniProt / Swiss-Prot database
+mkdir -p 03_qc/uniprot && cd 03_qc/uniprot
+wget https://ftp.uniprot.org/pub/databases/uniprot/current_release/knowledgebase/complete/uniprot_sprot.fasta.gz
+wget https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz
+diamond makedb --in uniprot_sprot.fasta.gz -d uniprot_sprot \
+    --taxonmap prot.accession2taxid.gz \
+    --taxonnodes ../taxdump/nodes.dmp
+cd ../..
+
+# generate 100kb sliding-windows
+seqkit sliding -s 100000 -W 100000 -g 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa > 03_qc/hap1.chunks.fa
+seqkit sliding -s 100000 -W 100000 -g 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa > 03_qc/hap2.chunks.fa
+
+# check windows against core_nt
+blastn -task megablast -db 03_qc/blastdb/core_nt -query 03_qc/hap1.chunks.fa \
+    -outfmt "6 qseqid staxids bitscore std" -max_target_seqs 10 -max_hsps 1 \
+    -evalue 1e-25 -num_threads 128 \
+    | sed 's/_sliding:[0-9]*-[0-9]*//' > 03_qc/hap1.blastn.out
+
+blastn -task megablast -db 03_qc/blastdb/core_nt -query 03_qc/hap2.chunks.fa \
+    -outfmt "6 qseqid staxids bitscore std" -max_target_seqs 10 -max_hsps 1 \
+    -evalue 1e-25 -num_threads 128 \
+    | sed 's/_sliding:[0-9]*-[0-9]*//' > 03_qc/hap2.blastn.out
+
+# check windows against UniProt / Swiss-Prot
+diamond blastx --query 03_qc/hap1.chunks.fa --db 03_qc/uniprot/uniprot_sprot.dmnd \
+    --outfmt 6 qseqid staxids bitscore qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore \
+    --sensitive --max-target-seqs 1 --evalue 1e-25 --threads 128 \
+    | sed 's/_sliding:[0-9]*-[0-9]*//' > 03_qc/hap1.diamond.out
+
+diamond blastx --query 03_qc/hap2.chunks.fa --db 03_qc/uniprot/uniprot_sprot.dmnd \
+    --outfmt 6 qseqid staxids bitscore qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore \
+    --sensitive --max-target-seqs 1 --evalue 1e-25 --threads 128 \
+    | sed 's/_sliding:[0-9]*-[0-9]*//' > 03_qc/hap2.diamond.out
+
+# build the Blobdir
+blobtools create --fasta E_phylacis_s050.asm.bp.hap1.p_ctg.fa --taxid 3932 --taxdump 03_qc/taxdump/ 03_qc/hap1_btk
+blobtools add --cov 03_qc/hap1.bam --threads 16 03_qc/hap1_btk
+blobtools add --hits 03_qc/hap1.blastn.out --hits 03_qc/hap1.diamond.out \
+    --taxrule bestsumorder --taxdump taxdump/ 03_qc/hap1_btk
+blobtools add --busco 02_assembly/homcov55/compleasm/s050_hap1/eudicotyledons_odb12/full_table.tsv 03_qc/hap1_btk
+
+blobtools create --fasta E_phylacis_s050.asm.bp.hap2.p_ctg.fa --taxid 3932 --taxdump 03_qc/taxdump/ 03_qc/hap2_btk
+blobtools add --cov 03_qc/hap2.bam --threads 16 03_qc/hap2_btk
+blobtools add --hits 03_qc/hap2.blastn.out --hits 03_qc/hap2.diamond.out \
+    --taxrule bestsumorder --taxdump taxdump/ 03_qc/hap2_btk
+blobtools add --busco 02_assembly/homcov55/compleasm/s050_hap2/eudicotyledons_odb12/full_table.tsv 03_qc/hap2_btk
+
+# export the output
+blobtools filter --table 03_qc/hap1_btk.tsv hap1_btk
+blobtools filter --table 03_qc/hap2_btk.tsv hap2_btk
+
+blobtools view \
+    --view blob \
+    --format png \
+    --out 03_qc/fig_hap1 \
+    03_qc/hap1_btk
+
+blobtools view \
+    --view blob \
+    --format png \
+    --out 03_qc/fig_hap2 \
+    03_qc/hap2_btk
+```
+
+<b><i>Haplotype 1</b></i>
+
+<b><i>Haplotype 2</b></i>
 
 ## <a id="04">Scaffolding</a>
 
