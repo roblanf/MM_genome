@@ -14,7 +14,7 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#03c">Rerunning with `--hom-cov 55`</a>
     - <a href="#03d">Trying other `-s` values</a>
     - <a href="#03e">Conclusion</a>
-- <a href="#04">Scaffolding</a>
+- <a href="#04">Assembly of organelle genome</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
@@ -559,18 +559,23 @@ cd ../../..
 ### Contamination check
 ```
 # map the filtered ONT reads to the union
-minimap2 -ax map-ont -t 128 --secondary=no \
-    02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.union.fa \
+minimap2 -t 128 -ax lr:hq \
+    02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa \
     01_qc/02_chopper/E_phylacis_filtered.fastq.gz \
-    | samtools sort -@8 -o 03_qc/diploid.bam - && samtools index 03_qc/diploid.bam
+    | samtools sort -@16 -o 03_qc/hap1.bam
+
+minimap2 -t 128 -ax lr:hq \
+    02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa \
+    01_qc/02_chopper/E_phylacis_filtered.fastq.gz \
+    | samtools sort -@16 -o 03_qc/hap2.bam
+
+# index the BAM file
+samtools index -c 03_qc/hap1.bam
+samtools index -c 03_qc/hap2.bam
 
 # index each haplotype
 samtools faidx 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa
 samtools faidx 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa
-
-# split the BAM file
-samtools view -b 03_qc/diploid.bam $(cut -f1 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa.fai) > 03_qc/hap1.bam && samtools index 03_qc/hap1.bam
-samtools view -b 03_qc/diploid.bam $(cut -f1 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa.fai) > 03_qc/hap2.bam && samtools index 03_qc/hap2.bam
 
 # download the taxonomy metadata
 mkdir -p 03_qc/taxdump && cd 03_qc/taxdump
@@ -618,37 +623,53 @@ diamond blastx --query 03_qc/hap2.chunks.fa --db 03_qc/uniprot/uniprot_sprot.dmn
     --sensitive --max-target-seqs 1 --evalue 1e-25 --threads 128 \
     | sed 's/_sliding:[0-9]*-[0-9]*//' > 03_qc/hap2.diamond.out
 
+# change compleasm output table
+sed -e '1s/^# compleasm version is: .*/# BUSCO version is: 6.1.0/' \
+    -e 's/\tSingle\t/\tComplete\t/; s/\tInterspaced\t/\tFragmented\t/' \
+    02_assembly/homcov55/compleasm/s050_hap1/eudicotyledons_odb12/full_table_busco_format.tsv \
+    > 03_qc/s050_hap1_busco_btk.tsv
+
+sed -e '1s/^# compleasm version is: .*/# BUSCO version is: 6.1.0/' \
+    -e 's/\tSingle\t/\tComplete\t/; s/\tInterspaced\t/\tFragmented\t/' \
+    02_assembly/homcov55/compleasm/s050_hap2/eudicotyledons_odb12/full_table_busco_format.tsv \
+    > 03_qc/s050_hap2_busco_btk.tsv
+
 # build the Blobdir
-blobtools create --fasta E_phylacis_s050.asm.bp.hap1.p_ctg.fa --taxid 3932 --taxdump 03_qc/taxdump/ 03_qc/hap1_btk
+blobtools create \
+    --fasta 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa \
+    --taxid 3932 --taxdump 03_qc/taxdump/ 03_qc/hap1_btk
 blobtools add --cov 03_qc/hap1.bam --threads 16 03_qc/hap1_btk
 blobtools add --hits 03_qc/hap1.blastn.out --hits 03_qc/hap1.diamond.out \
-    --taxrule bestsumorder --taxdump taxdump/ 03_qc/hap1_btk
-blobtools add --busco 02_assembly/homcov55/compleasm/s050_hap1/eudicotyledons_odb12/full_table.tsv 03_qc/hap1_btk
+    --taxrule bestsumorder --taxdump 03_qc/taxdump/ 03_qc/hap1_btk
+blobtools add --busco 03_qc/s050_hap1_busco_btk.tsv 03_qc/hap1_btk
 
-blobtools create --fasta E_phylacis_s050.asm.bp.hap2.p_ctg.fa --taxid 3932 --taxdump 03_qc/taxdump/ 03_qc/hap2_btk
+blobtools create \
+    --fasta 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa \
+    --taxid 3932 --taxdump 03_qc/taxdump/ 03_qc/hap2_btk
 blobtools add --cov 03_qc/hap2.bam --threads 16 03_qc/hap2_btk
 blobtools add --hits 03_qc/hap2.blastn.out --hits 03_qc/hap2.diamond.out \
-    --taxrule bestsumorder --taxdump taxdump/ 03_qc/hap2_btk
-blobtools add --busco 02_assembly/homcov55/compleasm/s050_hap2/eudicotyledons_odb12/full_table.tsv 03_qc/hap2_btk
+    --taxrule bestsumorder --taxdump 03_qc/taxdump/ 03_qc/hap2_btk
+blobtools add --busco 03_qc/s050_hap2_busco_btk.tsv 03_qc/hap2_btk
 
 # export the output
-blobtools filter --table 03_qc/hap1_btk.tsv hap1_btk
-blobtools filter --table 03_qc/hap2_btk.tsv hap2_btk
+blobtools filter --table 03_qc/hap1_btk.tsv 03_qc/hap1_btk
+blobtools filter --table 03_qc/hap2_btk.tsv 03_qc/hap2_btk
 
-blobtools view \
-    --view blob \
-    --format png \
-    --out 03_qc/fig_hap1 \
-    03_qc/hap1_btk
+# generate plots
+blobtk plot -v blob       -d 03_qc/hap1_btk -o 03_qc/hap1_blob.png
+blobtk plot -v snail      -d 03_qc/hap1_btk -o 03_qc/hap1_snail.svg
 
-blobtools view \
-    --view blob \
-    --format png \
-    --out 03_qc/fig_hap2 \
-    03_qc/hap2_btk
+blobtk plot -v blob       -d 03_qc/hap2_btk -o 03_qc/hap2_blob.png
+blobtk plot -v snail      -d 03_qc/hap2_btk -o 03_qc/hap2_snail.svg
 ```
 
-## <a id="04">Scaffolding</a>
+|                   Haplotype 1               |                   Haplotype 2               |
+| :-----------------------------------------: | :-----------------------------------------: |
+| ![Hap1 Blobplot](./figures/fig05_hap1.png)  | ![Hap2 BlobPlot](./figures/fig05_hap2.png)  |
+| ![Hap1 Snailplot](./figures/fig06_hap1.svg) | ![Hap2 Snailplot](./figures/fig06_hap2.svg) |
+| ![Hap1 Snailplot](./figures/fig06_hap1.svg) | ![Hap2 Snailplot](./figures/fig06_hap2.svg) |
+
+## <a id="04">Assembly of organelle genome</a>
 
 ---
-*Last update: 05 November 2026 by Jeremias Ivan*
+*Last update: 06 November 2026 by Jeremias Ivan*
