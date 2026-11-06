@@ -18,7 +18,7 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#04a">mtDNA</a>
     - <a href="#04b">ptDNA</a>
 - <a href="#05">Assembly of nuclear genome</a>
-    - <a href="#05a">Checking for duplicates contigs</a>
+    - <a href="#05a">Checking for duplicate contigs</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
@@ -1209,7 +1209,7 @@ done
 - <b><i>Haplotype 1</b></i> — 53 haplotig (half depth) (4.05 Mb); 2 duplicate (0.10 Mb); 7 repeat (half depth) (1.00 Mb); 26 45S rDNA fragment (2.81 Mb); 3 mitochondrion (0.33 Mb); 3 plastid (0.34 Mb); 17 full depth (1.37 Mb)
 
     | Contig      | Length (bp) | Covered (%) | Max&nbsp;identity (%) | Depth (x) | Cutoff (x) | Contained in                                                    | Verdict | Reason                |
-    | :---------- | ----------: | ----------: | ---------------: | --------: | ---------: | :-------------------------------------------------------------- | :------ | :-------------------- |
+    | :---------- | ----------: | ----------: | --------------------: | --------: | ---------: | :-------------------------------------------------------------- | :------ | :-------------------- |
     | h1tg000348l |      38,223 |        93.4 |            99.98 |       7.1 |          – | h1tg000114l, h1tg000231l, h1tg000016l, h1tg000019l              | Remove  | 45S rDNA fragment     |
     | h1tg000160l |      40,059 |       100.0 |            99.99 |      11.4 |       41.2 | h1tg000003l                                                     | Remove  | Duplicate             |
     | h1tg000347l |      38,596 |       100.0 |            99.99 |      11.9 |          – | h1tg000101l, h1tg000059l, h1tg000376l, h1tg000121l, h1tg000031l | Remove  | 45S rDNA fragment     |
@@ -1325,7 +1325,7 @@ done
 - <b><i>Haplotype 2</b></i> — 57 haplotig (half depth) (4.45 Mb); 1 duplicate (0.13 Mb); 5 repeat (half depth) (0.49 Mb); 11 45S rDNA fragment (2.02 Mb); 18 full depth (1.55 Mb)
 
     | Contig      | Length (bp) | Covered (%) | Max&nbsp;identity (%) | Depth (x) | Cutoff (x) | Contained in                                                    | Verdict | Reason                |
-    | :---------- | ----------: | ----------: | ---------------: | --------: | ---------: | :-------------------------------------------------------------- | :------ | :-------------------- |
+    | :---------- | ----------: | ----------: | --------------------: | --------: | ---------: | :-------------------------------------------------------------- | :------ | :-------------------- |
     | h2tg000161l |     131,896 |       100.0 |            99.96 |      13.1 |       41.2 | h2tg000001l                                                     | Remove  | Duplicate             |
     | h2tg000260l |      60,635 |        94.1 |            96.69 |      23.9 |       42.1 | h2tg000001l                                                     | Remove  | Haplotig (half&nbsp;depth) |
     | h2tg000033l |      61,285 |       100.0 |            97.56 |      24.4 |       41.2 | h2tg000012l                                                     | Remove  | Haplotig (half depth) |
@@ -1421,20 +1421,121 @@ done
 
 - <b><i>Other contigs</b></i>
 
-    | Contig      | Length&nbsp;(bp) | Organelle&nbsp;cover&nbsp;(%) | Organelle     | Verdict |
-    | :---------- | ----------: | ------------------: | :------------ | :------ |
-    | h1tg000025l |      64,440 |                 100 | Mitochondrion | Remove  |
-    | h1tg000041l |     272,541 |                 100 | Mitochondrion | Remove  |
-    | h1tg000083l |     136,306 |                 100 | Mitochondrion | Remove  |
-    | h1tg000292l |     118,804 |                 100 | Mitochondrion | Remove  |
-    | h1tg000254l |     140,617 |                  97 | Mitochondrion | Remove  |
-    | h2tg000037l |     201,570 |                 100 | Mitochondrion | Remove  |
-    | h2tg000220l |     118,804 |                 100 | Mitochondrion | Remove  |
-    | h2tg000202l |     140,617 |                  97 | Mitochondrion | Remove  |
-    | h2tg000113l |      94,627 |                  87 | Plastid       | Remove  |
-    | h1tg000014l |             |                     | 45S rDNA      | Keep    |
-    | h1tg000059l |             |                     | 45S rDNA      | Keep    |
-    | h1tg000033l |             |                     | 45S rDNA      | Keep    |
+    | Contig      | Organelle     | Verdict |
+    | :---------- | :------------ | :------ |
+    | h1tg000025l | Mitochondrion | Remove  |
+    | h1tg000041l | Mitochondrion | Remove  |
+    | h1tg000083l | Mitochondrion | Remove  |
+    | h1tg000292l | Mitochondrion | Remove  |
+    | h1tg000254l | Mitochondrion | Remove  |
+    | h2tg000037l | Mitochondrion | Remove  |
+    | h2tg000220l | Mitochondrion | Remove  |
+    | h2tg000202l | Mitochondrion | Remove  |
+    | h2tg000113l | Plastid       | Remove  |
+    | h1tg000014l | 45S rDNA      | Keep    |
+    | h1tg000059l | 45S rDNA      | Keep    |
+    | h1tg000033l | 45S rDNA      | Keep    |
+
+Based on these tables, there are <a href="./files/h1_remove.txt">99 contigs</a> that should be removed from haplotype 1, and <a href="./files/h2_remove.txt">78 contigs</a> from haplotype 2. Let's filter these contigs out!
+```
+for h in 1 2; do
+    seqkit grep -v \
+        -f 05_nuclear_qc/filtered/h${h}_remove.txt \
+        02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap${h}.p_ctg.fa \
+        > 05_nuclear_qc/filtered/hap${h}.purged.fa
+    seqkit grep \
+        -f 05_nuclear_qc/filtered/h${h}_remove.txt \
+        02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap${h}.p_ctg.fa \
+        > 05_nuclear_qc/filtered/hap${h}.removed.fa
+done
+cat 05_nuclear_qc/filtered/hap1.purged.fa 05_nuclear_qc/filtered/hap2.purged.fa > 05_nuclear_qc/filtered/union.purged.fa
+```
+
+### Seqkit
+```
+seqkit stats 05_nuclear_qc/filtered/hap?.purged.fa 05_nuclear_qc/filtered/union.purged.fa
+```
+
+- <b><i>Haplotype 1</b></i>
+
+    | Metric            | Before purge | After purge |           Removed |
+    | :---------------- | -----------: | ----------: | ----------------: |
+    | Contigs           |          402 |         303 |                99 |
+    | Total length (bp) |  574,198,743 | 564,835,398 | 9,363,345 (1.63%) |
+    | Min (bp)          |       24,809 |      24,809 |                 – |
+    | Mean (bp)         |    1,428,355 |   1,864,143 |                 – |
+    | Max (bp)          |   65,682,487 |  65,682,487 |                 – |
+
+- <b><i>Haplotype 2</b></i>
+
+    | Metric            | Before purge | After purge |           Removed |
+    | :---------------- | -----------: | ----------: | ----------------: |
+    | Contigs           |          305 |         227 |                78 |
+    | Total length (bp) |  560,735,642 | 553,092,091 | 7,643,551 (1.36%) |
+    | Min (bp)          |       36,811 |      44,597 |                 – |
+    | Mean (bp)         |    1,838,478 |   2,436,529 |                 – |
+    | Max (bp)          |   61,702,390 |  61,702,390 |                 – |
+
+- <b><i>Union (hap1 + hap2)</b></i>
+
+    | Metric            |  Before purge |   After purge |            Removed |
+    | :---------------- | ------------: | ------------: | -----------------: |
+    | Contigs           |           707 |           530 |                177 |
+    | Total length (bp) | 1,134,934,385 | 1,117,927,489 | 17,006,896 (1.50%) |
+    | Min (bp)          |        24,809 |        24,809 |                  – |
+    | Mean (bp)         |     1,605,282 |     2,109,297 |                  – |
+    | Max (bp)          |    65,682,487 |    65,682,487 |                  – |
+
+### Compleasm + Merqury
+```
+# compleasm
+for a in hap1 hap2 union; do
+    compleasm run -a 05_nuclear_qc/filtered/${a}.purged.fa \
+        -o 05_nuclear_qc/filtered/compleasm/${a} \
+        -l eudicotyledons --odb odb12 \
+        -t 128 \
+        -L 02_assembly/default/busco_lineages/
+done
+
+# merqury
+for a in hap1 hap2 union; do
+    mkdir -p 05_nuclear_qc/filtered/merqury/${a} && cd 05_nuclear_qc/filtered/merqury/${a}
+    merqury.sh ../../../../02_assembly/homcov55/merqury/reads.meryl ../../${a}.purged.fa ${a}_merq
+    cd ../../../..
+done
+```
+
+- <b><i>Compleasm</b></i>
+
+    | Metric                | hap1 before | hap1 after | hap2 before | hap2 after | union before | union after |
+    | :-------------------- | ----------: | ---------: | ----------: | ---------: | -----------: | ----------: |
+    | BUSCO S (%)           |       93.44 |      95.19 |       94.40 |      95.83 |         2.92 |        2.99 |
+    | BUSCO D (%)           |        6.20 |       4.46 |        5.28 |       3.85 |        96.86 |       96.79 |
+    | BUSCO F (%)           |        0.32 |       0.32 |        0.29 |       0.29 |         0.18 |        0.18 |
+    | BUSCO&nbsp;M&nbsp;(%) |        0.04 |       0.04 |        0.04 |       0.04 |         0.04 |        0.04 |
+
+- <b><i>Merqury</b></i>
+
+    | Metric                      | hap1 before | hap1 after | hap2 before | hap2 after | union before | union after |
+    | :-------------------------- | ----------: | ---------: | ----------: | ---------: | -----------: | ----------: |
+    | k-mer completeness&nbsp;(%) |       65.94 |      65.54 |       65.25 |      64.87 |        99.31 |       99.27 |
+    | Solid k-mers found (M)      |       396.4 |      394.0 |       392.3 |      389.9 |        597.0 |       596.7 |
+    | QV                          |       64.43 |      64.92 |       65.62 |      66.07 |        64.98 |       65.46 |
+    | Asm-only k-mers             |       4,326 |      3,801 |       3,227 |      2,865 |        7,553 |       6,666 |
+
+- <b><i>Copy number of het-peak (14–44x) and hom-peak (44–69x) read k-mers (%)</b></i>
+
+    | Metric               | hap1 before | hap1 after | hap2 before | hap2 after | union before | union after |
+    | :------------------- | ----------: | ---------: | ----------: | ---------: | -----------: | ----------: |
+    | het k-mers: 0x       |        45.3 |       45.8 |        46.0 |       46.4 |          0.6 |         0.6 |
+    | het k-mers: 1x       |        54.3 |       53.9 |        53.7 |       53.2 |         89.6 |        90.5 |
+    | het k-mers:&nbsp;≥2x |         0.4 |        0.4 |         0.4 |        0.3 |          9.8 |         8.9 |
+    | hom k-mers: 0x       |         8.7 |        8.8 |         9.4 |        9.5 |          0.2 |         0.2 |
+    | hom k-mers: 1x       |        78.5 |       79.6 |        78.7 |       79.8 |          4.2 |         4.3 |
+    | hom k-mers: 2x       |        12.6 |       11.4 |        11.6 |       10.4 |         84.7 |        86.9 |
+    | hom k-mers:&nbsp;≥3x |         0.3 |        0.2 |         0.3 |        0.3 |         10.9 |         8.6 |
+
+While the proportion of single-copy BUSCO increases for both haplotypes, two BUSCO that were first duplicated in the union are now only found in one haplotype. I think that's okay!
 
 ---
 *Last update: 06 November 2026 by Jeremias Ivan*
