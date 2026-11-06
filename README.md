@@ -19,6 +19,7 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#04b">ptDNA</a>
 - <a href="#05">Assembly of nuclear genome</a>
     - <a href="#05a">Checking for duplicate contigs</a>
+    - <a href="#05b">Aligning both haplotypes</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
@@ -1536,6 +1537,61 @@ done
     | hom k-mers:&nbsp;≥3x |         0.3 |        0.2 |         0.3 |        0.3 |         10.9 |         8.6 |
 
 While the proportion of single-copy BUSCO increases for both haplotypes, two BUSCO that were first duplicated in the union are now only found in one haplotype. I think that's okay!
+
+### <a id="05b">Aligning both haplotypes</a>
+```
+# align hap1 to hap2
+minimap2 -cx asm20 --secondary=no -t 128 \
+    05_nuclear_qc/filtered/hap2.purged.fa \
+    05_nuclear_qc/filtered/hap1.purged.fa \
+    > 05_nuclear_qc/alignment/h1_vs_h2.paf
+
+# align hap2 to hap1
+minimap2 -cx asm20 --secondary=no -t 128 \
+    05_nuclear_qc/filtered/hap1.purged.fa \
+    05_nuclear_qc/filtered/hap2.purged.fa \
+    > 05_nuclear_qc/alignment/h2_vs_h1.paf
+
+# combine both pairwise comparisons
+awk 'BEGIN{OFS="\t"} {t=$1;$1=$6;$6=t; t=$2;$2=$7;$7=t; t=$3;$3=$8;$8=t; t=$4;$4=$9;$9=t; print}' \
+    05_nuclear_qc/alignment/h2_vs_h1.paf | cat 05_nuclear_qc/alignment/h1_vs_h2.paf - > 05_nuclear_qc/alignment/both.paf
+
+# generate dotplot
+cut -f1-12 05_nuclear_qc/alignment/both.paf > 05_nuclear_qc/alignment/both.12.paf
+Rscript scripts/pafCoordsDotPlotly.R \
+    -i 05_nuclear_qc/alignment/both.12.paf \
+    -o both_dotplot -s -l -m 10000 -q 1
+
+# generate pairwise coverage table
+python3 scripts/pair_coverage.py 05_nuclear_qc/alignment/both.paf \
+    --prefix 05_nuclear_qc/alignment/both
+```
+
+![Figure 11. Dotplot between hap1 and hap2 (purged).](./figures/fig11.png)
+
+- <b><i>Chromosome-scale homologous pairs</b></i>
+
+    | hap1 contig | Length (bp) | hap2 contig | Length (bp) | Identity (%) | hap1&nbsp;cov (%) | hap2&nbsp;cov (%) | Note          |
+    | :---------- | ----------: | :---------- | ----------: | -----------: | ----------------: | ----------------: | :------------ |
+    | h1tg000003l |  65,682,487 | h2tg000008l |  61,702,390 |        95.77 |                55 |                58 |               |
+    | h1tg000295l |  60,519,633 | h2tg000004l |  59,378,024 |        95.55 |                48 |                49 |               |
+    | h1tg000007l |  60,272,560 | h2tg000010l |  56,292,565 |        95.74 |                55 |                57 |               |
+    | h1tg000004l |  54,056,000 | h2tg000012l |  51,144,738 |        95.94 |                71 |                72 | 5S&nbsp;rDNA  |
+    | h1tg000001l |  51,330,377 | h2tg000002l |  45,193,510 |        95.78 |                51 |                55 |               |
+    | h1tg000009l |  43,801,841 | h2tg000007l |  41,957,526 |        95.73 |                59 |                60 |               |
+    | h1tg000006l |  39,646,165 | h2tg000006l |  42,197,018 |        96.04 |                71 |                67 |               |
+    | h1tg000005l |  36,525,735 | h2tg000011l |  39,826,388 |        95.95 |                70 |                66 |               |
+    | h1tg000012l |  35,966,191 | h2tg000001l |  38,016,435 |        95.82 |                58 |                57 |               |
+    | h1tg000002l |  34,632,737 | h2tg000003l |  38,512,742 |        96.01 |                66 |                62 |               |
+    | h1tg000008l |  33,387,292 | h2tg000009l |  30,255,385 |        95.66 |                54 |                60 |               |
+    | h1tg000014l |  20,449,059 | h2tg000005l |  18,310,092 |        95.70 |                51 |                53 | 45S&nbsp;rDNA |
+
+- <b><i>Placement of the small contigs (< 10 Mb)</b></i>
+
+    | Haplotype | Small contigs |    ≥80% covered by a chromosome&nbsp;contig    | Covered&nbsp;by&nbsp;a small&nbsp;contig |     50–80% covered    | No partner |
+    | :-------- | ------------: | :--------------------------------------------- | ---------------------------------------: | --------------------: | ---------: |
+    | hap1      |           291 | 279 (26.89 Mb)<br>- 265 (≥99)<br>- 14 (94-99%) |                              2 (0.95 Mb) | 2&nbsp;(0.19&nbsp;Mb) |          8 |
+    | hap2      |           215 | 214 (28.46 Mb)<br>- 204 (≥99)<br>- 10 (94-99%) |                                        0 | 1&nbsp;(1.85&nbsp;Mb) |          0 |
 
 ---
 *Last update: 06 November 2026 by Jeremias Ivan*
