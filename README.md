@@ -15,6 +15,10 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#03d">Trying other `-s` values</a>
     - <a href="#03e">Conclusion</a>
 - <a href="#04">Assembly of organelle genomes</a>
+    - <a href="#04a">mtDNA</a>
+    - <a href="#04b">ptDNA</a>
+- <a href="#05">Assembly of nuclear genome</a>
+    - <a href="#05a">Checking for duplicated contigs</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
@@ -658,11 +662,11 @@ blobtools filter --table 03_qc/hap1_btk.tsv 03_qc/hap1_btk
 blobtools filter --table 03_qc/hap2_btk.tsv 03_qc/hap2_btk
 
 # generate plots
-blobtk plot -v blob       -d 03_qc/hap1_btk -o 03_qc/hap1_blob.png
-blobtk plot -v snail      -d 03_qc/hap1_btk -o 03_qc/hap1_snail.svg
+blobtk plot -v blob -d 03_qc/hap1_btk -o 03_qc/hap1_blob.png
+blobtk plot -v snail -d 03_qc/hap1_btk -o 03_qc/hap1_snail.svg
 
-blobtk plot -v blob       -d 03_qc/hap2_btk -o 03_qc/hap2_blob.png
-blobtk plot -v snail      -d 03_qc/hap2_btk -o 03_qc/hap2_snail.svg
+blobtk plot -v blob -d 03_qc/hap2_btk -o 03_qc/hap2_blob.png
+blobtk plot -v snail -d 03_qc/hap2_btk -o 03_qc/hap2_snail.svg
 ```
 
 |                   Haplotype 1               |                   Haplotype 2               |
@@ -729,7 +733,7 @@ python scripts/oatk_circular_map.py \
     -o 04_organelle/c30k1001/pltd_map.png
 ```
 
-### mtDNA
+### <a id="04a">mtDNA</a>
 ```
 >ctg000001l     length=355146 wlength=41066840.0 nv=11 circular=false path=u151-,u152+,u150-,u148-,u146-,u147+,u141-,u12277+,u139+,u146-,u138-
 >ctg000002l     length=23355 wlength=2312145.0 nv=1 circular=false path=u149+
@@ -737,11 +741,289 @@ python scripts/oatk_circular_map.py \
 ```
 ![Figure 07. mtDNA Circular Map.](./figures/fig07.png)
 
-### ptDNA
+### <a id="04b">ptDNA</a>
 ```
 >ctg000001c     length=160190 wlength=150009126.0 nv=12 circular=true path=u140+,u12277+,u137-,u7+,u12278-,u143-,u142+,u143+,u12278+,u7-,u137+,u12277-
 ```
 ![Figure 08. ptDNA Circular Map.](./figures/fig08.png)
+
+## <a id="05">Assembly of nuclear genome</a>
+
+### <a id="05a">Checking for duplicated contigs</a>
+```
+# map each haplotype against each other and against itself
+minimap2 -cx asm20 -t 128 \
+    02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa \
+    02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa \
+    > 05_nuclear_qc/h1_vs_v2/h1_vs_h2.paf
+minimap2 -cx asm20 -DP -m200 -t 128 \
+    02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa \
+    02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa \
+    > 05_nuclear_qc/h1_vs_v2/h1_self.paf
+minimap2 -cx asm20 -DP -m200 -t 128 \
+    02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa \
+    02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa \
+    > 05_nuclear_qc/h1_vs_v2/h2_self.paf
+
+# extract necessary columns
+cut -f1-12 05_nuclear_qc/h1_vs_v2/h1_self.paf > 05_nuclear_qc/h1_vs_v2/h1_self.12.paf
+cut -f1-12 05_nuclear_qc/h1_vs_v2/h2_self.paf > 05_nuclear_qc/h1_vs_v2/h2_self.12.paf
+
+# generate the dotplots
+Rscript scripts/pafCoordsDotPlotly.R \
+    -i 05_nuclear_qc/h1_vs_v2/h1_vs_h2.paf \
+    -o h1_vs_h2_dotplot2 -s -t
+
+Rscript scripts/pafCoordsDotPlotly.R \
+    -i 05_nuclear_qc/h1_vs_v2/h1_self.12.paf \
+    -o h1_self_dotplot2 -s
+
+Rscript scripts/pafCoordsDotPlotly.R \
+    -i 05_nuclear_qc/h1_vs_v2/h2_self.12.paf \
+    -o h2_self_dotplot2 -s
+```
+
+|                Hap 1 vs Hap 2                 |                    Hap 1 vs. Hap 1             |                    Hap 2 vs. Hap 2             |
+| :-------------------------------------------: | :--------------------------------------------: | :--------------------------------------------: |
+| ![H1 vs H2 Dotplot](./figures/fig09_h1h2.png) | ![H1 vs H1 Dotplot](./figures/fig09_h1h1.png)  | ![H2 vs H2 Dotplot](./figures/fig09_h2h2.png)  |
+
+It seems that there is a number of duplicates at the top-right corner of the H1 vs. H1 and H2 vs. H2 plots. Let's zoom in more...
+```
+# remove the long, properly-aligned contigs
+awk '!($1==$6 && $3==$8 && $4==$9)' 05_nuclear_qc/h1_vs_v2/h1_self.12.paf > 05_nuclear_qc/h1_vs_v2/h1_self.noself.paf
+awk '!($1==$6 && $3==$8 && $4==$9)' 05_nuclear_qc/h1_vs_v2/h2_self.12.paf > 05_nuclear_qc/h1_vs_v2/h2_self.noself.paf
+
+# repeat the plotting
+Rscript scripts/pafCoordsDotPlotly.R \
+    -i 05_nuclear_qc/h1_vs_v2/h1_self.noself.paf \
+    -o h1_self_dotplot2_noself -s -m 10000 -q 50000
+
+Rscript scripts/pafCoordsDotPlotly.R \
+    -i 05_nuclear_qc/h1_vs_v2/h2_self.noself.paf \
+    -o h2_self_dotplot2_noself -s -m 10000 -q 50000
+```
+
+|                    Hap 1 vs. Hap 1             |                    Hap 2 vs. Hap 2             |
+| :--------------------------------------------: | :--------------------------------------------: |
+| ![H1 vs H1 Dotplot](./figures/fig10_h1h1.png)  | ![H2 vs H2 Dotplot](./figures/fig10_h2h2.png)  |
+
+
+It is still quite tricky to identify those contigs based on the plots. Claude (nicely) generated a Python <a href="./scripts/flag_contained_contigs.py">script</a> to identify putative duplicates if ≥80% of a contig’s length aligned at ≥90% identity to a longer contig of the same haplotype. Note that it only includes ≥10kb contigs.
+```
+python3 scripts/flag_contained_contigs.py 05_nuclear_qc/h1_vs_v2/h1_self.paf > 05_nuclear_qc/h1_vs_v2/h1_dups.tsv
+python3 scripts/flag_contained_contigs.py 05_nuclear_qc/h1_vs_v2/h2_self.paf > 05_nuclear_qc/h1_vs_v2/h2_dups.tsv
+```
+
+- <b><i>Haplotype 1</b></i> (111 contigs, 10.00 Mb)
+    | Contig      | Length (bp) | Covered (%) | Max identity (%) | Contained in                                                    |
+    | :---------- | ----------: | ----------: | ---------------: | :-------------------------------------------------------------- |
+    | h1tg000010l |      60,816 |       100.0 |           100.00 | h1tg000033l, h1tg000016l, h1tg000197l, h1tg000114l, h1tg000268l |
+    | h1tg000016l |     201,921 |       100.0 |           100.00 | h1tg000033l, h1tg000114l, h1tg000019l, h1tg000197l, h1tg000059l |
+    | h1tg000019l |     289,545 |       100.0 |           100.00 | h1tg000014l, h1tg000033l, h1tg000059l, h1tg000101l, h1tg000008l |
+    | h1tg000031l |     161,493 |       100.0 |           100.00 | h1tg000059l, h1tg000101l, h1tg000121l, h1tg000114l, h1tg000019l |
+    | h1tg000053l |      68,850 |       100.0 |            99.43 | h1tg000004l, h1tg000102l, h1tg000006l                           |
+    | h1tg000073l |      81,226 |       100.0 |            98.50 | h1tg000014l                                                     |
+    | h1tg000102l |     103,537 |       100.0 |            99.60 | h1tg000004l, h1tg000003l, h1tg000009l, h1tg000001l, h1tg000014l |
+    | h1tg000114l |     256,182 |       100.0 |           100.00 | h1tg000033l, h1tg000059l, h1tg000019l, h1tg000101l, h1tg000014l |
+    | h1tg000121l |     228,093 |       100.0 |           100.00 | h1tg000059l, h1tg000101l, h1tg000114l, h1tg000019l, h1tg000014l |
+    | h1tg000129l |      43,642 |       100.0 |            99.99 | h1tg000059l, h1tg000114l, h1tg000019l, h1tg000016l, h1tg000031l |
+    | h1tg000141l |      84,386 |       100.0 |           100.00 | h1tg000061l, h1tg000088l, h1tg000041l, h1tg000001l              |
+    | h1tg000160l |      40,059 |       100.0 |            99.99 | h1tg000003l                                                     |
+    | h1tg000171l |      42,060 |       100.0 |            99.99 | h1tg000376l, h1tg000121l, h1tg000101l, h1tg000059l, h1tg000263l |
+    | h1tg000180l |      55,519 |       100.0 |           100.00 | h1tg000025l, h1tg000373l, h1tg000041l, h1tg000083l, h1tg000005l |
+    | h1tg000188l |      69,874 |       100.0 |           100.00 | h1tg000033l, h1tg000016l, h1tg000197l, h1tg000019l, h1tg000268l |
+    | h1tg000195l |      71,957 |       100.0 |           100.00 | h1tg000376l, h1tg000059l, h1tg000121l, h1tg000101l, h1tg000031l |
+    | h1tg000197l |     240,577 |       100.0 |           100.00 | h1tg000014l, h1tg000033l, h1tg000019l, h1tg000114l, h1tg000059l |
+    | h1tg000211l |      67,208 |       100.0 |           100.00 | h1tg000033l, h1tg000016l, h1tg000019l, h1tg000197l, h1tg000114l |
+    | h1tg000263l |      56,408 |       100.0 |           100.00 | h1tg000101l, h1tg000059l, h1tg000376l, h1tg000121l, h1tg000031l |
+    | h1tg000284l |      52,359 |       100.0 |            99.99 | h1tg000059l, h1tg000114l, h1tg000019l, h1tg000016l, h1tg000101l |
+    | h1tg000309l |      53,645 |       100.0 |           100.00 | h1tg000088l, h1tg000061l, h1tg000141l, h1tg000041l, h1tg000001l |
+    | h1tg000340l |      89,250 |       100.0 |           100.00 | h1tg000059l, h1tg000376l, h1tg000101l, h1tg000121l, h1tg000031l |
+    | h1tg000347l |      38,596 |       100.0 |            99.99 | h1tg000101l, h1tg000059l, h1tg000376l, h1tg000121l, h1tg000031l |
+    | h1tg000352l |      43,085 |       100.0 |           100.00 | h1tg000101l, h1tg000059l, h1tg000121l, h1tg000376l, h1tg000340l |
+    | h1tg000356l |      68,179 |       100.0 |           100.00 | h1tg000059l, h1tg000033l, h1tg000114l, h1tg000019l, h1tg000016l |
+    | h1tg000366l |      42,921 |       100.0 |            99.99 | h1tg000033l, h1tg000016l, h1tg000197l, h1tg000019l, h1tg000114l |
+    | h1tg000367l |      71,906 |       100.0 |            95.79 | h1tg000008l                                                     |
+    | h1tg000373l |      62,207 |       100.0 |           100.00 | h1tg000025l, h1tg000083l, h1tg000005l                           |
+    | h1tg000376l |     125,158 |       100.0 |           100.00 | h1tg000059l, h1tg000121l, h1tg000101l, h1tg000031l, h1tg000114l |
+    | h1tg000386l |      60,966 |       100.0 |            96.57 | h1tg000004l                                                     |
+    | h1tg000402l |      32,104 |       100.0 |           100.00 | h1tg000059l, h1tg000376l, h1tg000121l, h1tg000101l, h1tg000031l |
+    | h1tg000096l |      61,056 |       100.0 |            95.72 | h1tg000004l                                                     |
+    | h1tg000369l |      50,916 |       100.0 |            95.80 | h1tg000004l                                                     |
+    | h1tg000357l |      48,044 |       100.0 |            96.49 | h1tg000002l                                                     |
+    | h1tg000231l |      57,617 |       100.0 |           100.00 | h1tg000033l, h1tg000016l, h1tg000197l, h1tg000019l, h1tg000268l |
+    | h1tg000029l |      58,330 |        99.9 |           100.00 | h1tg000033l, h1tg000016l, h1tg000019l, h1tg000197l, h1tg000114l |
+    | h1tg000239l |      55,435 |        99.4 |            96.96 | h1tg000001l, h1tg000009l                                        |
+    | h1tg000381l |      88,366 |        99.1 |            96.55 | h1tg000012l                                                     |
+    | h1tg000175l |      57,797 |        99.1 |            97.56 | h1tg000295l, h1tg000003l                                        |
+    | h1tg000304l |      64,293 |        98.6 |            97.14 | h1tg000005l                                                     |
+    | h1tg000207l |      62,163 |        98.6 |            96.02 | h1tg000006l                                                     |
+    | h1tg000052l |      57,550 |        98.6 |            95.86 | h1tg000295l                                                     |
+    | h1tg000268l |      86,546 |        98.4 |           100.00 | h1tg000033l, h1tg000016l, h1tg000197l, h1tg000019l, h1tg000114l |
+    | h1tg000359l |      59,624 |        98.4 |            99.82 | h1tg000002l, h1tg000295l, h1tg000007l, h1tg000009l, h1tg000273l |
+    | h1tg000137l |      73,968 |        97.9 |            96.80 | h1tg000005l                                                     |
+    | h1tg000061l |     198,533 |        97.5 |           100.00 | h1tg000041l, h1tg000088l, h1tg000001l, h1tg000009l              |
+    | h1tg000310l |      58,915 |        97.5 |            97.37 | h1tg000005l, h1tg000007l, h1tg000009l, h1tg000071l, h1tg000003l |
+    | h1tg000099l |      58,344 |        97.1 |            96.48 | h1tg000008l                                                     |
+    | h1tg000234l |      58,540 |        96.8 |            95.50 | h1tg000003l                                                     |
+    | h1tg000154l |      71,970 |        96.6 |            95.27 | h1tg000012l                                                     |
+    | h1tg000355l |      61,806 |        96.2 |            95.53 | h1tg000008l                                                     |
+    | h1tg000116l |      56,604 |        95.7 |            95.27 | h1tg000007l                                                     |
+    | h1tg000210l |     122,668 |        95.3 |            97.06 | h1tg000012l                                                     |
+    | h1tg000267l |      59,257 |        95.1 |            94.60 | h1tg000009l                                                     |
+    | h1tg000262l |      60,426 |        94.5 |            99.97 | h1tg000004l, h1tg000205l                                        |
+    | h1tg000237l |      69,434 |        93.9 |            96.20 | h1tg000001l, h1tg000005l                                        |
+    | h1tg000198l |      59,360 |        93.8 |            96.61 | h1tg000004l                                                     |
+    | h1tg000209l |      54,964 |        93.7 |            97.68 | h1tg000003l                                                     |
+    | h1tg000299l |      58,740 |        93.4 |            96.90 | h1tg000005l, h1tg000007l                                        |
+    | h1tg000348l |      38,223 |        93.4 |            99.98 | h1tg000114l, h1tg000231l, h1tg000016l, h1tg000019l              |
+    | h1tg000324l |      87,889 |        93.1 |            96.69 | h1tg000004l, h1tg000003l, h1tg000005l                           |
+    | h1tg000385l |      62,848 |        91.9 |            95.49 | h1tg000008l                                                     |
+    | h1tg000256l |      75,059 |        91.8 |            97.23 | h1tg000002l                                                     |
+    | h1tg000101l |     290,087 |        91.2 |           100.00 | h1tg000059l, h1tg000014l, h1tg000008l, h1tg000033l              |
+    | h1tg000185l |      61,829 |        90.6 |            96.22 | h1tg000003l                                                     |
+    | h1tg000306l |      48,104 |        90.4 |            96.33 | h1tg000008l                                                     |
+    | h1tg000297l |      69,314 |        90.2 |            96.80 | h1tg000295l                                                     |
+    | h1tg000047l |     252,734 |        89.8 |            98.49 | h1tg000003l, h1tg000008l                                        |
+    | h1tg000371l |      61,340 |        89.6 |            95.03 | h1tg000008l, h1tg000003l                                        |
+    | h1tg000146l |     142,640 |        89.5 |            98.49 | h1tg000004l, h1tg000005l, h1tg000006l, h1tg000007l, h1tg000071l |
+    | h1tg000157l |      77,595 |        89.1 |            96.85 | h1tg000005l                                                     |
+    | h1tg000194l |     101,536 |        89.0 |            95.43 | h1tg000002l                                                     |
+    | h1tg000020l |      76,640 |        88.7 |            97.35 | h1tg000001l, h1tg000004l, h1tg000295l, h1tg000007l, h1tg000003l |
+    | h1tg000077l |      85,589 |        88.7 |            96.84 | h1tg000008l, h1tg000003l, h1tg000295l                           |
+    | h1tg000212l |      77,008 |        88.6 |            96.31 | h1tg000002l                                                     |
+    | h1tg000204l |     162,827 |        88.5 |            97.77 | h1tg000295l, h1tg000007l                                        |
+    | h1tg000018l |      87,119 |        88.4 |            98.23 | h1tg000005l, h1tg000009l                                        |
+    | h1tg000252l |     154,916 |        88.4 |            98.17 | h1tg000001l, h1tg000009l, h1tg000295l, h1tg000002l, h1tg000003l |
+    | h1tg000158l |      56,037 |        88.1 |            95.33 | h1tg000009l                                                     |
+    | h1tg000068l |      77,346 |        88.1 |            96.88 | h1tg000008l                                                     |
+    | h1tg000159l |      59,911 |        88.0 |            96.30 | h1tg000001l                                                     |
+    | h1tg000333l |      66,283 |        87.9 |            96.25 | h1tg000002l                                                     |
+    | h1tg000192l |      98,955 |        87.5 |            96.01 | h1tg000002l                                                     |
+    | h1tg000089l |      99,513 |        87.2 |            96.90 | h1tg000001l                                                     |
+    | h1tg000043l |      58,740 |        87.1 |            96.78 | h1tg000003l, h1tg000001l                                        |
+    | h1tg000202l |      54,121 |        86.9 |            95.70 | h1tg000002l                                                     |
+    | h1tg000293l |      81,065 |        86.9 |            97.15 | h1tg000002l                                                     |
+    | h1tg000334l |     109,400 |        86.4 |            98.32 | h1tg000005l, h1tg000009l                                        |
+    | h1tg000278l |      97,489 |        86.3 |            95.99 | h1tg000009l                                                     |
+    | h1tg000050l |      51,925 |        86.2 |            96.87 | h1tg000009l                                                     |
+    | h1tg000314l |      66,301 |        86.2 |            94.82 | h1tg000004l                                                     |
+    | h1tg000383l |      93,603 |        85.7 |            97.46 | h1tg000002l                                                     |
+    | h1tg000323l |      67,032 |        85.5 |            98.36 | h1tg000004l, h1tg000007l                                        |
+    | h1tg000335l |     114,065 |        85.3 |            96.13 | h1tg000003l                                                     |
+    | h1tg000054l |      46,840 |        84.9 |            95.96 | h1tg000008l                                                     |
+    | h1tg000124l |      84,493 |        84.7 |            95.60 | h1tg000009l                                                     |
+    | h1tg000372l |      57,717 |        84.3 |            97.21 | h1tg000002l                                                     |
+    | h1tg000362l |      56,512 |        84.2 |            95.19 | h1tg000007l                                                     |
+    | h1tg000384l |      49,774 |        84.1 |            96.58 | h1tg000004l                                                     |
+    | h1tg000112l |      60,454 |        84.1 |            97.59 | h1tg000009l                                                     |
+    | h1tg000392l |      58,378 |        82.8 |            97.10 | h1tg000012l                                                     |
+    | h1tg000138l |     448,249 |        82.6 |            99.38 | h1tg000008l, h1tg000012l, h1tg000295l, h1tg000009l              |
+    | h1tg000331l |      49,002 |        82.5 |            95.88 | h1tg000008l, h1tg000006l, h1tg000295l, h1tg000005l, h1tg000009l |
+    | h1tg000149l |      66,846 |        81.5 |            96.05 | h1tg000003l                                                     |
+    | h1tg000360l |      65,049 |        81.4 |            96.83 | h1tg000004l, h1tg000071l, h1tg000001l, h1tg000295l, h1tg000006l |
+    | h1tg000105l |      60,672 |        81.4 |            96.21 | h1tg000006l                                                     |
+    | h1tg000088l |     214,149 |        81.1 |           100.00 | h1tg000041l, h1tg000006l, h1tg000001l, h1tg000007l, h1tg000012l |
+    | h1tg000069l |     304,868 |        81.0 |            96.76 | h1tg000009l                                                     |
+    | h1tg000325l |      53,329 |        80.6 |            97.73 | h1tg000014l, h1tg000022l, h1tg000001l, h1tg000006l, h1tg000003l |
+    | h1tg000072l |      74,883 |        80.5 |            97.03 | h1tg000012l                                                     |
+    | h1tg000235l |      91,815 |        80.3 |            96.24 | h1tg000005l                                                     |
+
+- <b><i>Haplotype 2</b></i> (92 contigs, 8.64 Mb)
+    | Contig      | Length (bp) | Covered (%) | Max identity (%) | Contained in                                                    |
+    | :---------- | ----------: | ----------: | ---------------: | :-------------------------------------------------------------- |
+    | h2tg000025l |     137,959 |       100.0 |           100.00 | h2tg000005l, h2tg000045l, h2tg000068l, h2tg000016l, h2tg000090l |
+    | h2tg000033l |      61,285 |       100.0 |            97.56 | h2tg000012l                                                     |
+    | h2tg000055l |      56,644 |       100.0 |            96.07 | h2tg000011l                                                     |
+    | h2tg000072l |      45,906 |       100.0 |           100.00 | h2tg000005l, h2tg000016l, h2tg000090l, h2tg000121l, h2tg000273l |
+    | h2tg000085l |      60,254 |       100.0 |            96.00 | h2tg000001l                                                     |
+    | h2tg000090l |     292,667 |       100.0 |           100.00 | h2tg000005l, h2tg000016l, h2tg000045l, h2tg000009l              |
+    | h2tg000114l |      71,242 |       100.0 |            98.24 | h2tg000002l, h2tg000109l, h2tg000010l, h2tg000004l              |
+    | h2tg000121l |     122,198 |       100.0 |            99.98 | h2tg000005l, h2tg000016l, h2tg000090l, h2tg000068l, h2tg000025l |
+    | h2tg000148l |      76,624 |       100.0 |            96.02 | h2tg000004l, h2tg000006l, h2tg000007l                           |
+    | h2tg000161l |     131,896 |       100.0 |            99.96 | h2tg000001l                                                     |
+    | h2tg000173l |     174,305 |       100.0 |           100.00 | h2tg000005l, h2tg000045l, h2tg000068l, h2tg000016l, h2tg000090l |
+    | h2tg000179l |      49,033 |       100.0 |            97.98 | h2tg000003l, h2tg000042l, h2tg000007l, h2tg000005l              |
+    | h2tg000241l |      98,137 |       100.0 |            97.36 | h2tg000004l, h2tg000009l                                        |
+    | h2tg000269l |      57,239 |       100.0 |            97.22 | h2tg000002l                                                     |
+    | h2tg000273l |      92,123 |       100.0 |           100.00 | h2tg000005l, h2tg000016l, h2tg000090l, h2tg000045l, h2tg000068l |
+    | h2tg000290l |      36,811 |       100.0 |            99.99 | h2tg000005l, h2tg000045l, h2tg000068l, h2tg000025l, h2tg000173l |
+    | h2tg000041l |      63,528 |       100.0 |            96.18 | h2tg000008l, h2tg000004l, h2tg000007l, h2tg000005l, h2tg000006l |
+    | h2tg000068l |     252,652 |       100.0 |            99.99 | h2tg000005l, h2tg000045l, h2tg000016l, h2tg000090l, h2tg000009l |
+    | h2tg000133l |      61,627 |        99.8 |            96.80 | h2tg000008l                                                     |
+    | h2tg000115l |      85,713 |        99.7 |            96.78 | h2tg000011l                                                     |
+    | h2tg000199l |      53,314 |        99.5 |            96.11 | h2tg000008l                                                     |
+    | h2tg000205l |      63,721 |        99.5 |            95.17 | h2tg000011l                                                     |
+    | h2tg000189l |      58,864 |        99.4 |            95.17 | h2tg000011l                                                     |
+    | h2tg000016l |     426,642 |        99.4 |           100.00 | h2tg000005l, h2tg000009l                                        |
+    | h2tg000153l |     142,845 |        99.2 |            99.15 | h2tg000011l, h2tg000012l, h2tg000002l, h2tg000010l, h2tg000009l |
+    | h2tg000159l |     102,704 |        99.1 |            96.25 | h2tg000010l, h2tg000007l                                        |
+    | h2tg000240l |      47,255 |        98.8 |           100.00 | h2tg000005l, h2tg000016l, h2tg000090l, h2tg000121l, h2tg000273l |
+    | h2tg000058l |     122,305 |        97.6 |            96.96 | h2tg000009l                                                     |
+    | h2tg000045l |     393,158 |        97.3 |           100.00 | h2tg000005l, h2tg000016l, h2tg000009l                           |
+    | h2tg000203l |      74,271 |        96.9 |            97.42 | h2tg000011l                                                     |
+    | h2tg000032l |      67,113 |        96.8 |            96.83 | h2tg000001l                                                     |
+    | h2tg000279l |      61,497 |        96.4 |            95.29 | h2tg000005l                                                     |
+    | h2tg000298l |      53,830 |        96.2 |            96.45 | h2tg000005l                                                     |
+    | h2tg000056l |     130,833 |        95.9 |            95.13 | h2tg000005l                                                     |
+    | h2tg000244l |      56,932 |        95.4 |            97.07 | h2tg000007l                                                     |
+    | h2tg000198l |      81,149 |        95.3 |            96.80 | h2tg000002l                                                     |
+    | h2tg000272l |      58,866 |        95.3 |            97.06 | h2tg000004l                                                     |
+    | h2tg000141l |      65,614 |        95.3 |            96.93 | h2tg000036l                                                     |
+    | h2tg000127l |      93,705 |        94.5 |            95.99 | h2tg000010l                                                     |
+    | h2tg000093l |     181,630 |        94.5 |            96.52 | h2tg000012l, h2tg000007l, h2tg000006l, h2tg000004l, h2tg000005l |
+    | h2tg000260l |      60,635 |        94.1 |            96.69 | h2tg000001l                                                     |
+    | h2tg000042l |      77,393 |        93.9 |            97.26 | h2tg000003l, h2tg000002l, h2tg000007l, h2tg000005l              |
+    | h2tg000080l |      55,702 |        93.9 |            96.43 | h2tg000011l                                                     |
+    | h2tg000175l |      72,915 |        93.7 |            97.10 | h2tg000008l                                                     |
+    | h2tg000073l |      59,854 |        93.4 |            97.28 | h2tg000012l, h2tg000185l                                        |
+    | h2tg000134l |      61,652 |        93.3 |            97.48 | h2tg000010l                                                     |
+    | h2tg000137l |      63,097 |        92.7 |            98.35 | h2tg000002l, h2tg000015l                                        |
+    | h2tg000101l |      50,093 |        92.5 |            97.96 | h2tg000001l, h2tg000220l                                        |
+    | h2tg000162l |     100,984 |        92.5 |            97.18 | h2tg000007l                                                     |
+    | h2tg000046l |      84,672 |        92.3 |            96.79 | h2tg000012l, h2tg000009l, h2tg000011l, h2tg000001l, h2tg000003l |
+    | h2tg000178l |      60,961 |        91.3 |            98.09 | h2tg000002l, h2tg000137l, h2tg000015l                           |
+    | h2tg000123l |      67,248 |        91.0 |            95.96 | h2tg000008l                                                     |
+    | h2tg000218l |     105,915 |        90.2 |            95.45 | h2tg000001l                                                     |
+    | h2tg000233l |      74,029 |        89.9 |            96.64 | h2tg000005l                                                     |
+    | h2tg000249l |      87,280 |        89.8 |            96.50 | h2tg000012l                                                     |
+    | h2tg000213l |     177,552 |        89.5 |            96.31 | h2tg000012l                                                     |
+    | h2tg000124l |      66,744 |        89.5 |            95.38 | h2tg000005l                                                     |
+    | h2tg000130l |      67,099 |        89.4 |            95.49 | h2tg000007l                                                     |
+    | h2tg000139l |      66,853 |        89.2 |            96.79 | h2tg000008l                                                     |
+    | h2tg000067l |      70,936 |        88.2 |            95.61 | h2tg000001l                                                     |
+    | h2tg000226l |     125,977 |        87.6 |            98.58 | h2tg000008l                                                     |
+    | h2tg000057l |      43,064 |        87.3 |            94.92 | h2tg000010l                                                     |
+    | h2tg000270l |      89,621 |        87.1 |            96.68 | h2tg000003l, h2tg000009l                                        |
+    | h2tg000207l |      85,960 |        87.0 |            96.39 | h2tg000001l                                                     |
+    | h2tg000158l |      65,663 |        86.6 |            96.69 | h2tg000008l                                                     |
+    | h2tg000227l |      62,457 |        86.5 |            96.03 | h2tg000002l                                                     |
+    | h2tg000110l |      74,609 |        86.5 |            96.19 | h2tg000012l, h2tg000185l                                        |
+    | h2tg000192l |      81,168 |        86.1 |            96.77 | h2tg000008l                                                     |
+    | h2tg000268l |      66,676 |        86.0 |            95.82 | h2tg000007l                                                     |
+    | h2tg000140l |      53,753 |        86.0 |            96.28 | h2tg000003l                                                     |
+    | h2tg000132l |      94,325 |        85.4 |            96.88 | h2tg000010l                                                     |
+    | h2tg000040l |      41,228 |        85.1 |            96.37 | h2tg000036l                                                     |
+    | h2tg000194l |      72,245 |        84.9 |            94.87 | h2tg000012l                                                     |
+    | h2tg000181l |      64,728 |        84.7 |            95.83 | h2tg000002l                                                     |
+    | h2tg000191l |     185,841 |        84.7 |            96.21 | h2tg000012l, h2tg000004l, h2tg000010l                           |
+    | h2tg000232l |      73,484 |        84.5 |            96.79 | h2tg000001l                                                     |
+    | h2tg000082l |     134,355 |        84.1 |            96.99 | h2tg000008l                                                     |
+    | h2tg000062l |      75,593 |        84.1 |            96.67 | h2tg000003l, h2tg000010l, h2tg000005l, h2tg000007l, h2tg000008l |
+    | h2tg000217l |      74,108 |        83.8 |            97.10 | h2tg000002l                                                     |
+    | h2tg000081l |      89,468 |        83.7 |            95.28 | h2tg000010l                                                     |
+    | h2tg000074l |      75,235 |        83.2 |            96.98 | h2tg000001l                                                     |
+    | h2tg000238l |      55,369 |        83.1 |            95.04 | h2tg000004l, h2tg000237l                                        |
+    | h2tg000176l |     132,719 |        82.8 |            97.55 | h2tg000003l, h2tg000011l, h2tg000004l, h2tg000009l, h2tg000012l |
+    | h2tg000230l |      61,325 |        82.8 |            95.98 | h2tg000008l                                                     |
+    | h2tg000276l |      48,196 |        82.5 |            96.72 | h2tg000008l                                                     |
+    | h2tg000119l |      59,694 |        82.4 |            95.81 | h2tg000004l                                                     |
+    | h2tg000187l |      84,820 |        82.3 |            96.72 | h2tg000004l                                                     |
+    | h2tg000195l |     123,740 |        81.4 |            99.05 | h2tg000001l, h2tg000010l                                        |
+    | h2tg000214l |      61,942 |        80.6 |            97.27 | h2tg000004l, h2tg000011l, h2tg000012l, h2tg000009l, h2tg000008l |
+    | h2tg000125l |      46,962 |        80.4 |            94.97 | h2tg000001l                                                     |
+    | h2tg000015l |     151,173 |        80.2 |            98.27 | h2tg000002l                                                     |
+    | h2tg000186l |     186,095 |        80.2 |            97.38 | h2tg000005l, h2tg000009l, h2tg000011l, h2tg000004l, h2tg000008l |
 
 ---
 *Last update: 06 November 2026 by Jeremias Ivan*
