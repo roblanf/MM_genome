@@ -19,7 +19,9 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#04b">ptDNA</a>
 - <a href="#05">Assembly of nuclear genome</a>
     - <a href="#05a">Checking for duplicate contigs</a>
-    - <a href="#05b">Aligning both haplotypes</a>
+    - <a href="#05b">Aligning haplotypes against each other</a>
+    - <a href="#05c">Generating parental k-mers</a>
+    - <a href="#05d">ROADIES</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
@@ -41,12 +43,14 @@ conda install -c conda-forge -c bioconda \
     meryl \
     mosdepth \
     nanoplot \
+    ncbi-datasets-cli \
     oatk \
     pycirclize \
     r-optparse \
     r-plotly \
     r-tidyverse \
-    seqkit
+    seqkit \
+    sra-tools
 ```
 
 > [!NOTE]
@@ -757,31 +761,31 @@ python scripts/oatk_circular_map.py \
 minimap2 -cx asm20 -t 128 \
     02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa \
     02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa \
-    > 05_nuclear_qc/h1_vs_v2/h1_vs_h2.paf
+    > 05_nuclear_qc/01_h1h2/h1_vs_h2.paf
 minimap2 -cx asm20 -DP -m200 -t 128 \
     02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa \
     02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa \
-    > 05_nuclear_qc/h1_vs_v2/h1_self.paf
+    > 05_nuclear_qc/01_h1h2/h1_self.paf
 minimap2 -cx asm20 -DP -m200 -t 128 \
     02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa \
     02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa \
-    > 05_nuclear_qc/h1_vs_v2/h2_self.paf
+    > 05_nuclear_qc/01_h1h2/h2_self.paf
 
 # extract necessary columns
-cut -f1-12 05_nuclear_qc/h1_vs_v2/h1_self.paf > 05_nuclear_qc/h1_vs_v2/h1_self.12.paf
-cut -f1-12 05_nuclear_qc/h1_vs_v2/h2_self.paf > 05_nuclear_qc/h1_vs_v2/h2_self.12.paf
+cut -f1-12 05_nuclear_qc/01_h1h2/h1_self.paf > 05_nuclear_qc/01_h1h2/h1_self.12.paf
+cut -f1-12 05_nuclear_qc/01_h1h2/h2_self.paf > 05_nuclear_qc/01_h1h2/h2_self.12.paf
 
 # generate the dotplots
 Rscript scripts/pafCoordsDotPlotly.R \
-    -i 05_nuclear_qc/h1_vs_v2/h1_vs_h2.paf \
+    -i 05_nuclear_qc/01_h1h2/h1_vs_h2.paf \
     -o h1_vs_h2_dotplot2 -s -t
 
 Rscript scripts/pafCoordsDotPlotly.R \
-    -i 05_nuclear_qc/h1_vs_v2/h1_self.12.paf \
+    -i 05_nuclear_qc/01_h1h2/h1_self.12.paf \
     -o h1_self_dotplot2 -s
 
 Rscript scripts/pafCoordsDotPlotly.R \
-    -i 05_nuclear_qc/h1_vs_v2/h2_self.12.paf \
+    -i 05_nuclear_qc/01_h1h2/h2_self.12.paf \
     -o h2_self_dotplot2 -s
 ```
 
@@ -792,16 +796,16 @@ Rscript scripts/pafCoordsDotPlotly.R \
 It seems that there is a number of duplicates at the top-right corner of the H1 vs. H1 and H2 vs. H2 plots. Let's zoom in more...
 ```
 # remove the long, properly-aligned contigs
-awk '!($1==$6 && $3==$8 && $4==$9)' 05_nuclear_qc/h1_vs_v2/h1_self.12.paf > 05_nuclear_qc/h1_vs_v2/h1_self.noself.paf
-awk '!($1==$6 && $3==$8 && $4==$9)' 05_nuclear_qc/h1_vs_v2/h2_self.12.paf > 05_nuclear_qc/h1_vs_v2/h2_self.noself.paf
+awk '!($1==$6 && $3==$8 && $4==$9)' 05_nuclear_qc/01_h1h2/h1_self.12.paf > 05_nuclear_qc/01_h1h2/h1_self.noself.paf
+awk '!($1==$6 && $3==$8 && $4==$9)' 05_nuclear_qc/01_h1h2/h2_self.12.paf > 05_nuclear_qc/01_h1h2/h2_self.noself.paf
 
 # repeat the plotting
 Rscript scripts/pafCoordsDotPlotly.R \
-    -i 05_nuclear_qc/h1_vs_v2/h1_self.noself.paf \
+    -i 05_nuclear_qc/01_h1h2/h1_self.noself.paf \
     -o h1_self_dotplot2_noself -s -m 10000 -q 50000
 
 Rscript scripts/pafCoordsDotPlotly.R \
-    -i 05_nuclear_qc/h1_vs_v2/h2_self.noself.paf \
+    -i 05_nuclear_qc/01_h1h2/h2_self.noself.paf \
     -o h2_self_dotplot2_noself -s -m 10000 -q 50000
 ```
 
@@ -841,25 +845,25 @@ It is still quite tricky to identify those contigs based on the plots. Claude (n
 
 ```
 # identify putative paralogs
-python3 scripts/flag_contained_contigs.py 05_nuclear_qc/h1_vs_v2/h1_self.paf > 05_nuclear_qc/h1_vs_v2/h1_dups.tsv
-python3 scripts/flag_contained_contigs.py 05_nuclear_qc/h1_vs_v2/h2_self.paf > 05_nuclear_qc/h1_vs_v2/h2_dups.tsv
+python3 scripts/flag_contained_contigs.py 05_nuclear_qc/01_h1h2/h1_self.paf > 05_nuclear_qc/01_h1h2/h1_dups.tsv
+python3 scripts/flag_contained_contigs.py 05_nuclear_qc/01_h1h2/h2_self.paf > 05_nuclear_qc/01_h1h2/h2_dups.tsv
 
 # calculate each contig's depth
-awk -F'\t' 'NR>1{print $1}' 05_nuclear_qc/h1_vs_v2/h1_dups.tsv > 05_nuclear_qc/h1_vs_v2/h1_remove.txt
+awk -F'\t' 'NR>1{print $1}' 05_nuclear_qc/01_h1h2/h1_dups.tsv > 05_nuclear_qc/01_h1h2/h1_remove.txt
 awk 'NR==FNR{k[$1];next} $1 in k{print $1"\t0\t"$2}' \
-    05_nuclear_qc/h1_vs_v2/h1_remove.txt \
+    05_nuclear_qc/01_h1h2/h1_remove.txt \
     02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa.fai \
-    > 05_nuclear_qc/h1_vs_v2/h1_remove.bed
-mosdepth -t 16 --by 05_nuclear_qc/h1_vs_v2/h1_remove.bed --no-per-base 05_nuclear_qc/h1_vs_v2/h1_dups 03_qc/hap1.bam
-zcat 05_nuclear_qc/h1_vs_v2/h1_dups.regions.bed.gz | awk '{printf "%s\t%.1f\n",$1,$4}' | sort -k2,2n
+    > 05_nuclear_qc/01_h1h2/h1_remove.bed
+mosdepth -t 16 --by 05_nuclear_qc/01_h1h2/h1_remove.bed --no-per-base 05_nuclear_qc/01_h1h2/h1_dups 03_qc/hap1.bam
+zcat 05_nuclear_qc/01_h1h2/h1_dups.regions.bed.gz | awk '{printf "%s\t%.1f\n",$1,$4}' | sort -k2,2n
 
-awk -F'\t' 'NR>1{print $1}' 05_nuclear_qc/h1_vs_v2/h2_dups.tsv > 05_nuclear_qc/h1_vs_v2/h2_remove.txt
+awk -F'\t' 'NR>1{print $1}' 05_nuclear_qc/01_h1h2/h2_dups.tsv > 05_nuclear_qc/01_h1h2/h2_remove.txt
 awk 'NR==FNR{k[$1];next} $1 in k{print $1"\t0\t"$2}' \
-    05_nuclear_qc/h1_vs_v2/h2_remove.txt \
+    05_nuclear_qc/01_h1h2/h2_remove.txt \
     02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap2.p_ctg.fa.fai \
-    > 05_nuclear_qc/h1_vs_v2/h2_remove.bed
-mosdepth -t 16 --by 05_nuclear_qc/h1_vs_v2/h2_remove.bed --no-per-base 05_nuclear_qc/h1_vs_v2/h2_dups 03_qc/hap2.bam
-zcat 05_nuclear_qc/h1_vs_v2/h2_dups.regions.bed.gz | awk '{printf "%s\t%.1f\n",$1,$4}' | sort -k2,2n
+    > 05_nuclear_qc/01_h1h2/h2_remove.bed
+mosdepth -t 16 --by 05_nuclear_qc/01_h1h2/h2_remove.bed --no-per-base 05_nuclear_qc/01_h1h2/h2_dups 03_qc/hap2.bam
+zcat 05_nuclear_qc/01_h1h2/h2_dups.regions.bed.gz | awk '{printf "%s\t%.1f\n",$1,$4}' | sort -k2,2n
 ```
 
 > [!NOTE]
@@ -1083,8 +1087,8 @@ zcat 05_nuclear_qc/h1_vs_v2/h2_dups.regions.bed.gz | awk '{printf "%s\t%.1f\n",$
 ### Organelle Genomes
 ```
 # combine the two organelle genomes
-seqkit replace -p '^' -r 'pltd_' 04_organelle/c30k1001/E_phylacis.pltd.ctg.fasta  > 05_nuclear_qc/organelle_and_repeats/organelles.fa
-seqkit replace -p '^' -r 'mito_' 04_organelle/c30k1001/E_phylacis.mito.ctg.fasta >> 05_nuclear_qc/organelle_and_repeats/organelles.fa
+seqkit replace -p '^' -r 'pltd_' 04_organelle/c30k1001/E_phylacis.pltd.ctg.fasta  > 05_nuclear_qc/02_non_nuclear/organelles.fa
+seqkit replace -p '^' -r 'mito_' 04_organelle/c30k1001/E_phylacis.mito.ctg.fasta >> 05_nuclear_qc/02_non_nuclear/organelles.fa
 
 # wrap the haplotype sequences for barrnap
 seqkit seq -w 60 -u 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap1.p_ctg.fa > 02_assembly/homcov55/hifiasm_s050/hap1.wrapped.fa
@@ -1092,11 +1096,11 @@ seqkit seq -w 60 -u 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap
 
 # map the reads to the organelle genomes
 for h in 1 2; do
-  minimap2 -cx asm5 -t 128 05_nuclear_qc/organelle_and_repeats/organelles.fa 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap${h}.p_ctg.fa 2>/dev/null \
+  minimap2 -cx asm5 -t 128 05_nuclear_qc/02_non_nuclear/organelles.fa 02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap${h}.p_ctg.fa 2>/dev/null \
   | awk '$11>=5000 && $10/$11>=0.98 {print $1"\t"$3"\t"$4"\t"$2"\t"substr($6,1,4)}' \
   | sort -k1,1 -k2,2n | bedtools merge -i - -c 4,5 -o distinct,distinct \
   | awk '{cov[$1]+=$3-$2; len[$1]=$4; org[$1]=$5} END{for(c in cov) printf "%s\t%d\t%.2f\t%s\n", c, len[c], cov[c]/len[c], org[c]}' \
-  | sort -k3,3nr > 05_nuclear_qc/organelle_and_repeats/hap${h}_organelle.tsv
+  | sort -k3,3nr > 05_nuclear_qc/02_non_nuclear/hap${h}_organelle.tsv
 done
 ```
 
@@ -1135,15 +1139,15 @@ done
 ```
 # check for rRNA genes
 DB=$(dirname "$(readlink -f "$(which barrnap)")")/../db/euk.hmm
-nhmmer --rna --cpu 16 --noali -E 1e-6 --w_length 8000 --tblout 05_nuclear_qc/organelle_and_repeats/hap1_rrna.tbl -o /dev/null "$DB" 02_assembly/homcov55/hifiasm_s050/hap1.wrapped.fa
-nhmmer --rna --cpu 16 --noali -E 1e-6 --w_length 8000 --tblout 05_nuclear_qc/organelle_and_repeats/hap2_rrna.tbl -o /dev/null "$DB" 02_assembly/homcov55/hifiasm_s050/hap2.wrapped.fa
+nhmmer --rna --cpu 16 --noali -E 1e-6 --w_length 8000 --tblout 05_nuclear_qc/02_non_nuclear/hap1_rrna.tbl -o /dev/null "$DB" 02_assembly/homcov55/hifiasm_s050/hap1.wrapped.fa
+nhmmer --rna --cpu 16 --noali -E 1e-6 --w_length 8000 --tblout 05_nuclear_qc/02_non_nuclear/hap2_rrna.tbl -o /dev/null "$DB" 02_assembly/homcov55/hifiasm_s050/hap2.wrapped.fa
 
 # extract contigs with ≥10 hits
 for h in 1 2; do
   awk '!/^#/{n[$1 SUBSEP $3]++; c[$1]=1}
        END{split("18S_rRNA 5_8S_rRNA 28S_rRNA 5S_rRNA", g, " ");
            for(k in c){t=0; line=k; for(i=1;i<=4;i++){v=n[k SUBSEP g[i]]+0; t+=v; line=line "\t" v}; print line "\t" t}}' \
-      05_nuclear_qc/organelle_and_repeats/hap${h}_rrna.tbl | sort -k6,6nr | awk '$6>=5' > hap${h}_rrna_counts.tsv
+      05_nuclear_qc/02_non_nuclear/hap${h}_rrna.tbl | sort -k6,6nr | awk '$6>=5' > hap${h}_rrna_counts.tsv
 done
 ```
 
@@ -1152,7 +1156,7 @@ done
     | Contig      | 18S | 5.8S | 28S |  5S | Total | Interpretation                    | Flagged | Verdict |
     | :---------- | --: | ---: | --: | --: | ----: | :-------------------------------- | :------ | :------ |
     | h1tg000004l |   9 |    1 |   7 | 984 | 1,001 | 5S rDNA array                     | no      | Keep    |
-    | h1tg000014l | 136 |   67 |  80 |   0 |   283 | 45S rDNA array (NOR)              | no      | Keep    |
+    | h1tg000014l | 136 |   67 |  80 |   0 |   283 | 45S rDNA array                    | no      | Keep    |
     | h1tg000059l |  47 |   30 |  31 |   0 |   108 | 45S rDNA fragment                 | no      | Keep    |
     | h1tg000033l |  34 |   29 |  30 |   0 |    93 | 45S rDNA fragment                 | no      | Keep    |
     | h1tg000019l |  32 |   24 |  25 |   0 |    81 | 45S rDNA fragment                 | yes     | Remove  |
@@ -1172,8 +1176,8 @@ done
     | h1tg000010l |   7 |    6 |   6 |   0 |    19 | 45S rDNA fragment                 | yes     | Remove  |
     | h1tg000029l |   7 |    6 |   6 |   0 |    19 | 45S rDNA fragment                 | yes     | Remove  |
     | h1tg000231l |   9 |    5 |   5 |   0 |    19 | 45S rDNA fragment                 | yes     | Remove  |
-    | h1tg000001l |   6 |    0 |   8 |   1 |    15 | chromosome; NUPT rRNA (no 5.8S)   | no      | Keep    |
-    | h1tg000008l |   7 |    2 |   6 |   0 |    15 | chromosome; a few 45S units       | no      | Keep    |
+    | h1tg000001l |   6 |    0 |   8 |   1 |    15 | chromosome                        | no      | Keep    |
+    | h1tg000008l |   7 |    2 |   6 |   0 |    15 | chromosome                        | no      | Keep    |
     | h1tg000352l |   5 |    5 |   5 |   0 |    15 | 45S rDNA fragment                 | yes     | Remove  |
     | h1tg000356l |   7 |    4 |   4 |   0 |    15 | 45S rDNA fragment                 | yes     | Remove  |
     | h1tg000366l |   4 |    4 |   5 |   0 |    13 | 45S rDNA fragment                 | yes     | Remove  |
@@ -1189,7 +1193,7 @@ done
     | Contig      | 18S | 5.8S | 28S |  5S | Total | Interpretation                     | Flagged | Verdict |
     | :---------- | --: | ---: | --: | --: | ----: | :--------------------------------- | :------ | :------ |
     | h2tg000012l |   9 |    1 |  11 | 851 |   872 | 5S rDNA array                      | no      | Keep    |
-    | h2tg000005l | 106 |   72 |  76 |   1 |   255 | 45S rDNA array (NOR)               | no      | Keep    |
+    | h2tg000005l | 106 |   72 |  76 |   1 |   255 | 45S rDNA array                     | no      | Keep    |
     | h2tg000016l |  45 |   34 |  35 |   0 |   114 | 45S rDNA fragment                  | yes     | Remove  |
     | h2tg000045l |  49 |   31 |  32 |   0 |   112 | 45S rDNA fragment                  | yes     | Remove  |
     | h2tg000090l |  31 |   25 |  28 |   0 |    84 | 45S rDNA fragment                  | yes     | Remove  |
@@ -1198,11 +1202,11 @@ done
     | h2tg000025l |  17 |   13 |  13 |   0 |    43 | 45S rDNA fragment                  | yes     | Remove  |
     | h2tg000121l |  14 |   12 |  13 |   0 |    39 | 45S rDNA fragment                  | yes     | Remove  |
     | h2tg000273l |  10 |    9 |  10 |   0 |    29 | 45S rDNA fragment                  | yes     | Remove  |
-    | h2tg000011l |   3 |    0 |  17 |   0 |    20 | chromosome; NUPT rRNA (no 5.8S)    | no      | Keep    |
+    | h2tg000011l |   3 |    0 |  17 |   0 |    20 | chromosome                         | no      | Keep    |
     | h2tg000072l |   6 |    5 |   5 |   0 |    16 | 45S rDNA fragment                  | yes     | Remove  |
     | h2tg000240l |   5 |    4 |   5 |   0 |    14 | 45S rDNA fragment                  | yes     | Remove  |
-    | h2tg000002l |   7 |    0 |   4 |   0 |    11 | chromosome; rRNA hits without 5.8S | no      | Keep    |
-    | h2tg000008l |   1 |    1 |   9 |   0 |    11 | chromosome; scattered 28S hits     | no      | Keep    |
+    | h2tg000002l |   7 |    0 |   4 |   0 |    11 | chromosome                         | no      | Keep    |
+    | h2tg000008l |   1 |    1 |   9 |   0 |    11 | chromosome                         | no      | Keep    |
     | h2tg000290l |   4 |    3 |   4 |   0 |    11 | 45S rDNA fragment                  | yes     | Remove  |
 
 ### Conclusion
@@ -1441,20 +1445,20 @@ Based on these tables, there are <a href="./files/h1_remove.txt">99 contigs</a> 
 ```
 for h in 1 2; do
     seqkit grep -v \
-        -f 05_nuclear_qc/filtered/h${h}_remove.txt \
+        -f 05_nuclear_qc/03_filtered/h${h}_remove.txt \
         02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap${h}.p_ctg.fa \
-        > 05_nuclear_qc/filtered/hap${h}.purged.fa
+        > 05_nuclear_qc/03_filtered/hap${h}.purged.fa
     seqkit grep \
-        -f 05_nuclear_qc/filtered/h${h}_remove.txt \
+        -f 05_nuclear_qc/03_filtered/h${h}_remove.txt \
         02_assembly/homcov55/hifiasm_s050/E_phylacis_s050.asm.bp.hap${h}.p_ctg.fa \
-        > 05_nuclear_qc/filtered/hap${h}.removed.fa
+        > 05_nuclear_qc/03_filtered/hap${h}.removed.fa
 done
-cat 05_nuclear_qc/filtered/hap1.purged.fa 05_nuclear_qc/filtered/hap2.purged.fa > 05_nuclear_qc/filtered/union.purged.fa
+cat 05_nuclear_qc/03_filtered/hap1.purged.fa 05_nuclear_qc/03_filtered/hap2.purged.fa > 05_nuclear_qc/03_filtered/union.purged.fa
 ```
 
 ### Seqkit
 ```
-seqkit stats 05_nuclear_qc/filtered/hap?.purged.fa 05_nuclear_qc/filtered/union.purged.fa
+seqkit stats 05_nuclear_qc/03_filtered/hap?.purged.fa 05_nuclear_qc/03_filtered/union.purged.fa
 ```
 
 - <b><i>Haplotype 1</b></i>
@@ -1491,8 +1495,8 @@ seqkit stats 05_nuclear_qc/filtered/hap?.purged.fa 05_nuclear_qc/filtered/union.
 ```
 # compleasm
 for a in hap1 hap2 union; do
-    compleasm run -a 05_nuclear_qc/filtered/${a}.purged.fa \
-        -o 05_nuclear_qc/filtered/compleasm/${a} \
+    compleasm run -a 05_nuclear_qc/03_filtered/${a}.purged.fa \
+        -o 05_nuclear_qc/03_filtered/compleasm/${a} \
         -l eudicotyledons --odb odb12 \
         -t 128 \
         -L 02_assembly/default/busco_lineages/
@@ -1500,7 +1504,7 @@ done
 
 # merqury
 for a in hap1 hap2 union; do
-    mkdir -p 05_nuclear_qc/filtered/merqury/${a} && cd 05_nuclear_qc/filtered/merqury/${a}
+    mkdir -p 05_nuclear_qc/03_filtered/merqury/${a} && cd 05_nuclear_qc/03_filtered/merqury/${a}
     merqury.sh ../../../../02_assembly/homcov55/merqury/reads.meryl ../../${a}.purged.fa ${a}_merq
     cd ../../../..
 done
@@ -1536,35 +1540,39 @@ done
     | hom k-mers: 2x       |        12.6 |       11.4 |        11.6 |       10.4 |         84.7 |        86.9 |
     | hom k-mers:&nbsp;≥3x |         0.3 |        0.2 |         0.3 |        0.3 |         10.9 |         8.6 |
 
-While the proportion of single-copy BUSCO increases for both haplotypes, two BUSCO that were first duplicated in the union are now only found in one haplotype. I think that's okay!
+While the proportion of single-copy BUSCO increases for both haplotypes, two BUSCO that were first duplicated in the union are now only found in one haplotype:
+- 742808at71240 (h2tg000002l): likely due to compleasm different scoring (as we did not touch its respective contig) 
+- 904132at71240 (h1tg000159l): half-depth haplotig, likely due to case 2 (see above)
 
-### <a id="05b">Aligning both haplotypes</a>
+I think we can move on to the next step!
+
+### <a id="05b">Aligning haplotypes against each other</a>
 ```
 # align hap1 to hap2
 minimap2 -cx asm20 --secondary=no -t 128 \
-    05_nuclear_qc/filtered/hap2.purged.fa \
-    05_nuclear_qc/filtered/hap1.purged.fa \
-    > 05_nuclear_qc/alignment/h1_vs_h2.paf
+    05_nuclear_qc/03_filtered/hap2.purged.fa \
+    05_nuclear_qc/03_filtered/hap1.purged.fa \
+    > 05_nuclear_qc/04_alignment/h1_vs_h2.paf
 
 # align hap2 to hap1
 minimap2 -cx asm20 --secondary=no -t 128 \
-    05_nuclear_qc/filtered/hap1.purged.fa \
-    05_nuclear_qc/filtered/hap2.purged.fa \
-    > 05_nuclear_qc/alignment/h2_vs_h1.paf
+    05_nuclear_qc/03_filtered/hap1.purged.fa \
+    05_nuclear_qc/03_filtered/hap2.purged.fa \
+    > 05_nuclear_qc/04_alignment/h2_vs_h1.paf
 
 # combine both pairwise comparisons
 awk 'BEGIN{OFS="\t"} {t=$1;$1=$6;$6=t; t=$2;$2=$7;$7=t; t=$3;$3=$8;$8=t; t=$4;$4=$9;$9=t; print}' \
-    05_nuclear_qc/alignment/h2_vs_h1.paf | cat 05_nuclear_qc/alignment/h1_vs_h2.paf - > 05_nuclear_qc/alignment/both.paf
+    05_nuclear_qc/04_alignment/h2_vs_h1.paf | cat 05_nuclear_qc/04_alignment/h1_vs_h2.paf - > 05_nuclear_qc/04_alignment/both.paf
 
 # generate dotplot
-cut -f1-12 05_nuclear_qc/alignment/both.paf > 05_nuclear_qc/alignment/both.12.paf
+cut -f1-12 05_nuclear_qc/04_alignment/both.paf > 05_nuclear_qc/04_alignment/both.12.paf
 Rscript scripts/pafCoordsDotPlotly.R \
-    -i 05_nuclear_qc/alignment/both.12.paf \
+    -i 05_nuclear_qc/04_alignment/both.12.paf \
     -o both_dotplot -s -l -m 10000 -q 1
 
 # generate pairwise coverage table
-python3 scripts/pair_coverage.py 05_nuclear_qc/alignment/both.paf \
-    --prefix 05_nuclear_qc/alignment/both
+python3 scripts/pair_coverage.py 05_nuclear_qc/04_alignment/both.paf \
+    --prefix 05_nuclear_qc/04_alignment/both
 ```
 
 ![Figure 11. Dotplot between hap1 and hap2 (purged).](./figures/fig11.png)
@@ -1590,8 +1598,197 @@ python3 scripts/pair_coverage.py 05_nuclear_qc/alignment/both.paf \
 
     | Haplotype | Small contigs |    ≥80% covered by a chromosome&nbsp;contig    | Covered&nbsp;by&nbsp;a small&nbsp;contig |     50–80% covered    | No partner |
     | :-------- | ------------: | :--------------------------------------------- | ---------------------------------------: | --------------------: | ---------: |
-    | hap1      |           291 | 279 (26.89 Mb)<br>- 265 (≥99)<br>- 14 (94-99%) |                              2 (0.95 Mb) | 2&nbsp;(0.19&nbsp;Mb) |          8 |
-    | hap2      |           215 | 214 (28.46 Mb)<br>- 204 (≥99)<br>- 10 (94-99%) |                                        0 | 1&nbsp;(1.85&nbsp;Mb) |          0 |
+    | hap1      |           291 | 279 (26.89 Mb)<br>- ≥99: 265<br>- 94-99%: 14 |                              2 (0.95 Mb) | 2&nbsp;(0.19&nbsp;Mb) |          8 |
+    | hap2      |           215 | 214 (28.46 Mb)<br>- ≥99: 204<br>- 94-99%: 10 |                                        0 | 1&nbsp;(1.85&nbsp;Mb) |          0 |
+
+### <a id="05c">Generating parental k-mers</a>
+```
+# change working directory
+cd 06_parental_assign/parents/
+
+# E. decipiens
+wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos9/sra-pub-zq-922/SRR025/25119/SRR25119757/SRR25119757.lite.1
+fasterq-dump SRR25119757.lite.1 --split-files --threads 16 --progress && pigz -p 16 *.fastq
+mv SRR25119757.lite.1_1.fastq.gz E_decipiens_R1.fastq.gz
+mv SRR25119757.lite.1_2.fastq.gz E_decipiens_R2.fastq.gz
+
+# E. virginea
+wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos9/sra-pub-zq-922/SRR025/25119/SRR25119786/SRR25119786.lite.1
+fasterq-dump SRR25119786.lite.1 --split-files --threads 16 --progress && pigz -p 16 *.fastq
+mv SRR25119786.lite.1_1.fastq.gz E_virginea_R1.fastq.gz
+mv SRR25119786.lite.1_2.fastq.gz E_virginea_R2.fastq.gz
+
+# create a meryl database with k=31
+meryl k=31 count threads=128 \
+    output E_virginea.meryl \
+    E_virginea_R1.fastq.gz E_virginea_R2.fastq.gz
+
+meryl k=31 count threads=128 memory=1200G \
+    output E_decipiens.meryl \
+    E_decipiens_R1.fastq.gz E_decipiens_R2.fastq.gz
+
+# filter out k-mers <6 occurrences
+meryl threads=128 greater-than 5 \
+    output E_virginea.filtered.meryl \
+    E_virginea.meryl
+
+meryl threads=128 greater-than 5 \
+    output E_decipiens.filtered.meryl \
+    E_decipiens.meryl
+
+# extract unique k-mers
+meryl difference threads=128 \
+    E_virginea.filtered.meryl E_decipiens.filtered.meryl \
+    output E_virginea.unique.meryl
+
+meryl difference threads=128 \
+    E_decipiens.filtered.meryl E_virginea.filtered.meryl \
+    output E_decipiens.unique.meryl
+
+meryl symmetric-difference threads=128 \
+    E_decipiens.filtered.meryl E_virginea.filtered.meryl \
+    output union.unique.meryl
+
+# run Merqury
+mkdir merqury && cd merqury
+
+merqury.sh \
+    ../union.unique.meryl \
+    ../E_virginea.unique.meryl \
+    ../E_decipiens.unique.meryl \
+    ../../../05_nuclear_qc/03_filtered/hap1.purged.fa \
+    ../../../05_nuclear_qc/03_filtered/hap2.purged.fa \
+    E_phylacis_map
+
+cd ../../..
+```
+
+### Phase blocks per haplotype (blocks broken by ≥ 100 opposite hapmers spanning ≥ 20 kb)
+|                     Hap 1                    |                       Hap 2                   |
+| :------------------------------------------: | :-------------------------------------------: |
+| ![H1 Phase Blocks](./figures/fig12_hap1.png) | ![H2 Phase Blocks](./figures/fig12_hap2.png)  |
+
+![H1 vs H2 Dotplot](./figures/fig12_dotplot.png)
+
+| Assembly | Blocks | Total (Mb) | Mean (kb) | N50 (kb) | Max (Mb) | Switch&nbsp;hapmers (M) | Total&nbsp;hapmers (M) | Switch&nbsp;error (%) | Minority&nbsp;hapmers (%) |
+| :------- | -----: | ---------: | --------: | -------: | -------: | -----------------: | ----------------: | ---------------: | -------------------: |
+| hap1     | 21,091 |      563.3 |      26.7 |    101.1 |     3.09 |               14.7 |             200.8 |             7.31 |                 11.8 |
+| hap2     | 22,021 |      551.1 |      25.0 |     91.8 |     2.53 |               15.2 |             197.3 |             7.71 |                 13.2 | 
+
+### Parental assignment of the chromosome pairs (V: virginea-specfic; D: decipiens-specific)
+
+| hap1 contig | V&nbsp;(%) | D&nbsp;(%) | Minority&nbsp;(%) | Putative&nbsp;Parent | hap2 contig | V&nbsp;(%) | D&nbsp;(%) | Minority&nbsp;(%) | Putative&nbsp;Parent |
+| :---------- | ----: | ----: | -----------: | :------------- | :---------- | ----: | ----: | -----------: | :------------- |
+| h1tg000003l |   4.5 |  31.5 |         12.6 | decipiens-like | h2tg000008l |  32.2 |   4.6 |         12.5 | virginea-like  |
+| h1tg000295l |   4.0 |  29.7 |         12.0 | decipiens-like | h2tg000004l |  26.0 |   6.9 |         21.0 | virginea-like  |
+| h1tg000007l |   4.8 |  26.0 |         15.5 | decipiens-like | h2tg000010l |  27.8 |   5.9 |         17.6 | virginea-like  |
+| h1tg000004l |   3.3 |  34.5 |          8.8 | decipiens-like | h2tg000012l |  35.2 |   3.9 |         10.0 | virginea-like  |
+| h1tg000001l |   3.8 |  29.6 |         11.4 | decipiens-like | h2tg000002l |  26.5 |   6.7 |         20.1 | virginea-like  |
+| h1tg000009l |   3.5 |  32.7 |          9.7 | decipiens-like | h2tg000007l |  34.2 |   4.1 |         10.7 | virginea-like  |
+| h1tg000006l |  34.5 |   4.5 |         11.5 | virginea-like  | h2tg000006l |   3.2 |  35.0 |          8.4 | decipiens-like |
+| h1tg000005l |  32.3 |   5.1 |         13.7 | virginea-like  | h2tg000011l |   3.5 |  31.6 |         10.0 | decipiens-like |
+| h1tg000012l |  32.9 |   4.7 |         12.5 | virginea-like  | h2tg000001l |   3.3 |  32.7 |          9.2 | decipiens-like |
+| h1tg000002l |  36.0 |   4.0 |         10.1 | virginea-like  | h2tg000003l |   3.7 |  31.8 |         10.5 | decipiens-like |
+| h1tg000008l |  31.8 |   5.1 |         13.9 | virginea-like  | h2tg000009l |   5.5 |  29.7 |         15.7 | decipiens-like |
+| h1tg000014l |   4.1 |  31.9 |         11.4 | decipiens-like | h2tg000005l |  30.1 |   5.5 |         15.4 | virginea-like  |
+
+From these results, the 12 longest contigs seem to clearly prefer one parent over another. The ~12% minority hapmers likely reflect homozygous regions across the two haplotypes, resulting in a frequent switching between decipiens- and virginea-derived kmers. Now, let's try to redo this analysis using the filtered ONT reads to assess k-mer completeness.
+
+```
+# change working directory
+cd 06_parental_assign/e_phylacis/
+
+# create a meryl database with k=31
+meryl k=31 count threads=128 \
+    output E_phylacis.meryl \
+    ../../01_qc/02_chopper/E_phylacis_filtered.fastq.gz
+
+# check for trough
+meryl statistics E_phylacis.meryl | head -n 30
+
+# filter out k-mers <10 occurrences
+meryl threads=128 greater-than 9 \
+    output E_phylacis.filtered.meryl \
+    E_phylacis.meryl
+
+# run Merqury
+mkdir merqury && cd merqury
+
+merqury.sh \
+    ../E_phylacis.filtered.meryl \
+    ../../parents/E_virginea.unique.meryl \
+    ../../parents/E_decipiens.unique.meryl \
+    ../../../05_nuclear_qc/03_filtered/hap1.purged.fa \
+    ../../../05_nuclear_qc/03_filtered/hap2.purged.fa \
+    E_phylacis_trio
+
+cd ../../..
+```
+
+### K-mer copy number spectrum
+
+![Figure 13. K-mer copy number spectrum of E. phylacis](./figures/fig13.png)
+
+### Species-specific k-mers found in each haplotype
+
+| Hapmer set            |       Total | In&nbsp;hap1 (%) | In&nbsp;hap2 (%) | In&nbsp;union (%) | In&nbsp;both&nbsp;haplotypes (% of those in union) |
+| :-------------------- | ----------: | ---------------: | ---------------: | ----------------: | -------------------------------------------------: |
+| E.&nbsp;virginea–specific  | 334,998,162 |        22.0 |        30.2 |         46.7 |                                     11.7 |
+| E.&nbsp;decipiens–specific | 401,534,689 |        26.5 |        19.2 |         40.2 |                                     13.7 |
+
+> [!NOTE]
+> The phase block and parental assignment results are identical to the previous run.
+
+Consistent with `hifiasm` and `GenomeScope2`, the heterozygous k‑mers (red, one copy in the union) peak at ~27x, while homozygous k‑mers (blue, two copies — one per haplotype) peak at ~52x. The elevated number of asm-only k-mers (i.e., x==0) is caused by the threshold set when generating the `meryl` database (i.e., at least 10 occurrences). Moreover, the k-mer completeness table affirms that the ~12% minority hapmers on each haplotype (alongside ~7% switch error and relatively-low 100kb N50) are due to shared ancestry between the two parents.
+
+### <a id="05d">ROADIES</a>
+While assigning the 12-longest chromosomes to their 'true' parents seems pretty clear, it is not the case for the rest of the contigs. To address this, let's try using ROADIES. First, we need to download all reference genomes from eucalypts:
+```
+# change working directory
+cd 06_parental_assign/parents/
+
+# download datasets
+datasets download genome taxon "3932"  --reference --assembly-level chromosome --filename eucs.zip
+datasets download genome taxon "87658" --reference --assembly-level chromosome --filename corymbia.zip
+datasets download genome taxon "22531" --reference --assembly-level chromosome --filename angophora.zip
+
+# create the reference directory
+mkdir roadies
+
+# unzip only the genomic fasta files (.fna) directly into the folder
+unzip -j eucs.zip      "ncbi_dataset/data/*/*.fna" -d roadies/
+unzip -j corymbia.zip  "ncbi_dataset/data/*/*.fna" -d roadies/
+unzip -j angophora.zip "ncbi_dataset/data/*/*.fna" -d roadies/
+
+# get the metadata files
+unzip -j eucs.zip      "ncbi_dataset/data/assembly_data_report.jsonl" -d roadies/ && mv roadies/assembly_data_report.jsonl roadies/eucs_metadata.jsonl
+unzip -j corymbia.zip  "ncbi_dataset/data/assembly_data_report.jsonl" -d roadies/ && mv roadies/assembly_data_report.jsonl roadies/corymbia_metadata.jsonl
+unzip -j angophora.zip "ncbi_dataset/data/assembly_data_report.jsonl" -d roadies/ && mv roadies/assembly_data_report.jsonl roadies/angophora_metadata.jsonl
+
+# rename file following the species name
+cd roadies/
+
+python3 -c "
+import os, json
+mapping = {}
+for meta in [f for f in os.listdir('.') if f.endswith('.jsonl')]:
+    for line in open(meta):
+        d = json.loads(line)
+        org = d.get('organism', {})
+        name = org.get('organism_name') or org.get('organismName')
+        if not name:
+            print(f'no organism name in {meta}: {org}'); continue
+        mapping[d['accession']] = name.replace(' ', '_').replace('.', '')
+for fn in [f for f in os.listdir('.') if f.endswith('.fna')]:
+    acc = next((a for a in mapping if fn.startswith(a)), None)
+    if acc is None:
+        print(f'no metadata for {fn}'); continue
+    new = f'{mapping[acc]}_{acc}.fna'
+    if os.path.exists(new):
+        print(f'exists, skipping {fn}'); continue
+    os.rename(fn, new); print(f'{fn} -> {new}')
+"
+```
 
 ---
-*Last update: 06 November 2026 by Jeremias Ivan*
+*Last update: 07 November 2026 by Jeremias Ivan*
