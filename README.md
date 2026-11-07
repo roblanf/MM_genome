@@ -49,6 +49,7 @@ conda install -c conda-forge -c bioconda \
     r-optparse \
     r-plotly \
     r-tidyverse \
+    roadies \
     seqkit \
     sra-tools
 ```
@@ -1660,13 +1661,14 @@ merqury.sh \
     ../../../05_nuclear_qc/03_filtered/hap2.purged.fa \
     E_phylacis_map
 
+# change working directory
 cd ../../..
 ```
 
-### Phase blocks per haplotype (blocks broken by ≥ 100 opposite hapmers spanning ≥ 20 kb)
-|                     Hap 1                    |                       Hap 2                   |
-| :------------------------------------------: | :-------------------------------------------: |
-| ![H1 Phase Blocks](./figures/fig12_hap1.png) | ![H2 Phase Blocks](./figures/fig12_hap2.png)  |
+### Phased blocks per haplotype (blocks broken by ≥ 100 opposite hapmers spanning ≥ 20 kb)
+|                  Haplotype 1                  |                    Haplotype 2                 |
+| :-------------------------------------------: | :--------------------------------------------: |
+| ![H1 Phased Blocks](./figures/fig12_hap1.png) | ![H2 Phased Blocks](./figures/fig12_hap2.png)  |
 
 ![H1 vs H2 Dotplot](./figures/fig12_dotplot.png)
 
@@ -1722,6 +1724,7 @@ merqury.sh \
     ../../../05_nuclear_qc/03_filtered/hap2.purged.fa \
     E_phylacis_trio
 
+# change working directory
 cd ../../..
 ```
 
@@ -1737,7 +1740,7 @@ cd ../../..
 | E.&nbsp;decipiens–specific | 401,534,689 |        26.5 |        19.2 |         40.2 |                                     13.7 |
 
 > [!NOTE]
-> The phase block and parental assignment results are identical to the previous run.
+> The phased blocks and parental assignment results are identical to the previous run.
 
 Consistent with `hifiasm` and `GenomeScope2`, the heterozygous k‑mers (red, one copy in the union) peak at ~27x, while homozygous k‑mers (blue, two copies — one per haplotype) peak at ~52x. The elevated number of asm-only k-mers (i.e., x==0) is caused by the threshold set when generating the `meryl` database (i.e., at least 10 occurrences). Moreover, the k-mer completeness table affirms that the ~12% minority hapmers on each haplotype (alongside ~7% switch error and relatively-low 100kb N50) are due to shared ancestry between the two parents.
 
@@ -1788,7 +1791,59 @@ for fn in [f for f in os.listdir('.') if f.endswith('.fna')]:
         print(f'exists, skipping {fn}'); continue
     os.rename(fn, new); print(f'{fn} -> {new}')
 "
+
+# change working directory
+cd ../..
 ```
+
+The next step is to store individual contigs as separate FASTA files, together with the reference assemblies.
+```
+# change working directory
+cd 06_parental_assign/roadies/
+
+# copy the assemblies to a new folder
+mkdir -p euc_refs
+cp ../parents/roadies/*.fna euc_refs/
+
+# change working directory
+cd euc_refs
+
+# rename the file following ROADIES convention
+for file in *.fna; do
+    new_name=$(echo "$file" | sed 's/subsp\._/subsp_/g')
+    new_name="${new_name%.fna}.fa"    
+    mv "$file" "$new_name"
+done
+
+# change working directory
+cd ..
+
+# combine both haplotypes
+cat ../../05_nuclear_qc/03_filtered/hap1.purged.fa ../../05_nuclear_qc/03_filtered/hap2.purged.fa > all.purged.fa
+
+# copy the queries to a new folder
+mkdir -p roadies_all
+seqkit split -i all.purged.fa -O roadies_all/
+
+# rename individual contigs
+for f in roadies_all/all.purged.part_*.fa; do
+    c=$(basename "$f" .fa); c=${c#all.purged.part_}
+    mv "$f" roadies_all/Ephylacis_${c}.fa
+done
+
+# copy the reference assemblies
+cp euc_refs/*.fa roadies_all/
+
+# change working directory
+cd ../..
+```
+
+There are several ways to run ROADIES:
+1. One tree with *all* contigs (530 contigs + 35 references)
+2. 530 trees with one contig each (1 contig + 35 references)
+3. 12 trees with one homologous pair of chromosome-scale contigs and *all* other contigs
+
+Let's try the first approach, because it's the most straightforward one. Here, I start with a smaller `GENE_COUNT: 1000` with `--mode fast` as a trial.
 
 ---
 *Last update: 07 November 2026 by Jeremias Ivan*
