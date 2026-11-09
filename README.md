@@ -22,6 +22,7 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#05b">Aligning haplotypes against each other</a>
     - <a href="#05c">Generating parental k-mers</a>
     - <a href="#05d">Mapping to reference assemblies</a>
+    - <a href="#05e">Scaffolding</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
@@ -49,9 +50,12 @@ conda install -c conda-forge -c bioconda \
     r-optparse \
     r-plotly \
     r-tidyverse \
+    racon \
+    ragtag \
     roadies \
     seqkit \
-    sra-tools
+    sra-tools \
+    tgsgapcloser
 ```
 
 > [!NOTE]
@@ -2554,6 +2558,50 @@ cd ../../..
 ![Figure 14. Hapmer blob plot of the two parental assemblies.](./figures/fig14.png)
 
 The results look pretty good! The two assemblies have high BUSCO completeness scores, and ~95% of the k-mers agree to the hypothesised parents.
+
+### <a id="05e">Scaffolding</a>
+
+Now, let's scaffold the contigs to their respective parents.
+```
+# change working directory
+cd 07_scaffolding/
+
+# virginea-like to virginea
+ragtag.py scaffold -t 128 --mm2-params "-x asm20" -f 10000 -u -s 0.1 \
+    -o virginea_like ../06_parental_assign/parents/roadies/Eucalyptus_virginea_GCA_014182375.1.fna \
+    ../06_parental_assign/final/E_phylacis_virginea_like.fa
+
+# decipiens-like to decipiens
+ragtag.py scaffold -t 128 --mm2-params "-x asm20" -f 10000 -u -s 0.1 \
+    -o decipiens_like ../06_parental_assign/parents/roadies/Eucalyptus_decipiens_GCA_014182575.1.fna \
+    ../06_parental_assign/final/E_phylacis_decipiens_like.fa
+
+# virginea-like to regnans
+ragtag.py scaffold -t 128 --mm2-params "-x asm20" -f 10000 -u -s 0.1 \
+    -o virginea_like ../06_parental_assign/parents/roadies/Eucalyptus_regnans_GCA_037349125.1.fna \
+    ../06_parental_assign/final/E_phylacis_virginea_like.fa
+
+# decipiens-like to regnans
+ragtag.py scaffold -t 128 --mm2-params "-x asm20" -f 10000 -u -s 0.1 \
+    -o decipiens_like ../06_parental_assign/parents/roadies/Eucalyptus_regnans_GCA_037349125.1.fna \
+    ../06_parental_assign/final/E_phylacis_decipiens_like.fa
+
+# change working directory
+cd ..
+```
+
+### OUTPUT
+| Metric               | virginea-like, ref. E. virginea | virginea-like, ref. E. regnans | decipiens-like, ref. E. decipiens | decipiens-like, ref. E. regnans |
+| :------------------- | ------------------------------: | -----------------------------: | --------------------------------: | ------------------------------: |
+| Input contigs        |                             277 |                            277 |                               245 |                             245 |
+| Chromosome scaffolds |                              11 |                             11 |                                11 |                              11 |
+| Contigs placed       |                             193 |                            159 |                               181 |                             153 |
+| Placed (bp)          |                     534,221,985 |                    530,423,308 |                       565,214,048 |                     561,954,513 |
+| Placed (%)           |                            98.2 |                           97.5 |                              98.6 |                            98.0 |
+| Contigs unplaced     |                              84 |                            118 |                                64 |                              92 |
+| s < 0.1 (Mb)         |                       20 (5.19) |                      32 (5.96) |                         21 (2.43) |                       32 (5.99) |
+| Unplaced (bp)        |                       9,686,931 |                     13,485,608 |                         8,269,866 |                      11,529,401 |
+| Gaps (100 N)         |                             182 |                            147 |                               169 |                             142 |
 
 ---
 *Last update: 08 November 2026 by Jeremias Ivan*
