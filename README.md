@@ -22,7 +22,6 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#05b">Aligning haplotypes against each other</a>
     - <a href="#05c">Generating parental k-mers</a>
     - <a href="#05d">Mapping to reference assemblies</a>
-    - <a href="#05e">ROADIES</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
@@ -876,7 +875,7 @@ zcat 05_nuclear_qc/01_h1h2/h2_dups.regions.bed.gz | awk '{printf "%s\t%.1f\n",$1
 - <b><i>Haplotype 1</b></i> — **62** remove (5.15 Mb), **17** keep (1.37 Mb), **32** check (3.48 Mb)
 
     <details>
-    <summary>Click here to view the full table</summary>
+    <summary><i>Click here to view the full table</i></summary>
 
     | Contig      | Length (bp) | Covered (%) | Max identity (%) | Depth (x) | Cutoff (x) | Contained in                                                    | Verdict |
     | :---------- | ----------: | ----------: | ---------------: | --------: | ---------: | :-------------------------------------------------------------- | :------ |
@@ -998,7 +997,7 @@ zcat 05_nuclear_qc/01_h1h2/h2_dups.regions.bed.gz | awk '{printf "%s\t%.1f\n",$1
 - <b><i>Haplotype 2</b></i> — **63** remove (5.07 Mb), **18** keep (1.55 Mb), **11** check (2.02 Mb)
 
     <details>
-    <summary>Click here to view the full table</summary>
+    <summary><i>Click here to view the full table</i></summary>
 
     | Contig      | Length (bp) | Covered (%) | Max identity (%) | Depth (x) | Cutoff (x) | Contained in                                                    | Verdict |
     | :---------- | ----------: | ----------: | ---------------: | --------: | ---------: | :-------------------------------------------------------------- | :------ |
@@ -1227,7 +1226,7 @@ done
 - <b><i>Haplotype 1</b></i> — 53 haplotig (half depth) (4.05 Mb); 2 duplicate (0.10 Mb); 7 repeat (half depth) (1.00 Mb); 26 45S rDNA fragment (2.81 Mb); 3 mitochondrion (0.33 Mb); 3 plastid (0.34 Mb); 17 full depth (1.37 Mb)
 
     <details>
-    <summary>Click here to view the full table</summary>
+    <summary><i>Click here to view the full table</i></summary>
 
     | Contig      | Length (bp) | Covered (%) | Max&nbsp;identity (%) | Depth (x) | Cutoff (x) | Contained in                                                    | Verdict | Reason                |
     | :---------- | ----------: | ----------: | --------------------: | --------: | ---------: | :-------------------------------------------------------------- | :------ | :-------------------- |
@@ -1349,7 +1348,7 @@ done
 - <b><i>Haplotype 2</b></i> — 57 haplotig (half depth) (4.45 Mb); 1 duplicate (0.13 Mb); 5 repeat (half depth) (0.49 Mb); 11 45S rDNA fragment (2.02 Mb); 18 full depth (1.55 Mb)
 
     <details>
-    <summary>Click here to view the full table</summary>
+    <summary><i>Click here to view the full table</i></summary>
 
     | Contig      | Length (bp) | Covered (%) | Max&nbsp;identity (%) | Depth (x) | Cutoff (x) | Contained in                                                    | Verdict | Reason                |
     | :---------- | ----------: | ----------: | --------------------: | --------: | ---------: | :-------------------------------------------------------------- | :------ | :-------------------- |
@@ -1452,7 +1451,7 @@ done
 - <b><i>Other contigs</b></i>
 
     <details>
-    <summary>Click here to view the full table</summary>
+    <summary><i>Click here to view the full table</i></summary>
 
     | Contig      | Organelle     | Verdict |
     | :---------- | :------------ | :------ |
@@ -1700,7 +1699,7 @@ cd ../../..
 | :-------------------------------------------: | :--------------------------------------------: |
 | ![H1 Phased Blocks](./figures/fig12_hap1.png) | ![H2 Phased Blocks](./figures/fig12_hap2.png)  |
 
-![H1 vs H2 Dotplot](./figures/fig12_dotplot.png)
+![H1 vs H2 blob plot](./figures/fig12_blobplot.png)
 
 | Assembly | Blocks | Total (Mb) | Mean (kb) | N50 (kb) | Max (Mb) | Switch&nbsp;hapmers (M) | Total&nbsp;hapmers (M) | Switch&nbsp;error (%) | Minority&nbsp;hapmers (%) |
 | :------- | -----: | ---------: | --------: | -------: | -------: | -----------------: | ----------------: | ---------------: | -------------------: |
@@ -1873,7 +1872,7 @@ minimap2 -x asm20 -N 1000 -c --secondary=no -t 128 $ref_decipiens $hap2 > "${out
 minimap2 -x asm20 -N 1000 -c --secondary=no -t 128 $ref_virginea $hap2 > "${outdir}/hap2_vs_virginea.paf"
 ```
 
-I modified the bash script from the <a href="https://github.com/roblanf/MM_genome/tree/genome_assembly">`genome_assembly`</a> branch to score each contig on its percentage of aligned sites and alignment identity (see <a href="./scripts/dv_scoring.py">here</a>). 
+I modified the bash script from the <a href="https://github.com/roblanf/MM_genome/tree/genome_assembly">`genome_assembly`</a> branch to score each contig on its percentage of aligned sites (alignments ≥1 kb at ≥80% identity) and alignment identity (see <a href="./scripts/dv_scoring.py">here</a>). 
 ```
 python3 scripts/dv_scoring.py \
     --h1h2   05_nuclear_qc/04_alignment/h1_vs_h2.paf \
@@ -1893,7 +1892,7 @@ python3 scripts/dv_scoring.py \
 > - **ambiguous**: -0.5 ≤ Δ ID ≤ +0.5
 
 <details>
-<summary>Click here to view the full table</summary>
+<summary><i>Click here to view the full table</i></summary>
 
 | Contig      | Hap  |     Length |  GC% |   Cov | Phylum       | Chr&nbsp;(D) | Chr&nbsp;(V) | %&nbsp;Aligned&nbsp;(D) | %&nbsp;Aligned&nbsp;(V) | %&nbsp;ID&nbsp;(D) | %&nbsp;ID&nbsp;(V) | Δ&nbsp;ID | Aligned&nbsp;ratio | Call      | Partner&nbsp;contig | Partner&nbsp;Δ&nbsp;ID | Partner&nbsp;call | Reciprocal |
 | :---------- | :--- | ---------: | ---: | ----: | :----------- | :---------------- | :---------------- | ------------------: | -----------------: | -------------: | ------------: | -----: | ------------: | :-------- | :---------- | -----------: | :----------- | :--------- |
@@ -2423,105 +2422,138 @@ python3 scripts/dv_scoring.py \
 
 </details>
 
-### <a id="05e">ROADIES</a>
-While assigning the 12-longest chromosomes to their 'true' parents seems pretty clear, it is not the case for the rest of the contigs. To address this, let's try using ROADIES. First, we need to download all reference genomes from eucalypts:
+Across all contigs, there are 523 contigs categorised as:
+- **255** decipiens-like
+- **214** virginea-like
+- **53** ambiguous
+- **1** unaligned
+
+However, there are only 40 contigs with reciprocality (i.e., the paired contigs assigned different parents). Instead, we should categorise each contig based on the following criteria (in the order of importance):
+1. Assign each chromosome‑scale contig, including `h2tg000036l` (whose partner is chromosome-scale `h1tg000008l`), to its respective parents
+2. Assign other contig fragments whose best partner in the other haplotype is a chromosome contig covering ≥ 50% of the fragment
+3. Assign the rest of contigs that did not map to a chromosome contig based on its `ID` or hapmers assignment
+
+Claude created a Python <a href="./scripts/split_parents.py">script</a> to do this.
 ```
-# change working directory
-cd 06_parental_assign/parents/
+# extract the parent of each chromosome
+awk -F'\t' 'NR>1 {len=$3; gsub(",","",len)}
+            NR>1 && (len+0 >= 10000000 || $1=="h2tg000036l") && ($15=="decipiens" || $15=="virginea") {print $1"\t"$15}' \
+    06_parental_assign/alignment/dv_scoring.tsv > 06_parental_assign/alignment/parent_of_chromosome.tsv
 
-# download datasets
-datasets download genome taxon "3932"  --reference --assembly-level chromosome --filename eucs.zip
-datasets download genome taxon "87658" --reference --assembly-level chromosome --filename corymbia.zip
-datasets download genome taxon "22531" --reference --assembly-level chromosome --filename angophora.zip
+# index FASTA files
+samtools faidx 05_nuclear_qc/03_filtered/hap1.purged.fa
+samtools faidx 05_nuclear_qc/03_filtered/hap2.purged.fa
 
-# create the reference directory
-mkdir roadies
+# split contigs to each parent
+python3 scripts/split_parents.py \
+    --pairs   05_nuclear_qc/04_alignment/both.pairs.tsv \
+    --chrom   06_parental_assign/alignment/parent_of_chromosome.tsv \
+    --fai     05_nuclear_qc/03_filtered/hap1.purged.fa.fai 05_nuclear_qc/03_filtered/hap2.purged.fa.fai \
+    --dv      06_parental_assign/alignment/dv_scoring.tsv \
+    --hapmers 06_parental_assign/e_phylacis/merqury/E_phylacis_trio.hapmers.count \
+    --out     06_parental_assign/alignment/parent_of_contig.tsv
+```
 
-# unzip only the genomic fasta files (.fna) directly into the folder
-unzip -j eucs.zip      "ncbi_dataset/data/*/*.fna" -d roadies/
-unzip -j corymbia.zip  "ncbi_dataset/data/*/*.fna" -d roadies/
-unzip -j angophora.zip "ncbi_dataset/data/*/*.fna" -d roadies/
+This generated two files:
+- `decipiens.txt`: a set of decipiens-like contigs (13 chromosome-scale [548.42 Mb], 231 fragments [23.22 Mb], 3 others [2.79 Mb])
+- `virginea.txt`: a set of virginea-like contigs (12 chromosome-scale [514.14 Mb], 264 fragments [28.88 Mb])
+- Unassigned: 7 [0.48 Mb]
 
-# get the metadata files
-unzip -j eucs.zip      "ncbi_dataset/data/assembly_data_report.jsonl" -d roadies/ && mv roadies/assembly_data_report.jsonl roadies/eucs_metadata.jsonl
-unzip -j corymbia.zip  "ncbi_dataset/data/assembly_data_report.jsonl" -d roadies/ && mv roadies/assembly_data_report.jsonl roadies/corymbia_metadata.jsonl
-unzip -j angophora.zip "ncbi_dataset/data/assembly_data_report.jsonl" -d roadies/ && mv roadies/assembly_data_report.jsonl roadies/angophora_metadata.jsonl
+Across the 7 unassigned and 3 decipiens-like others, 8 were detected to come as coming from *Ascomycota* from BlobTools, while the other two (h1tg000058l and h2tg000019l) paired to each other with 0.993 identity, and both mapped to *E. decipiens*. This might reflect a genomic region with very low heterozygosity between the two parents and thus was failed to be differentiated based on the k-mers. Thus, we should assign h2tg000019l to *E. decipiens* (because it is larger and thus has stronger call for *E. decipiens*) and h1tg000058l to *E. virginea*.
 
-# rename file following the species name
-cd roadies/
+### Phasing and SeqKit
+```
+# change the working directory
+cd 06_parental_assign/final/
 
-python3 -c "
-import os, json
-mapping = {}
-for meta in [f for f in os.listdir('.') if f.endswith('.jsonl')]:
-    for line in open(meta):
-        d = json.loads(line)
-        org = d.get('organism', {})
-        name = org.get('organism_name') or org.get('organismName')
-        if not name:
-            print(f'no organism name in {meta}: {org}'); continue
-        mapping[d['accession']] = name.replace(' ', '_').replace('.', '')
-for fn in [f for f in os.listdir('.') if f.endswith('.fna')]:
-    acc = next((a for a in mapping if fn.startswith(a)), None)
-    if acc is None:
-        print(f'no metadata for {fn}'); continue
-    new = f'{mapping[acc]}_{acc}.fna'
-    if os.path.exists(new):
-        print(f'exists, skipping {fn}'); continue
-    os.rename(fn, new); print(f'{fn} -> {new}')
-"
+# remove contaminated contigs
+printf 'h1tg000017l\nh1tg000131l\nh1tg000179l\nh1tg000184l\nh1tg000191l\nh1tg000320l\nh1tg000321l\nh1tg000361l\n' > excluded_ascomycota.txt
+grep -v -x -f excluded_ascomycota.txt ../alignment/decipiens.txt > tmp && mv tmp decipiens.txt
+grep -v -x -f excluded_ascomycota.txt ../alignment/virginea.txt  > tmp && mv tmp virginea.txt
 
-# change working directory
+# add h2tg000019l to decipiens, add h1tg000058l to virginea
+grep -v -x h1tg000058l decipiens.txt > tmp && mv tmp decipiens.txt
+grep -q -x h2tg000019l decipiens.txt || echo h2tg000019l >> decipiens.txt
+grep -q -x h1tg000058l virginea.txt  || echo h1tg000058l >> virginea.txt
+
+# updated the table
+awk -F'\t' 'BEGIN{OFS="\t"}
+    FNR==NR {ex[$1]=1; next}
+    ($1 in ex)          {$4="excluded"; $5="excluded"; $11="Ascomycota (blobtools)"}
+    $1=="h1tg000058l"   {$4="manual";   $5="virginea"; $11="homozygous pair, one copy per parent"}
+    {print}' excluded_ascomycota.txt ../alignment/parent_of_contig.tsv > tmp && mv tmp parent_of_contig.tsv
+
+# rebuild the parental assemblies
+seqkit grep -f virginea.txt  ../../06_parental_assign/roadies/all.purged.fa > E_phylacis_virginea_like.fa
+seqkit grep -f decipiens.txt ../../06_parental_assign/roadies/all.purged.fa > E_phylacis_decipiens_like.fa
+seqkit stats E_phylacis_*_like.fa
+
+# change the working directory
 cd ../..
 ```
 
-The next step is to store individual contigs as separate FASTA files, together with the reference assemblies.
+| Metric            | decipiens-like | virginea-like |
+| :---------------- | -------------: | ------------: |
+| Contigs           |            245 |           277 |
+| Total length (bp) |    573,483,914 |   543,908,916 |
+| Min (bp)          |         24,809 |        44,531 |
+| Mean (bp)         |      2,340,751 |     1,963,570 |
+| Max (bp)          |     65,682,487 |    61,702,390 |
+
+### Compleasm + Merqury
 ```
-# change working directory
-cd 06_parental_assign/roadies/
+# compleasm
+compleasm run -a 06_parental_assign/final/E_phylacis_virginea_like.fa -o 06_parental_assign/final/compleasm/virginea -l eudicotyledons --odb odb12 -t 128 -L 02_assembly/default/busco_lineages/
+compleasm run -a 06_parental_assign/final/E_phylacis_decipiens_like.fa -o 06_parental_assign/final/compleasm/decipiens -l eudicotyledons --odb odb12 -t 128 -L 02_assembly/default/busco_lineages/
 
-# copy the assemblies to a new folder
-mkdir -p euc_refs
-cp ../parents/roadies/*.fna euc_refs/
+# run merqury for haplotype 1
+mkdir -p 06_parental_assign/final/merqury && cd 06_parental_assign/final/merqury
+merqury.sh \
+    ../../e_phylacis/E_phylacis.meryl \
+    ../../parents/E_virginea.unique.meryl \
+    ../../parents/E_decipiens.unique.meryl \
+    ../E_phylacis_virginea_like.fa \
+    ../E_phylacis_decipiens_like.fa \
+    E_phylacis_parents
 
-# change working directory
-cd euc_refs
-
-# rename the file following ROADIES convention
-for file in *.fna; do
-    new_name=$(echo "$file" | sed 's/subsp\._/subsp_/g')
-    new_name="${new_name%.fna}.fa"    
-    mv "$file" "$new_name"
-done
-
-# change working directory
-cd ..
-
-# combine both haplotypes
-cat ../../05_nuclear_qc/03_filtered/hap1.purged.fa ../../05_nuclear_qc/03_filtered/hap2.purged.fa > all.purged.fa
-
-# copy the queries to a new folder
-mkdir -p roadies_all
-seqkit split -i all.purged.fa -O roadies_all/
-
-# rename individual contigs
-for f in roadies_all/all.purged.part_*.fa; do
-    c=$(basename "$f" .fa); c=${c#all.purged.part_}
-    mv "$f" roadies_all/Ephylacis_${c}.fa
-done
-
-# copy the reference assemblies
-cp euc_refs/*.fa roadies_all/
-
-# change working directory
-cd ../..
+cd ../../..
 ```
 
-There are several ways to run ROADIES:
-1. One tree with *all* contigs (530 contigs + 35 references)
-2. 530 trees with one contig each (1 contig + 35 references)
-3. 12 trees with one homologous pair of chromosome-scale contigs and *all* other contigs
+- <b><i>Compleasm</b></i>
 
-(TBC)
+    | Metric                | decipiens   | virginea   |
+    | :-------------------- | ----------: | ---------: |
+    | BUSCO S (%)           |       95.29 |      95.69 |
+    | BUSCO D (%)           |        4.35 |       3.96 |
+    | BUSCO F (%)           |        0.32 |       0.32 |
+    | BUSCO&nbsp;M&nbsp;(%) |        0.04 |       0.04 |
+
+- <b><i>Merqury</b></i>
+
+    | Metric                       | virginea-like | decipiens-like |       Both |
+    | :--------------------------- | ------------: | -------------: | ---------: |
+    | QV                           |         62.39 |          62.76 |      62.58 |
+    | Error rate                   |      5.77e-07 |       5.29e-07 |   5.52e-07 |
+    | Asm-only k-mers              |         9,709 |          9,376 |     19,085 |
+    | k-mer completeness&nbsp;(%)  |         60.00 |          61.54 |      99.32 |
+
+- <b><i>Species-specific k-mers found in each haplotype</i></b>
+
+    | Hapmer set            |       Total | In&nbsp;virginea-like (%) | In&nbsp;decipiens-like (%) | In&nbsp;union (%) | In&nbsp;both&nbsp;haplotypes (% of those in union) |
+    | :-------------------- | ----------: | ------------------------: | -------------------------: | ----------------: | -------------------------------------------------: |
+    | virginea–specific  |        156.5 |                 95.3 |                  16.1 |              11.4 |                                 4.7 |
+    | decipiens–specific |        161.5 |                 18.9 |                  94.3 |              13.2 |                                 5.7 |
+
+- <b><i>Phased blocks</b></i>
+
+    | Assembly       | Blocks | N50 (kb) | Max (Mb) | Switch error (%) |
+    | :------------- | -----: | -------: | -------: | ---------------: |
+    | decipiens-like | 20,024 |    114.5 |     3.09 |             7.24 |
+    | virginea-like  | 23,078 |     82.5 |     2.53 |             7.78 |
+
+![Figure 14. Hapmer blob plot of the two parental assemblies.](./figures/fig14.png)
+
+The results look pretty good! The two assemblies have high BUSCO completeness scores, and ~95% of the k-mers agree to the hypothesised parents.
+
 ---
-*Last update: 07 November 2026 by Jeremias Ivan*
+*Last update: 08 November 2026 by Jeremias Ivan*
