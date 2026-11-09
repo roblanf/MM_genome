@@ -2591,17 +2591,42 @@ cd ..
 ```
 
 ### OUTPUT
-| Metric               | virginea-like, ref. E. virginea | virginea-like, ref. E. regnans | decipiens-like, ref. E. decipiens | decipiens-like, ref. E. regnans |
-| :------------------- | ------------------------------: | -----------------------------: | --------------------------------: | ------------------------------: |
+| Metric               | virginea-like,<br>ref. *E. virginea* | virginea-like,<br>ref. *E. regnans* | decipiens-like,<br>ref. *E. decipiens* | decipiens-like,<br>ref. *E. regnans* |
+| :------------------- | -----------------------------------: | ----------------------------------: | -------------------------------------: | -----------------------------------: |
 | Input contigs        |                             277 |                            277 |                               245 |                             245 |
 | Chromosome scaffolds |                              11 |                             11 |                                11 |                              11 |
 | Contigs placed       |                             193 |                            159 |                               181 |                             153 |
 | Placed (bp)          |                     534,221,985 |                    530,423,308 |                       565,214,048 |                     561,954,513 |
 | Placed (%)           |                            98.2 |                           97.5 |                              98.6 |                            98.0 |
 | Contigs unplaced     |                              84 |                            118 |                                64 |                              92 |
-| s < 0.1 (Mb)         |                       20 (5.19) |                      32 (5.96) |                         21 (2.43) |                       32 (5.99) |
+| `-s` < 0.1 (Mb)      |                       20 (5.19) |                      32 (5.96) |                         21 (2.43) |                       32 (5.99) |
 | Unplaced (bp)        |                       9,686,931 |                     13,485,608 |                         8,269,866 |                      11,529,401 |
 | Gaps (100 N)         |                             182 |                            147 |                               169 |                             142 |
 
+### Gap closing
+```
+# change working directory
+cd 08_gapclose/
+
+# combine the two haplotypes
+seqkit replace -p '^' -r 'vir_' ../07_scaffold/virginea_like_a01/ragtag.scaffold.fasta  > vir.fa
+seqkit replace -p '^' -r 'dec_' ../07_scaffold/decipiens_like_a01/ragtag.scaffold.fasta > dec.fa
+cat vir.fa dec.fa > both_parents.fa
+
+# extract unique reads; ambiguous reads (MAPQ < 20: homozygous regions) go to both bins
+minimap2 -x map-ont -t 128 --secondary=no both_parents.fa ../01_qc/02_chopper/E_phylacis_filtered.fastq.gz > reads_vs_parents.paf
+awk '$12>=20 && $6 ~ /^vir_/ {print $1}' reads_vs_parents.paf | sort -u > vir_reads.txt
+awk '$12>=20 && $6 ~ /^dec_/ {print $1}' reads_vs_parents.paf | sort -u > dec_reads.txt
+awk '$12<20 {print $1}' reads_vs_parents.paf | sort -u | tee -a vir_reads.txt >> dec_reads.txt
+for p in vir dec; do seqkit grep -f ${p}_reads.txt ../01_qc/02_chopper/E_phylacis_filtered.fastq.gz | seqkit fq2fa > ${p}_reads.fa; done
+
+# gap closing
+tgsgapcloser --scaff vir.fa --reads vir_reads.fa --output vir_closed --tgstype ont --racon $(which racon) --thread 128 > vir_closed.log 2>&1
+tgsgapcloser --scaff dec.fa --reads dec_reads.fa --output dec_closed --tgstype ont --racon $(which racon) --thread 128 > dec_closed.log 2>&1
+
+# change working directory
+cd ..
+```
+
 ---
-*Last update: 08 November 2026 by Jeremias Ivan*
+*Last update: 09 November 2026 by Jeremias Ivan*
