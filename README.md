@@ -23,6 +23,8 @@ This branch is purposed to: (i) summarise the findings from the other two branch
     - <a href="#05c">Generating parental k-mers</a>
     - <a href="#05d">Mapping to reference assemblies</a>
     - <a href="#05e">Scaffolding</a>
+    - <a href="#05f">Gap closing</a>
+- <a href="#06">Tree inference</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
@@ -2603,30 +2605,139 @@ cd ..
 | Unplaced (bp)        |                       9,686,931 |                     13,485,608 |                         8,269,866 |                      11,529,401 |
 | Gaps (100 N)         |                             182 |                            147 |                               169 |                             142 |
 
-### Gap closing
+### <a id="05f">Gap closing</a>
 ```
-# change working directory
-cd 08_gapclose/
+# create another set of longer, filtered reads
+pigz -dc -p 16 00_raw_data/*.fastq.gz | \
+chopper -q 7 -l 50000 | \
+bgzip -@ 128 > 01_qc/02_chopper/E_phylacis_filtered_Q750k.fastq.gz
 
 # combine the two haplotypes
-seqkit replace -p '^' -r 'vir_' ../07_scaffold/virginea_like_a01/ragtag.scaffold.fasta  > vir.fa
-seqkit replace -p '^' -r 'dec_' ../07_scaffold/decipiens_like_a01/ragtag.scaffold.fasta > dec.fa
-cat vir.fa dec.fa > both_parents.fa
+seqkit replace -p '^' -r 'vir_' 07_scaffold/virginea_like_a01/ragtag.scaffold.fasta  > 08_gapclose/vir.fa
+seqkit replace -p '^' -r 'dec_' 07_scaffold/decipiens_like_a01/ragtag.scaffold.fasta > 08_gapclose/dec.fa
+cat 08_gapclose/vir.fa 08_gapclose/dec.fa > 08_gapclose/both_parents.fa
 
-# extract unique reads; ambiguous reads (MAPQ < 20: homozygous regions) go to both bins
-minimap2 -x map-ont -t 128 --secondary=no both_parents.fa ../01_qc/02_chopper/E_phylacis_filtered.fastq.gz > reads_vs_parents.paf
-awk '$12>=20 && $6 ~ /^vir_/ {print $1}' reads_vs_parents.paf | sort -u > vir_reads.txt
-awk '$12>=20 && $6 ~ /^dec_/ {print $1}' reads_vs_parents.paf | sort -u > dec_reads.txt
-awk '$12<20 {print $1}' reads_vs_parents.paf | sort -u | tee -a vir_reads.txt >> dec_reads.txt
-for p in vir dec; do seqkit grep -f ${p}_reads.txt ../01_qc/02_chopper/E_phylacis_filtered.fastq.gz | seqkit fq2fa > ${p}_reads.fa; done
-
-# gap closing
-tgsgapcloser --scaff vir.fa --reads vir_reads.fa --output vir_closed --tgstype ont --racon $(which racon) --thread 128 > vir_closed.log 2>&1
-tgsgapcloser --scaff dec.fa --reads dec_reads.fa --output dec_closed --tgstype ont --racon $(which racon) --thread 128 > dec_closed.log 2>&1
+# map filtered reads to both parents
+minimap2 -x map-ont -t 128 --secondary=no 08_gapclose/both_parents.fa \
+    01_qc/02_chopper/E_phylacis_filtered_Q750k.fastq.gz > 08_gapclose/reads_vs_parents.paf
 
 # change working directory
-cd ..
+mkdir -p 08_gapclose/decipiens/
+mkdir -p 08_gapclose/virginea/
+
+# change working directory
+cd 08_gapclose/decipiens/
+
+# extract gap windows (±100 kb) on the decipiens scaffolds, named as in both_parents.fa
+awk -F'\t' '$5=="U" {s=$2-100000; if (s<1) s=1; print "dec_"$1"\t"s"\t"$3+100000}' \
+    ../../07_scaffold/decipiens_like_a01/ragtag.scaffold.agp > dec_gaps.bed
+
+# extract all reads with an alignment overlapping a gap window
+awk '$6 ~ /^dec_/ {print $6"\t"$8"\t"$9"\t"$1}' ../reads_vs_parents.paf \
+    | bedtools intersect -u -a - -b dec_gaps.bed | cut -f4 | sort -u > dec_gap_reads.txt
+seqkit grep -f dec_gap_reads.txt ../../01_qc/02_chopper/E_phylacis_filtered_Q750k.fastq.gz | seqkit fq2fa > dec_gap_reads.fa
+
+tgsgapcloser --scaff ../dec.fa --reads dec_gap_reads.fa --output dec_closed --tgstype ont \
+    --racon /home/jeremias/anaconda3/envs/btk/bin/racon --thread 32 > dec_closed.log 2>&1
+
+# change working directory
+cd ../virginea/
+
+# do the same with virginea
+awk -F'\t' '$5=="U" {s=$2-100000; if (s<1) s=1; print "vir_"$1"\t"s"\t"$3+100000}' \
+    ../../07_scaffold/virginea_like_a01/ragtag.scaffold.agp > vir_gaps.bed
+
+awk '$6 ~ /^vir_/ {print $6"\t"$8"\t"$9"\t"$1}' ../reads_vs_parents.paf \
+    | bedtools intersect -u -a - -b vir_gaps.bed | cut -f4 | sort -u > vir_gap_reads.txt
+seqkit grep -f vir_gap_reads.txt ../../01_qc/02_chopper/E_phylacis_filtered_Q750k.fastq.gz | seqkit fq2fa > vir_gap_reads.fa
+
+tgsgapcloser --scaff ../vir.fa --reads vir_gap_reads.fa --output vir_closed --tgstype ont \
+    --racon /home/jeremias/anaconda3/envs/btk/bin/racon --thread 32 > vir_closed.log 2>&1
+
+# combine two sets of reads
+# cat vir_gap_reads.fa extra_gap_reads.fa | seqkit rmdup -n > vir_gap_reads_all.fa
+
+# change working directory
+cd ../..
 ```
 
+| Reads                                  |                    decipiens-like                  |                   virginea-like                    |
+| :------------------------------------- | :------------------------------------------------: | :------------------------------------------------: |
+| Q&nbsp;≥&nbsp;7, len&nbsp;≥&nbsp;50kb  | ![Karyotype Q7, 50k](./figures/fig15_dec_Q7.png)   | ![Karyotype Q7, 50k](./figures/fig15_vir_Q7.png)   |
+| Q&nbsp;≥&nbsp;10, len&nbsp;≥&nbsp;15kb | ![Karyotype Q10, 15k](./figures/fig15_dec_Q10.png) | ![Karyotype Q10, 15k](./figures/fig15_vir_Q10.png) |
+| Both                                   | ![Karyotype both](./figures/fig15_dec_both.png)    | ![Karyotype both](./figures/fig15_vir_both.png)    |
+
+In these plots, runs of Ns are not coloured, so chromosome 5 on decipiens-like haplotype (`CM024613.1`) does not lose a contig. The original contig has Ns in the middle of it, which was not shown on `before` but explicitly marked on `after`. Moreover, it seems like TGS-GapCloser trimmed long, repetitive regions on chromosome 2 of virginea-like haplotype (`CM024515.1`), which resulted in a shorter chromosome length. Let's try using a stricter `--min_idy 0.8 --min_match 2000`, meaning that each flanking sequence must be at least 80% identical with the contig across ≥2 kb. I repeated the analysis using the combined set of reads.
+
+|                    decipiens-like                  |                   virginea-like                    |
+| :------------------------------------------------: | :------------------------------------------------: |
+| ![Karyotype both](./figures/fig16_dec_both.png)    | ![Karyotype both](./figures/fig16_vir_both.png)    |
+
+It seems that the trimmed repetitive sequences on chromosome 2 of virginea-like haplotype have identical 10kb flanking sequences and thus cannot really be fixed... I think we should exclude the chromosome from TGS-GapCloser analysis.
+
+```
+# change working directory
+cd 08_gapclose/virginea_nochr2/
+
+# virginea-like
+seqkit grep -v -p vir_CM024515.1_RagTag ../virginea/vir.fa > vir_noChr2.fa
+seqkit grep    -p vir_CM024515.1_RagTag ../virginea/vir.fa > vir_chr2.fa
+
+tgsgapcloser --scaff vir_noChr2.fa --reads ../virginea/vir_gap_reads_all.fa --output vir_final --tgstype ont \
+    --racon /home/jeremias/anaconda3/envs/btk/bin/racon --thread 32 > vir_final.log 2>&1
+
+cat vir_final.scaff_seqs vir_chr2.fa > vir_closed_final.fa
+
+# change working directory
+cd ../decipiens_nochr2/
+
+# decipiens-like
+seqkit grep -v -p dec_CM024610.1_RagTag ../decipiens/dec.fa > dec_noChr2.fa
+seqkit grep    -p dec_CM024610.1_RagTag ../decipiens/dec.fa > dec_chr2.fa
+
+gsgapcloser --scaff dec_noChr2.fa --reads ../decipiens/dec_gap_reads_all.fa --output dec_final --tgstype ont \
+    --racon /home/jeremias/anaconda3/envs/btk/bin/racon --thread 32 > dec_final.log 2>&1
+
+cat dec_final.scaff_seqs dec_chr2.fa > dec_closed_final.fa
+```
+
+### OUTPUT
+
+- <b><i>Karyotypes</b></i>
+
+    |                    decipiens-like                  |                   virginea-like                    |
+    | :------------------------------------------------: | :------------------------------------------------: |
+    | ![Karyotype both](./figures/fig17_dec.png)         | ![Karyotype both](./figures/fig17_vir.png)         |
+
+
+- <b><i>TGS-GapCloser + SeqKit</b></i>
+
+    | Metric                                        | virginea-like  |       decipiens-like |
+    | :-------------------------------------------- | -------------: | -------------------: |
+    | Sequences                                     |             95 |                   76 |
+    | Total length before (bp)                      |    543,927,116 |          573,500,814 |
+    | Total length after (bp)                       |    544,002,914 |          573,225,500 |
+    | RagTag gaps before                            |            182 |                  169 |
+    | RagTag gaps attempted (exclude chr2)          |            166 |                  162 |
+    | — filled with read sequence                   |  8 (76,745 bp) |       10 (97,427 bp) |
+    | — overlapping ends merged                     |      1 (47 bp) |                    0 |
+    | — left open                                   |            157 |                  152 |
+    | RagTag gaps after                             |            173 |                  159 |
+    | Contig-internal N runs (hifiasm)              |       2 (open) | 4 (1 filled; 3 open) |
+    | Original sequence removed (bp)                |             47 |                    0 |
+
+- <b><i>Compleasm</b></i>
+
+    | Metric                | decipiens-like   | virginea-like   |
+    | :-------------------- | ---------------: | --------------: |
+    | BUSCO S (%)           |       95.26 |      95.69 |
+    | BUSCO D (%)           |        4.39 |       3.96 |
+    | BUSCO F (%)           |        0.32 |       0.32 |
+    | BUSCO&nbsp;M&nbsp;(%) |        0.04 |       0.04 |
+
+    The difference in the decipiens-like haplotype comprises 3 differentially-classified BUSCO that are not found around the gap-filled regions, meaning that they reflect compleasm’s run‑to‑run variation.
+
+### <a id="06">Tree inference</a>
+
 ---
-*Last update: 09 November 2026 by Jeremias Ivan*
+*Last update: 11 November 2026 by Jeremias Ivan*
