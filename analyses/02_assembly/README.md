@@ -9,7 +9,7 @@ This README is purposed to store additional details required to conduct the `Ase
 - <a href="#03d">Trying other `-s` values</a>
 - <a href="#03e">Conclusion</a>
 
-### <a id="03a">Using default parameters</a>
+## <a id="03a">Using default parameters</a>
 
 ```
 # run Hifiasm with default parameters
@@ -28,7 +28,7 @@ hifiasm \
 
 After the third correction round, Hifiasm automatically sets the homozygous read depth threshold to be **52**, even though the peak homozygous depth ranges between 54 to 56 based on the histogram.
 
-### <a id="03b">Estimating the peak homozygous depth</a>
+## <a id="03b">Estimating the peak homozygous depth</a>
 To empirically estimate the homozygous peak depth, we can use the median BUSCO depth across the two haplotypes. First, I concatenated the two haplotypes inferred from the <a href="#03a">`default`</a> run and remapped the filtered ONT reads.
 
 ```
@@ -88,7 +88,7 @@ n=5173  Q1=23.6  median=27.9  Q3=32.2
 
 The median BUSCO depth (**27.9**) closely matches the heterozygosity peak from Hifiasm and GenomeScope2 (**29**). This means that the homozygosity peak should be approximately double that value. Following the k-mer histogram, we should redo the Hifiasm run with **`--hom-cov 55`**.
 
-### <a id="03c">Rerunning with `--hom-cov 55`</a>
+## <a id="03c">Rerunning with `--hom-cov 55`</a>
 
 ```
 hifiasm \
@@ -107,7 +107,7 @@ The next question is whether we need to adjust the `-l` and `-s` flags, which co
 
 `-s` reflects the *"similarity threshold for duplicate haplotigs that should be purged"*. At `-l 3`, the default threshold is 0.55, meaning that a pair of contigs need to have at least 55% cross-parent overlap to be considered as homologous. For an F1 hybrid genome with ~4% heterozygosity, this might be too strict.
 
-### <a id="03d">Trying other `-s` values</a>
+## <a id="03d">Trying other `-s` values</a>
 Let's try different `-s` values (0.30, 0.35, 0.40, 0.45, 0.50, 0.60, 0.65, 0.70, 0.75) based on the corrected reads from the Hifiasm run. I also tried a stricter `-l 2` with four different `-s` values (0.45, 0.55, 0.65, 0.75). Here's the example code for one Hifiasm run:
 
 ```
@@ -390,5 +390,5 @@ cd ../..
     |  2   | 0.65 | 42,197,018 |   6 | 42,197,018 | 20,289,095 |  12 | 20,289,095 | 41,264,420 |                         437.7 |
     |  2   | 0.75 | 45,190,855 |   6 | 54,056,018 | 30,311,269 |  13 | 38,519,572 | 46,639,921 |                          40.7 |
 
-### <a id="03e">Conclusion</a>
+## <a id="03e">Conclusion</a>
 From all these tests, `-s 0.55` seems to be the higher ceiling, because setting the value higher resulted in longer primary assembly (which means that Hifiasm stops recognising homologous contig pairs) and lower BUSCO completeness. However, using `s 0.55` somehow resulted in a higher percentage of missing BUSCO for hap2. Thus, we should use **`-l 3 -s 0.50`** for our analysis.
