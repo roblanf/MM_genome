@@ -1,6 +1,6 @@
 # Assembly
 
-This README is purposed to store additional details required to conduct the `Aseembly` step from the main <a href="../../README.md">`README.md`</a>.
+This README is purposed to store additional details required to conduct the `Assembly` step from the main <a href="../../README.md">`README.md`</a>.
 
 ## Table of Contents
 - <a href="#03a">Using default parameters</a>
@@ -241,7 +241,7 @@ cd ../..
 cd ../..
 ```
 
-I asked Claude to generate a Python <a href="./scripts/summarise_s_sweep.py">script</a> to summarise the results across parameter combinations. The following tables show the statistics across **2,805 BUSCOs** (for `compleasm`) and **601,145,508 solid read k-mers** (for `merqury`) per run:
+I asked Claude to generate an R <a href="./scripts/summarise_s_runs.R">script</a> to summarise the results across parameter combinations. The following tables show the statistics across **2,805 BUSCOs** (for `compleasm`) and **601,145,508 solid read k-mers** (for `merqury`) per run:
 
 - <b><i>Haplotype 1</b></i>
 

@@ -1,5 +1,7 @@
 # Nuclear
 
+This README is purposed to store additional details required to conduct the `Assembly of nuclear genome` step from the main <a href="../../README.md">`README.md`</a>.
+
 ## Table of Contents
 - <a href="#05a">Checking for duplicate contigs</a>
 - <a href="#05b">Aligning haplotypes against each other</a>
@@ -66,13 +68,14 @@ Rscript scripts/pafCoordsDotPlotly.R \
 | :--------------------------------------------: | :--------------------------------------------: |
 | ![H1 vs H1 Dotplot](./figures/fig10_h1h1.png)  | ![H2 vs H2 Dotplot](./figures/fig10_h2h2.png)  |
 
-It is still quite tricky to identify those contigs based on the plots. Tools such as `purge_dups` removed putative duplicates based on their mapping depths. Here, Claude generated a Python <a href="./scripts/flag_contained_contigs.py">script</a> that works similarly but with several adjustments following our data:
+It is still quite tricky to identify those contigs based on the plots. Tools such as `purge_dups` removed putative duplicates based on their mapping depths. Here, Claude generated an R <a href="../../scripts/flag_contained_contigs.R">script</a> that works similarly but with several adjustments following our data:
 - Use `minimap2 -cx asm20 -DP -m200` to accommodate the ~4% heterozygosity
 - Select candidate duplicates as contigs with ≥ 80% of their lengths covered by alignments to a longer contig with ≥ 10 kb length at ≥ 90% identity
 - Use a dynamic depth threshold based on the estimated homozygous peak of 55x
 
 Here is the decription of the method:
-- If a haplotype is perfect, then each contig should match 1:1 when mapped against itself. However, from the dotplots, we could see that there are smaller contigs that are better aligned to other longer contigs. The Python script lists every contig with ≥ 80% of its length lying inside a longer contig, with a minimum of 10kb aligned sites and 90% identity.
+- If a haplotype is perfect, then each contig should match 1:1 when mapped against itself. However, from the dotplots, we could see that there are smaller contigs that are better aligned to other longer contigs. The R script lists every contig with ≥ 80% of its length lying inside a longer contig, with a minimum of 10kb aligned sites and 90% identity.
+
 - There are four potential reasons how it could happen:
     1. An assembly error, where the same molecule got assembled twice
     2. A phasing error, where both parental alleles were put into hap1
@@ -80,6 +83,7 @@ Here is the decription of the method:
     4. It is a paralog
 
     Among these cases, we should remove cases 1-3, but **keep case 4**.
+
 - We can differentiate these four cases by looking at the:
     - Identity
         1. ≥99.9%, because the two assemblies come from the same molecule
@@ -96,12 +100,13 @@ Here is the decription of the method:
         2. ~27.5x, because reads from only one parent would map to the smaller contig
         3. Random
         4. ~55x, because it has its own locus from both parents
+
 - Lastly, instead of setting a fixed cutoff of 27.5x or 55x to keep or remove a contig, we dynamically set a depth threshold for each contig based on it's percentage of contained sites (*f*) with the following formula: `27.5*f* + 55(1 − *f*)`. If the value is lower than the threshold, the contig is more likely to fit either case 1 or 2 and thus should be removed.
 
 ```
 # identify putative paralogs
-python3 scripts/flag_contained_contigs.py 05_nuclear_qc/01_h1h2/h1_self.paf > 05_nuclear_qc/01_h1h2/h1_dups.tsv
-python3 scripts/flag_contained_contigs.py 05_nuclear_qc/01_h1h2/h2_self.paf > 05_nuclear_qc/01_h1h2/h2_dups.tsv
+Rscript scripts/flag_contained_contigs.R 05_nuclear_qc/01_h1h2/h1_self.paf > 05_nuclear_qc/01_h1h2/h1_dups.tsv
+Rscript scripts/flag_contained_contigs.R 05_nuclear_qc/01_h1h2/h2_self.paf > 05_nuclear_qc/01_h1h2/h2_dups.tsv
 
 # calculate each contig's depth
 awk -F'\t' 'NR>1{print $1}' 05_nuclear_qc/01_h1h2/h1_dups.tsv > 05_nuclear_qc/01_h1h2/h1_remove.txt
@@ -746,7 +751,7 @@ Rscript scripts/pafCoordsDotPlotly.R \
     -o both_dotplot -s -l -m 10000 -q 1
 
 # generate pairwise coverage table
-python3 scripts/pair_coverage.py 05_nuclear_qc/04_alignment/both.paf \
+Rscript scripts/pair_coverage.R 05_nuclear_qc/04_alignment/both.paf \
     --prefix 05_nuclear_qc/04_alignment/both
 ```
 
@@ -776,7 +781,7 @@ python3 scripts/pair_coverage.py 05_nuclear_qc/04_alignment/both.paf \
     | hap1      |           291 | 279 (26.89 Mb)<br>- ≥99: 265<br>- 94-99%: 14 |                              2 (0.95 Mb) | 2&nbsp;(0.19&nbsp;Mb) |          8 |
     | hap2      |           215 | 214 (28.46 Mb)<br>- ≥99: 204<br>- 94-99%: 10 |                                        0 | 1&nbsp;(1.85&nbsp;Mb) |          0 |
 
-### <a id="05c">Mapping to reference assemblies</a>
+## <a id="05c">Mapping to reference assemblies</a>
 To follow <a href="https://github.com/roblanf/MM_genome/tree/genome_assembly">Jack's</a> script for contig assignment, we need to map each haplotype to the reference genomes. I first downloaded the genome assemblies of both *E. decipiens* and *E. virginea* from NCBI, and changed the chromosome names to 1-11 for readability.
 
 ```
@@ -876,10 +881,10 @@ minimap2 -x asm20 -N 1000 -c --secondary=no -t 128 $ref_decipiens $hap2 > "${out
 minimap2 -x asm20 -N 1000 -c --secondary=no -t 128 $ref_virginea $hap2 > "${outdir}/hap2_vs_virginea.paf"
 ```
 
-I modified Jack's script to score each contig on its percentage of aligned sites (*all* alignments ≥1 kb at ≥80% identity) and identity compared to only the best alignment (see <a href="./scripts/dv_scoring.py">here</a>). 
+I modified Jack's script to score each contig on its percentage of aligned sites (*all* alignments ≥1 kb at ≥80% identity) and identity compared to only the best alignment (see <a href="./scripts/dv_scoring.R">here</a>). 
 
 ```
-python3 scripts/dv_scoring.py \
+Rscript scripts/dv_scoring.R \
     --h1h2   05_nuclear_qc/04_alignment/h1_vs_h2.paf \
     --h1-dec 06_parental_assign/alignment/hap1_vs_decipiens.paf \
     --h1-vir 06_parental_assign/alignment/hap1_vs_virginea.paf \

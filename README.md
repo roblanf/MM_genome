@@ -19,7 +19,6 @@ This branch is purposed to finalise the assembly of the *Eucalyptus x phylacis* 
     - <a href="#05b">Comparing to parental k-mers</a>
     - <a href="#05c">Assigning individual contigs to each putative parent</a>
 - <a href="#06">Scaffolding</a>
-    - <a href="#06a">Gap closing</a>
 
 ## <a id="01">Prerequisites</a>
 This analysis requires a number of software and R packages to run. Here, I am going to install them using `conda`:
@@ -30,12 +29,12 @@ conda activate    meelupmallee
 
 # install dependencies
 conda install  -c conda-forge -c bioconda \
-    barrnap=0.9  blobtoolkit chopper    compleasm diamond \
-    genomescope2 gfatools    hifiasm    kmc       kraken2 \
-    merqury      mosdepth    nanoplot   ncbi-datasets-cli \
-    oatk         pigz        pycirclize quast \
-    r-optparse   r-plotly    r-tidyverse \
-    racon        ragtag      seqkit     sra-tools tgsgapcloser
+    barrnap=0.9  blobtoolkit  chopper    compleasm diamond \
+    genomescope2 gfatools     hifiasm    kmc       kraken2 \
+    merqury      mosdepth     nanoplot   ncbi-datasets-cli \
+    oatk         pigz         quast \
+    r-circlize   r-data.table r-optparse r-plotly  r-tidyverse \
+    racon        ragtag       seqkit     sra-tools tgsgapcloser
 ```
 
 > [!NOTE]
@@ -66,8 +65,6 @@ NanoPlot \
     -o 01_qc/03_nanoplot \
     --title "E_phylacis_Filtered_ONT"
 ```
-
-### OUTPUT
 
 |        Metric       |         Raw       |      Filtered     |
 | :------------------ | -----------------:| -----------------:|
@@ -112,8 +109,6 @@ kraken2 \
     --output 01_qc/04_kraken/conf02.kraken \
     01_qc/02_chopper/E_phylacis_filtered.fastq.gz
 ```
-
-### OUTPUT
 
 | Category                        |  `--confidence 0`  |  `--confidence 0.2`  |
 | :------------------------------ | -----------------: | -------------------: |
@@ -163,8 +158,6 @@ genomescope2 \
     -o 01_qc/05_genomescope/ \
     -k 21 -p 2
 ```
-
-### OUTPUT
 
 ![Figure 01. GenomeScope2 transformed linear plot on filtered ONT reads.](./analyses/01_qc/figures/fig01.png)
 
@@ -333,7 +326,7 @@ blobtk plot -v snail -d 03_qc/hap2_btk -o 03_qc/hap2_snail.svg
 It seems that hap1 contains a little bit of contamination from *Ascomycota* (fungi). We should remove these contigs in later stages. 
 
 ## <a id="04">Assembly of organelle genomes</a>
-I followed <a href="https://github.com/roblanf/MM_genome/tree/initial_trials">Rob's</a> recommendation to assemble the mtDNA and ptDNA genomes (see <a href="./analyses/03_organelle/README.md">here</a> to download the organelle database). I also asked Claude to generate a Python <a href="./analyses/03_organelle/scripts/oatk_circular_map.py">script</a> to visualise the circular map of each organelle.
+I followed <a href="https://github.com/roblanf/MM_genome/tree/initial_trials">Rob's</a> recommendation to assemble the mtDNA and ptDNA genomes (see <a href="./analyses/03_organelle/README.md">here</a> to download the organelle database). I also asked Claude to generate an R <a href="./analyses/03_organelle/scripts/oatk_circular_map.R">script</a> to visualise the circular map of each organelle.
 
 ```
 # create a new directory as not to overwrite the previous results
@@ -356,12 +349,12 @@ oatk -k 1001 \
      02_assembly/homcov55/hifiasm_s050/ec_extract/E_phylacis_s050.asm.ec.fq
 
 # save into PNG
-python scripts/oatk_circular_map.py \
+Rscript scripts/oatk_circular_map.R \
     04_organelle/c30k1001/E_phylacis.mito.ctg.fasta \
     04_organelle/c30k1001/E_phylacis.mito.ctg.bed \
     -o 04_organelle/c30k1001/mito_map.png
 
-python scripts/oatk_circular_map.py \
+Rscript scripts/oatk_circular_map.R \
     04_organelle/c30k1001/E_phylacis.pltd.ctg.fasta \
     04_organelle/c30k1001/E_phylacis.pltd.ctg.bed \
     -o 04_organelle/c30k1001/pltd_map.png
@@ -386,7 +379,7 @@ python scripts/oatk_circular_map.py \
 ![Figure 08. ptDNA Circular Map.](./analyses/03_organelle/figures/fig08.png)
 
 ## <a id="05">Assembly of nuclear genome</a>
-Claude generated a Python <a href="./analyses/04_nuclear/scripts/flag_contained_contigs.py">script</a> to identify duplicates based on their identities and mapping depths. Based on the <a href="./analyses/04_nuclear/README.md">final table</a>, there are <a href="./files/h1_remove.txt">99 contigs</a> that should be removed from haplotype 1 and <a href="./files/h2_remove.txt">78 contigs</a> from haplotype 2. Let's filter these contigs out!
+Claude generated an R <a href="./analyses/04_nuclear/scripts/flag_contained_contigs.R">script</a> to identify duplicates based on their identities and mapping depths. Based on the <a href="./analyses/04_nuclear/README.md">final table</a>, there are <a href="./files/h1_remove.txt">99 contigs</a> that should be removed from haplotype 1 and <a href="./files/h2_remove.txt">78 contigs</a> from haplotype 2. Let's filter these contigs out!
 
 ```
 # iterate over haplotypes
@@ -629,7 +622,7 @@ Consistent with `hifiasm` and `GenomeScope2`, the heterozygous k‑mers (red, on
 From these results, the 12 longest contigs seem to clearly prefer one parent over another. The ~12% minority hapmers (whose value is comparable to the species-specific k-mers found in both haplotypes), alongside ~7% error-rate and relatively short ~100 kb N50, likely reflect homozygous regions across the two haplotypes, resulting in a frequent switching between decipiens- and virginea-derived kmers.
 
 ### <a id="05c">Assigning individual contigs to each putative parent</a>
-I tried to use <a href="https://github.com/roblanf/MM_genome/tree/genome_assembly">Jack's</a> script to categorise contigs onto `decipiens-like` and `virginea-like` based on their mapping identity to each putative parent (`ID`). However, I found that the placement of some contigs was <a href="./analyses/04_nuclear/README.md">ambiguous</a>. We could use tools such as ROADIES to categorise each contig, but it is very resource intensive. Instead, Claude suggested a simpler <a href="./analyses/04_nuclear/scripts/split_parents.py">approach</a> to categorise each contig based on the following criteria (in the order of importance):
+I tried to use <a href="https://github.com/roblanf/MM_genome/tree/genome_assembly">Jack's</a> script to categorise contigs onto `decipiens-like` and `virginea-like` based on their mapping identity to each putative parent (`ID`). However, I found that the placement of some contigs was <a href="./analyses/04_nuclear/README.md">ambiguous</a>. We could use tools such as ROADIES to categorise each contig, but it is very resource intensive. Instead, Claude suggested a simpler <a href="./scripts/split_parents.R">approach</a> to categorise each contig based on the following criteria (in the order of importance):
 1. Assign each chromosome‑scale contig, including the 3.5 Mb long `h2tg000036l`, to its respective parents (see previous <a href="#05b">section</a>)
 2. Assign other contig fragments whose best partner in the other haplotype is a chromosome-scale contig covering ≥ 50% of the fragment
 3. Assign the rest of contigs that did not map to a chromosome-scale contig based on its `ID`
@@ -645,7 +638,7 @@ samtools faidx 05_nuclear_qc/03_filtered/hap1.purged.fa
 samtools faidx 05_nuclear_qc/03_filtered/hap2.purged.fa
 
 # split contigs to each parent
-python3 scripts/split_parents.py \
+Rscript scripts/split_parents.R \
     --pairs   05_nuclear_qc/04_alignment/both.pairs.tsv \
     --chrom   06_parental_assign/alignment/parent_of_chromosome.tsv \
     --fai     05_nuclear_qc/03_filtered/hap1.purged.fa.fai 05_nuclear_qc/03_filtered/hap2.purged.fa.fai \
@@ -756,180 +749,6 @@ cd ../../..
 The results look pretty good! The two assemblies have **~95%** BUSCO completeness scores, and similarly **~95%** of the k-mers agree to the hypothesised parents.
 
 ## <a id="06">Scaffolding</a>
-
-Now, let's scaffold the contigs to their respective parents.
-```
-# change working directory
-cd 07_scaffolding/
-
-# virginea-like to virginea
-ragtag.py scaffold -t 128 --mm2-params "-x asm20" -f 10000 -u -s 0.1 \
-    -o virginea_like ../06_parental_assign/parents/roadies/Eucalyptus_virginea_GCA_014182375.1.fna \
-    ../06_parental_assign/final/E_phylacis_virginea_like.fa
-
-# decipiens-like to decipiens
-ragtag.py scaffold -t 128 --mm2-params "-x asm20" -f 10000 -u -s 0.1 \
-    -o decipiens_like ../06_parental_assign/parents/roadies/Eucalyptus_decipiens_GCA_014182575.1.fna \
-    ../06_parental_assign/final/E_phylacis_decipiens_like.fa
-
-# virginea-like to regnans
-ragtag.py scaffold -t 128 --mm2-params "-x asm20" -f 10000 -u -s 0.1 \
-    -o virginea_like ../06_parental_assign/parents/roadies/Eucalyptus_regnans_GCA_037349125.1.fna \
-    ../06_parental_assign/final/E_phylacis_virginea_like.fa
-
-# decipiens-like to regnans
-ragtag.py scaffold -t 128 --mm2-params "-x asm20" -f 10000 -u -s 0.1 \
-    -o decipiens_like ../06_parental_assign/parents/roadies/Eucalyptus_regnans_GCA_037349125.1.fna \
-    ../06_parental_assign/final/E_phylacis_decipiens_like.fa
-
-# change working directory
-cd ..
-```
-
-### OUTPUT
-| Metric               | virginea-like,<br>ref. *E. virginea* | virginea-like,<br>ref. *E. regnans* | decipiens-like,<br>ref. *E. decipiens* | decipiens-like,<br>ref. *E. regnans* |
-| :------------------- | -----------------------------------: | ----------------------------------: | -------------------------------------: | -----------------------------------: |
-| Input contigs        |                             277 |                            277 |                               245 |                             245 |
-| Chromosome scaffolds |                              11 |                             11 |                                11 |                              11 |
-| Contigs placed       |                             193 |                            159 |                               181 |                             153 |
-| Placed (bp)          |                     534,221,985 |                    530,423,308 |                       565,214,048 |                     561,954,513 |
-| Placed (%)           |                            98.2 |                           97.5 |                              98.6 |                            98.0 |
-| Contigs unplaced     |                              84 |                            118 |                                64 |                              92 |
-| `-s` < 0.1 (Mb)      |                       20 (5.19) |                      32 (5.96) |                         21 (2.43) |                       32 (5.99) |
-| Unplaced (bp)        |                       9,686,931 |                     13,485,608 |                         8,269,866 |                      11,529,401 |
-| Gaps (100 N)         |                             182 |                            147 |                               169 |                             142 |
-
-### <a id="06a">Gap closing</a>
-```
-# create another set of longer, filtered reads
-pigz -dc -p 16 00_raw_data/*.fastq.gz | \
-chopper -q 7 -l 50000 | \
-bgzip -@ 128 > 01_qc/02_chopper/E_phylacis_filtered_Q750k.fastq.gz
-
-# combine the two haplotypes
-seqkit replace -p '^' -r 'vir_' 07_scaffold/virginea_like_a01/ragtag.scaffold.fasta  > 08_gapclose/vir.fa
-seqkit replace -p '^' -r 'dec_' 07_scaffold/decipiens_like_a01/ragtag.scaffold.fasta > 08_gapclose/dec.fa
-cat 08_gapclose/vir.fa 08_gapclose/dec.fa > 08_gapclose/both_parents.fa
-
-# map filtered reads to both parents
-minimap2 -x map-ont -t 128 --secondary=no 08_gapclose/both_parents.fa \
-    01_qc/02_chopper/E_phylacis_filtered_Q750k.fastq.gz > 08_gapclose/reads_vs_parents.paf
-
-# change working directory
-mkdir -p 08_gapclose/decipiens/
-mkdir -p 08_gapclose/virginea/
-
-# change working directory
-cd 08_gapclose/decipiens/
-
-# extract gap windows (±100 kb) on the decipiens scaffolds, named as in both_parents.fa
-awk -F'\t' '$5=="U" {s=$2-100000; if (s<1) s=1; print "dec_"$1"\t"s"\t"$3+100000}' \
-    ../../07_scaffold/decipiens_like_a01/ragtag.scaffold.agp > dec_gaps.bed
-
-# extract all reads with an alignment overlapping a gap window
-awk '$6 ~ /^dec_/ {print $6"\t"$8"\t"$9"\t"$1}' ../reads_vs_parents.paf \
-    | bedtools intersect -u -a - -b dec_gaps.bed | cut -f4 | sort -u > dec_gap_reads.txt
-seqkit grep -f dec_gap_reads.txt ../../01_qc/02_chopper/E_phylacis_filtered_Q750k.fastq.gz | seqkit fq2fa > dec_gap_reads.fa
-
-tgsgapcloser --scaff ../dec.fa --reads dec_gap_reads.fa --output dec_closed --tgstype ont \
-    --racon /home/jeremias/anaconda3/envs/btk/bin/racon --thread 32 > dec_closed.log 2>&1
-
-# change working directory
-cd ../virginea/
-
-# do the same with virginea
-awk -F'\t' '$5=="U" {s=$2-100000; if (s<1) s=1; print "vir_"$1"\t"s"\t"$3+100000}' \
-    ../../07_scaffold/virginea_like_a01/ragtag.scaffold.agp > vir_gaps.bed
-
-awk '$6 ~ /^vir_/ {print $6"\t"$8"\t"$9"\t"$1}' ../reads_vs_parents.paf \
-    | bedtools intersect -u -a - -b vir_gaps.bed | cut -f4 | sort -u > vir_gap_reads.txt
-seqkit grep -f vir_gap_reads.txt ../../01_qc/02_chopper/E_phylacis_filtered_Q750k.fastq.gz | seqkit fq2fa > vir_gap_reads.fa
-
-tgsgapcloser --scaff ../vir.fa --reads vir_gap_reads.fa --output vir_closed --tgstype ont \
-    --racon /home/jeremias/anaconda3/envs/btk/bin/racon --thread 32 > vir_closed.log 2>&1
-
-# combine two sets of reads
-# cat vir_gap_reads.fa extra_gap_reads.fa | seqkit rmdup -n > vir_gap_reads_all.fa
-
-# change working directory
-cd ../..
-```
-
-| Reads                                  |                    decipiens-like                  |                   virginea-like                    |
-| :------------------------------------- | :------------------------------------------------: | :------------------------------------------------: |
-| Q&nbsp;≥&nbsp;7, len&nbsp;≥&nbsp;50kb  | ![Karyotype Q7, 50k](./figures/fig15_dec_Q7.png)   | ![Karyotype Q7, 50k](./figures/fig15_vir_Q7.png)   |
-| Q&nbsp;≥&nbsp;10, len&nbsp;≥&nbsp;15kb | ![Karyotype Q10, 15k](./figures/fig15_dec_Q10.png) | ![Karyotype Q10, 15k](./figures/fig15_vir_Q10.png) |
-| Both                                   | ![Karyotype both](./figures/fig15_dec_both.png)    | ![Karyotype both](./figures/fig15_vir_both.png)    |
-
-In these plots, runs of Ns are not coloured, so chromosome 5 on decipiens-like haplotype (`CM024613.1`) does not lose a contig. The original contig has Ns in the middle of it, which was not shown on `before` but explicitly marked on `after`. Moreover, it seems like TGS-GapCloser trimmed long, repetitive regions on chromosome 2 of virginea-like haplotype (`CM024515.1`), which resulted in a shorter chromosome length. Let's try using a stricter `--min_idy 0.8 --min_match 2000`, meaning that each flanking sequence must be at least 80% identical with the contig across ≥2 kb. I repeated the analysis using the combined set of reads.
-
-|                    decipiens-like                  |                   virginea-like                    |
-| :------------------------------------------------: | :------------------------------------------------: |
-| ![Karyotype both](./figures/fig16_dec_both.png)    | ![Karyotype both](./figures/fig16_vir_both.png)    |
-
-It seems that the trimmed repetitive sequences on chromosome 2 of virginea-like haplotype have identical 10kb flanking sequences and thus cannot really be fixed... I think we should exclude the chromosome from TGS-GapCloser analysis.
-
-```
-# change working directory
-cd 08_gapclose/virginea_nochr2/
-
-# virginea-like
-seqkit grep -v -p vir_CM024515.1_RagTag ../virginea/vir.fa > vir_noChr2.fa
-seqkit grep    -p vir_CM024515.1_RagTag ../virginea/vir.fa > vir_chr2.fa
-
-tgsgapcloser --scaff vir_noChr2.fa --reads ../virginea/vir_gap_reads_all.fa --output vir_final --tgstype ont \
-    --racon /home/jeremias/anaconda3/envs/btk/bin/racon --thread 32 > vir_final.log 2>&1
-
-cat vir_final.scaff_seqs vir_chr2.fa > vir_closed_final.fa
-
-# change working directory
-cd ../decipiens_nochr2/
-
-# decipiens-like
-seqkit grep -v -p dec_CM024610.1_RagTag ../decipiens/dec.fa > dec_noChr2.fa
-seqkit grep    -p dec_CM024610.1_RagTag ../decipiens/dec.fa > dec_chr2.fa
-
-gsgapcloser --scaff dec_noChr2.fa --reads ../decipiens/dec_gap_reads_all.fa --output dec_final --tgstype ont \
-    --racon /home/jeremias/anaconda3/envs/btk/bin/racon --thread 32 > dec_final.log 2>&1
-
-cat dec_final.scaff_seqs dec_chr2.fa > dec_closed_final.fa
-```
-
-### OUTPUT
-
-- <b><i>Karyotypes</b></i>
-
-    |                    decipiens-like                  |                   virginea-like                    |
-    | :------------------------------------------------: | :------------------------------------------------: |
-    | ![Karyotype both](./figures/fig17_dec.png)         | ![Karyotype both](./figures/fig17_vir.png)         |
-
-
-- <b><i>TGS-GapCloser + SeqKit</b></i>
-
-    | Metric                                        | virginea-like  |       decipiens-like |
-    | :-------------------------------------------- | -------------: | -------------------: |
-    | Sequences                                     |             95 |                   76 |
-    | Total length before (bp)                      |    543,927,116 |          573,500,814 |
-    | Total length after (bp)                       |    544,002,914 |          573,225,500 |
-    | RagTag gaps before                            |            182 |                  169 |
-    | RagTag gaps attempted (exclude chr2)          |            166 |                  162 |
-    | — filled with read sequence                   |  8 (76,745 bp) |       10 (97,427 bp) |
-    | — overlapping ends merged                     |      1 (47 bp) |                    0 |
-    | — left open                                   |            157 |                  152 |
-    | RagTag gaps after                             |            173 |                  159 |
-    | Contig-internal N runs (hifiasm)              |       2 (open) | 4 (1 filled; 3 open) |
-    | Original sequence removed (bp)                |             47 |                    0 |
-
-- <b><i>Compleasm</b></i>
-
-    | Metric                | decipiens-like   | virginea-like   |
-    | :-------------------- | ---------------: | --------------: |
-    | BUSCO S (%)           |       95.26 |      95.69 |
-    | BUSCO D (%)           |        4.39 |       3.96 |
-    | BUSCO F (%)           |        0.32 |       0.32 |
-    | BUSCO&nbsp;M&nbsp;(%) |        0.04 |       0.04 |
-
-    The difference in the decipiens-like haplotype comprises 3 differentially-classified BUSCO that are not found around the gap-filled regions, meaning that they reflect compleasm’s run‑to‑run variation.
 
 ---
 *Last update: 11 November 2026 by Jeremias Ivan*
