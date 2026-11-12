@@ -18,6 +18,7 @@ This branch is purposed to finalise the assembly of the *Eucalyptus x phylacis* 
     - <a href="#05a">Checking for duplicate contigs</a>
     - <a href="#05b">Comparing to parental k-mers</a>
     - <a href="#05c">Assigning individual contigs to each putative parent</a>
+    - <a href="#05d">Filtering out cross-haplotype duplicates</a>
 - <a href="#06">Scaffolding</a>
 
 ## <a id="01">Prerequisites</a>
@@ -379,6 +380,8 @@ Rscript scripts/oatk_circular_map.R \
 ![Figure 08. ptDNA Circular Map.](./analyses/03_organelle/figures/fig08.png)
 
 ## <a id="05">Assembly of nuclear genome</a>
+
+### <a id="05a">Checking for duplicate contigs</a>
 Claude generated an R <a href="./analyses/04_nuclear/scripts/flag_contained_contigs.R">script</a> to identify duplicates based on their identities and mapping depths. Based on the <a href="./analyses/04_nuclear/README.md">final table</a>, there are <a href="./files/h1_remove.txt">99 contigs</a> that should be removed from haplotype 1 and <a href="./files/h2_remove.txt">78 contigs</a> from haplotype 2. Let's filter these contigs out!
 
 ```
@@ -654,7 +657,6 @@ This generated two files:
 
 Across the 7 unassigned and 3 decipiens-like contigs (others), 8 came from *Ascomycota* according to <a href="#03b">BlobTools</a>. The other two (`h1tg000058l` and `h2tg000019l`) paired to each other with 0.993 identity, and both mapped to *E. decipiens*. This might reflect a genomic region with very low heterozygosity between the two parents and thus was failed to be differentiated based on the k-mers. Thus, I assigned `h2tg000019l` to *E. decipiens* (because it is larger and thus has a stronger call for *E. decipiens*) and `h1tg000058l` to *E. virginea*.
 
-### Phasing and SeqKit
 ```
 # change the working directory
 cd 06_parental_assign/final/
@@ -679,25 +681,59 @@ awk -F'\t' 'BEGIN{OFS="\t"}
 # rebuild the parental assemblies
 seqkit grep -f virginea.txt  ../../06_parental_assign/roadies/all.purged.fa > E_phylacis_virginea_like.fa
 seqkit grep -f decipiens.txt ../../06_parental_assign/roadies/all.purged.fa > E_phylacis_decipiens_like.fa
-seqkit stats E_phylacis_*_like.fa
 
 # change the working directory
 cd ../..
 ```
 
+### <a id="05d">Filtering out cross-haplotype duplicates</a>
+While our deduplication step removed within-haplotype duplicates, there might be cross-haplotype duplicates, where a duplicate contig of hap1 is present on hap2 (or vice versa). To identify such cases, Claude generated a <a href="./scripts/crosshap_dedup.py">script</a> that checks the depth of individual contigs. Similar to the previous deduplication <a href="#05a">criterion</a>, we compared every contig to *every* other contig and marked one as a duplicate if at least 50% of its sites aligned to a longer contig with ≥ 99.5% identity and < 41.3x depth.
+
+```
+# generate parent_of_chromosome.tsv
+awk -F'\t' 'NR>1 {len=$3; gsub(",","",len)}
+            NR>1 && (len+0 >= 10000000 || $1=="h2tg000036l") && ($15=="decipiens" || $15=="virginea") {print $1"\t"$15}' \
+    06_parental_assign/alignment/dv_scoring.tsv > 06_parental_assign/alignment/parent_of_chromosome.tsv
+
+# deduplication
+python3 scripts/crosshap_dedup.py \
+    --union   06_parental_assign/roadies/all.purged.fa \
+    --anchors 06_parental_assign/alignment/parent_of_chromosome.tsv \
+    --bam-h1  03_qc/hap1.bam \
+    --bam-h2  03_qc/hap2.bam \
+    --out     06_parental_assign/cross_dedup
+
+# remove duplicates
+seqkit grep -v -f 06_parental_assign/cross_dedup.drop.txt 06_parental_assign/final/E_phylacis_virginea_like.fa  -o 06_parental_assign/final/E_phylacis_virginea_like.dedup.fa
+seqkit grep -v -f 06_parental_assign/cross_dedup.drop.txt 06_parental_assign/final/E_phylacis_decipiens_like.fa -o 06_parental_assign/final/E_phylacis_decipiens_like.dedup.fa
+```
+
+This excludes 217 contigs with <41.3x depth, and retains the rest (288 contigs).
+```
+duplicate     drop (single-parent copy)  n= 217   23.04 Mb
+duplicate     keep (shared sequence)     n= 273   28.70 Mb
+no-hit        keep                       n=  14    3.48 Mb
+own-sequence  keep                       n=   1    0.16 Mb
+```
+
+### Phasing and SeqKit
+```
+seqkit stats 06_parental_assign/final/E_phylacis_*_like.dedup.fa
+```
+
 | Metric            | decipiens-like | virginea-like |
 | :---------------- | -------------: | ------------: |
-| Contigs           |            245 |           277 |
-| Total length (bp) |    573,483,914 |   543,908,916 |
-| Min (bp)          |         24,809 |        44,531 |
-| Mean (bp)         |      2,340,751 |     1,963,570 |
+| Contigs           |            148 |           157 |
+| Total length (bp) |    564,348,195 |   530,008,586 |
+| Min (bp)          |         24,809 |        44,597 |
+| Mean (bp)         |      3,813,164 |     3,375,851 |
 | Max (bp)          |     65,682,487 |    61,702,390 |
 
 ### Compleasm + Merqury
 ```
 # compleasm
-compleasm run -a 06_parental_assign/final/E_phylacis_virginea_like.fa  -o 06_parental_assign/final/compleasm/virginea  -l eudicotyledons --odb odb12 -t 128 -L 02_assembly/default/busco_lineages/
-compleasm run -a 06_parental_assign/final/E_phylacis_decipiens_like.fa -o 06_parental_assign/final/compleasm/decipiens -l eudicotyledons --odb odb12 -t 128 -L 02_assembly/default/busco_lineages/
+compleasm run -a 06_parental_assign/final/E_phylacis_virginea_like.dedup.fa  -o 06_parental_assign/final/compleasm/virginea  -l eudicotyledons --odb odb12 -t 128 -L 02_assembly/default/busco_lineages/
+compleasm run -a 06_parental_assign/final/E_phylacis_decipiens_like.dedup.fa -o 06_parental_assign/final/compleasm/decipiens -l eudicotyledons --odb odb12 -t 128 -L 02_assembly/default/busco_lineages/
 
 # merqury
 mkdir -p 06_parental_assign/final/merqury && cd 06_parental_assign/final/merqury
@@ -705,8 +741,8 @@ merqury.sh \
     ../../e_phylacis/E_phylacis.meryl \
     ../../parents/E_virginea.unique.meryl \
     ../../parents/E_decipiens.unique.meryl \
-    ../E_phylacis_virginea_like.fa \
-    ../E_phylacis_decipiens_like.fa \
+    ../E_phylacis_virginea_like.dedup.fa \
+    ../E_phylacis_decipiens_like.dedup.fa \
     E_phylacis_parents
 
 cd ../../..
@@ -716,8 +752,8 @@ cd ../../..
 
     | Metric                | decipiens   | virginea   |
     | :-------------------- | ----------: | ---------: |
-    | BUSCO S (%)           |       95.29 |      95.69 |
-    | BUSCO D (%)           |        4.35 |       3.96 |
+    | BUSCO S (%)           |       96.72 |      97.54 |
+    | BUSCO D (%)           |        2.92 |       2.10 |
     | BUSCO F (%)           |        0.32 |       0.32 |
     | BUSCO&nbsp;M&nbsp;(%) |        0.04 |       0.04 |
 
@@ -725,30 +761,30 @@ cd ../../..
 
     | Metric                       | virginea-like | decipiens-like |       Both |
     | :--------------------------- | ------------: | -------------: | ---------: |
-    | QV                           |         62.39 |          62.76 |      62.58 |
-    | Error rate                   |      5.77e-07 |       5.29e-07 |   5.52e-07 |
-    | Asm-only k-mers              |         9,709 |          9,376 |     19,085 |
-    | k-mer completeness&nbsp;(%)  |         60.00 |          61.54 |      99.32 |
+    | QV                           |         62.38 |          62.80 |      62.59 |
+    | Error rate                   |      5.78e-07 |       5.25e-07 |   5.51e-07 |
+    | Asm-only k-mers              |         9,483 |          9,156 |     18,639 |
+    | k-mer completeness&nbsp;(%)  |         58.84 |          60.78 |      99.32 |
 
 - <b><i>Species-specific k-mers found in each haplotype</i></b>
 
     | Hapmer set            |       Total | In&nbsp;virginea-like (%) | In&nbsp;decipiens-like (%) | In&nbsp;union (%) | In&nbsp;both&nbsp;haplotypes (% of those in union) |
     | :-------------------- | ----------: | ------------------------: | -------------------------: | ----------------: | -------------------------------------------------: |
-    | virginea–specific  |        156.5 |                 95.3 |                  16.1 |              11.4 |                                 4.7 |
-    | decipiens–specific |        161.5 |                 18.9 |                  94.3 |              13.2 |                                 5.7 |
+    | virginea–specific  |        156.5 |                 95.1 |                  14.2 |               9.4 |                                 4.9 |
+    | decipiens–specific |        161.5 |                 16.5 |                  94.2 |              10.7 |                                 5.8 |
 
 - <b><i>Phased blocks</b></i>
 
     | Assembly       | Blocks | N50 (kb) | Max (Mb) | Switch error (%) |
     | :------------- | -----: | -------: | -------: | ---------------: |
-    | decipiens-like | 20,024 |    114.5 |     3.09 |             7.24 |
-    | virginea-like  | 23,078 |     82.5 |     2.53 |             7.78 |
+    | decipiens-like | 19,509 |    117.2 |     3.09 |             7.25 |
+    | virginea-like  | 22,465 |     83.5 |     2.53 |             7.79 |
 
 ![Figure 14. Hapmer blob plot of the two parental assemblies.](./analyses/04_nuclear/figures/fig14.png)
 
-The results look pretty good! The two assemblies have **~95%** BUSCO completeness scores, and similarly **~95%** of the k-mers agree to the hypothesised parents.
+The results look pretty good! The two assemblies have **~97%** BUSCO completeness scores, and **94-95%** of the k-mers agree to the hypothesised parents.
 
 ## <a id="06">Scaffolding</a>
 
 ---
-*Last update: 11 November 2026 by Jeremias Ivan*
+*Last update: 12 November 2026 by Jeremias Ivan*
