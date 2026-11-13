@@ -9,6 +9,7 @@ This README is purposed to store additional details required to conduct the `Sca
 - <a href="#06d">Trying different RagTag parameters</a>
     - <a href="#06d1">`-a`</a>
     - <a href="#06d2">`-f`</a>
+- <a href="#06e">Binning and removing contigs beyond telomeres</a>
 
 ## <a id="06a">Scaffolding against *E. virginea* and *E. decipiens* reference genomes</a>
 
@@ -397,4 +398,165 @@ cd ..
 | ![](./figures/fig20_vir_f5k.png) | ![](./figures/fig20_vir_f10k.png) | ![](./figures/fig20_vir_f25k.png) | ![](./figures/fig20_vir_f50k.png) | ![](./figures/fig20_vir_f75k.png) | ![](./figures/fig20_vir_f100k.png) |
 
 Similarly, it seems that increasing the value of `-f` does not have a big impact, except on one chromosome on the `decipiens-like` haplotype. Let's stick with `-f 25000`.
+
+## <a id="06e">Binning and removing contigs beyond telomeres</a>
+Claude generated a <a href="./scripts/scaffold_per_chromosome.sh">script</a> to bin contigs based on the previous RagTag run, and exclude contigs that are placed beyond telomeres.
+
+```
+# create new folders
+mkdir -p 07_scaffold_correct_bin/refs/
+mkdir -p 07_scaffold_correct_bin/init/
+
+# copy the reference to a new folder
+cp 07_scaffold_a02_f/union_mel_f25k/union_chromosomes.fa 07_scaffold_correct_bin/refs/
+
+# remove the _RagTag suffix
+seqkit replace -p '_RagTag' -r '' 07_scaffold_correct_bin/refs/union_chromosomes.fa > 07_scaffold_correct_bin/refs/union_chromosomes_clean.fa
+
+# rerun RagTag with -a 0.2 -f 25000
+cd 07_scaffold_correct_bin/init/
+
+ragtag.py scaffold -t 64 --mm2-params "-x asm20" -f 25000 -u -a 0.2 \
+        -o virginea_like ../refs/union_chromosomes_clean.fa \
+        ../../06_parental_assign/final/E_phylacis_virginea_like.dedup.split.fa
+
+ragtag.py scaffold -t 64 --mm2-params "-x asm20" -f 25000 -u -a 0.2 \
+        -o decipiens_like ../refs/union_chromosomes_clean.fa \
+        ../../06_parental_assign/final/E_phylacis_decipiens_like.dedup.fa
+
+cd ../..
+
+# run binning (iteration 1)
+bash scripts/scaffold_per_chromosome.sh vir
+bash scripts/scaffold_per_chromosome.sh dec
+
+# run iterative binning (iteration 2, etc.) - virginea-like
+P=vir; W=07_scaffold_correct_bin/$P
+cp $W/beyond_telomere.txt $W/exclude_all.txt
+
+for i in 1 2 3 4 5; do
+    EXCLUDE=$PWD/$W/exclude_all.txt bash scripts/scaffold_per_chromosome.sh $P
+    n=$(wc -l < $W/beyond_telomere.txt)
+    echo "round $i: $n fragments still beyond a telomere"
+    [ "$n" -eq 0 ] && { echo "converged"; break; }
+    cat $W/beyond_telomere.txt >> $W/exclude_all.txt
+    sort -u -o $W/exclude_all.txt $W/exclude_all.txt
+done
+
+# run iterative binning (iteration 2, etc.) - decipiens-like
+P=dec; W=07_scaffold_correct_bin/$P
+cp $W/beyond_telomere.txt $W/exclude_all.txt
+
+for i in 1 2 3 4 5; do
+    EXCLUDE=$PWD/$W/exclude_all.txt bash scripts/scaffold_per_chromosome.sh $P
+    n=$(wc -l < $W/beyond_telomere.txt)
+    echo "round $i: $n fragments still beyond a telomere"
+    [ "$n" -eq 0 ] && { echo "converged"; break; }
+    cat $W/beyond_telomere.txt >> $W/exclude_all.txt
+    sort -u -o $W/exclude_all.txt $W/exclude_all.txt
+done
+```
+
+### Virginea-like
+
+- <b><i>Iteration 1</i></b>
+
+    ```
+    scaffold               anchor        left end                                       right end                                       internal-in-anchor
+    CM023406.3_RagTag      h2tg000004l   telomere 3019 copies                           telomere 1146 copies; 16 comp. beyond (3.30 Mb) -
+    CM023409.3_RagTag      h2tg000008l   telomere 6775 copies; 4 comp. beyond (0.27 Mb) telomere 3379 copies                            -
+    CM023404.3_RagTag      h2tg000010l   telomere 2634 copies; 2 comp. beyond (0.11 Mb) telomere 4079 copies                            -
+    CM023403.3_RagTag      h2tg000005l   telomere 3134 copies                           telomere 4226 copies                            -
+    CM023407.3_RagTag      h2tg000012l   telomere 4501 copies; 8 comp. beyond (0.79 Mb) telomere 2536 copies                            -
+    CM023408.3_RagTag      h2tg000002l   telomere 2831 copies; 7 comp. beyond (0.61 Mb) telomere 4531 copies; 1 comp. beyond (0.05 Mb)  -
+    CM023402.3_RagTag      h2tg000007l   telomere 3815 copies; 2 comp. beyond (0.14 Mb) telomere 8668 copies                            -
+    CM023412.3_RagTag      h1tg000006l   telomere 5317 copies                           telomere 2771 copies; 3 comp. beyond (0.31 Mb)  -
+    CM023410.3_RagTag      h1tg000005l   telomere 4126 copies                           telomere 4361 copies; 5 comp. beyond (0.33 Mb)  -
+    CM023405.3_RagTag      h1tg000012l   telomere 4100 copies; 1 comp. beyond (0.05 Mb) telomere 2603 copies; 8 comp. beyond (0.68 Mb)  -
+    CM023411.3_RagTag      h1tg000002l   telomere 5850 copies; 4 comp. beyond (0.24 Mb) telomere 5678 copies                            -
+
+    chromosome ends with a telomere: 22/22; components placed beyond a telomere: 61
+    ```
+
+- <b><i>Iteration 2</i></b>
+
+    ```
+    scaffold               anchor        left end                                       right end               internal-in-anchor
+    CM023409.3_RagTag      h2tg000008l   telomere 6776 copies                           telomere 3380 copies    -
+    CM023406.3_RagTag      h2tg000004l   telomere 3019 copies                           telomere 1145 copies    -
+    CM023404.3_RagTag      h2tg000010l   telomere 2634 copies                           telomere 4079 copies    -
+    CM023403.3_RagTag      h2tg000005l   telomere 3134 copies                           telomere 4226 copies    -
+    CM023407.3_RagTag      h2tg000012l   telomere 4593 copies                           telomere 2537 copies    -
+    CM023408.3_RagTag      h2tg000002l   telomere 2837 copies; 1 comp. beyond (0.07 Mb) telomere 4529 copies    -
+    CM023402.3_RagTag      h2tg000007l   telomere 3814 copies                           telomere 8667 copies    -
+    CM023412.3_RagTag      h1tg000006l   telomere 5317 copies                           telomere 2770 copies    -
+    CM023410.3_RagTag      h1tg000005l   telomere 4126 copies                           telomere 4359 copies    -
+    CM023405.3_RagTag      h1tg000012l   telomere 4160 copies                           telomere 2663 copies    -
+    CM023411.3_RagTag      h1tg000002l   telomere 5851 copies                           telomere 5678 copies    -
+
+    chromosome ends with a telomere: 22/22; components placed beyond a telomere: 1
+    ```
+
+- <b><i>Iteration 3</i></b>
+
+    ```
+    scaffold               anchor        left end                           right end                          internal-in-anchor
+    CM023409.3_RagTag      h2tg000008l   telomere 6776 copies               telomere 3380 copies               -
+    CM023406.3_RagTag      h2tg000004l   telomere 3019 copies               telomere 1145 copies               -
+    CM023404.3_RagTag      h2tg000010l   telomere 2634 copies               telomere 4079 copies               -
+    CM023403.3_RagTag      h2tg000005l   telomere 3134 copies               telomere 4226 copies               -
+    CM023407.3_RagTag      h2tg000012l   telomere 4593 copies               telomere 2537 copies               -
+    CM023408.3_RagTag      h2tg000002l   telomere 2825 copies               telomere 4529 copies               -
+    CM023402.3_RagTag      h2tg000007l   telomere 3814 copies               telomere 8667 copies               -
+    CM023412.3_RagTag      h1tg000006l   telomere 5317 copies               telomere 2770 copies               -
+    CM023410.3_RagTag      h1tg000005l   telomere 4126 copies               telomere 4359 copies               -
+    CM023405.3_RagTag      h1tg000012l   telomere 4160 copies               telomere 2663 copies               -
+    CM023411.3_RagTag      h1tg000002l   telomere 5851 copies               telomere 5678 copies               -
+
+    chromosome ends with a telomere: 22/22; components placed beyond a telomere: 0
+    ```
+
+    ![Virginea-like telomeres](./figures/fig21_vir.png)
+
+### Decipiens-like
+
+- <b><i>Iteration 1</i></b>
+
+    ```
+    scaffold               anchor        left end                                        right end                                       internal-in-anchor
+    CM023409.3_RagTag      h1tg000003l   telomere 3415 copies                            telomere 2705 copies; 18 comp. beyond (1.91 Mb) -
+    CM023406.3_RagTag      h1tg000295l   telomere 4091 copies; 12 comp. beyond (1.31 Mb) no telomere                                     -
+    CM023404.3_RagTag      h1tg000007l   telomere 2987 copies; 5 comp. beyond (0.62 Mb)  telomere 3489 copies                            -
+    CM023403.3_RagTag      h1tg000014l   telomere 3357 copies; 6 comp. beyond (0.68 Mb)  telomere 3056 copies                            -
+    CM023407.3_RagTag      h1tg000004l   telomere 2241 copies                            telomere 5589 copies; 7 comp. beyond (0.49 Mb)  -
+    CM023408.3_RagTag      h1tg000001l   telomere 6214 copies; 6 comp. beyond (0.56 Mb)  telomere 5487 copies                            -
+    CM023402.3_RagTag      h1tg000009l   telomere 3625 copies; 2 comp. beyond (0.13 Mb)  telomere 9776 copies                            -
+    CM023412.3_RagTag      h2tg000006l   telomere 8149 copies                            no telomere                                     -
+    CM023410.3_RagTag      h2tg000011l   telomere 4533 copies; 3 comp. beyond (0.22 Mb)  telomere 2904 copies                            -
+    CM023411.3_RagTag      h2tg000003l   telomere 5003 copies                            telomere 4286 copies; 6 comp. beyond (0.58 Mb)  -
+    CM023405.3_RagTag      h2tg000001l   telomere 3134 copies                            telomere 2520 copies; 2 comp. beyond (0.17 Mb)  -
+
+    chromosome ends with a telomere: 20/22; components placed beyond a telomere: 67
+    ```
+
+- <b><i>Iteration 2</i></b>
+
+    ```
+    scaffold               anchor        left end                           right end                          internal-in-anchor
+    CM023409.3_RagTag      h1tg000003l   telomere 3415 copies               telomere 2704 copies               -
+    CM023406.3_RagTag      h1tg000295l   telomere 4093 copies               no telomere                        -
+    CM023404.3_RagTag      h1tg000007l   telomere 2989 copies               telomere 3489 copies               -
+    CM023403.3_RagTag      h1tg000014l   telomere 3357 copies               telomere 3055 copies               -
+    CM023407.3_RagTag      h1tg000004l   telomere 2241 copies               telomere 5589 copies               -
+    CM023408.3_RagTag      h1tg000001l   telomere 6223 copies               telomere 5479 copies               -
+    CM023402.3_RagTag      h1tg000009l   telomere 3624 copies               telomere 9777 copies               -
+    CM023412.3_RagTag      h2tg000006l   telomere 8149 copies               no telomere                        -
+    CM023410.3_RagTag      h2tg000011l   telomere 4534 copies               telomere 2902 copies               -
+    CM023411.3_RagTag      h2tg000003l   telomere 5003 copies               telomere 4286 copies               -
+    CM023405.3_RagTag      h2tg000001l   telomere 3134 copies               telomere 2520 copies               -
+
+    chromosome ends with a telomere: 20/22; components placed beyond a telomere: 0
+    ```
+
+    ![Decipiens-like telomeres](./figures/fig21_dec.png)
 

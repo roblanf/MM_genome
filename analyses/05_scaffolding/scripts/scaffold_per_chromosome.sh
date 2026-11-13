@@ -21,15 +21,15 @@ PARENT_OF_CHROM=$BASE/06_parental_assign/alignment/parent_of_chromosome.tsv
 TELOMERE_CHECK=$BASE/scripts/telomere_check.py
 THREADS=64
 case $PARENT in
-  vir) LABEL=virginea;  ASM=$BASE/06_parental_assign/final/E_phylacis_virginea_like.fa
-       REF=$BASE/06_parental_assign/roadies/euc_refs/Eucalyptus_virginea_GCA_014182375.1.fa
-       FIRST_AGP=$BASE/07_scaffold/virginea_like_a01/ragtag.scaffold.agp ;;
-  dec) LABEL=decipiens; ASM=$BASE/06_parental_assign/final/E_phylacis_decipiens_like.fa
-       REF=$BASE/06_parental_assign/roadies/euc_refs/Eucalyptus_decipiens_GCA_014182575.1.fa
-       FIRST_AGP=$BASE/07_scaffold/decipiens_like_a01/ragtag.scaffold.agp ;;
+  vir) LABEL=virginea;  ASM=$BASE/06_parental_assign/final/E_phylacis_virginea_like.dedup.split.fa
+       REF=$BASE/07_scaffold_correct_bin/refs/union_chromosomes_clean.fa
+       FIRST_AGP=$BASE/07_scaffold_correct_bin/init/virginea_like/ragtag.scaffold.agp ;;
+  dec) LABEL=decipiens; ASM=$BASE/06_parental_assign/final/E_phylacis_decipiens_like.dedup.fa
+       REF=$BASE/07_scaffold_correct_bin/refs/union_chromosomes_clean.fa
+       FIRST_AGP=$BASE/07_scaffold_correct_bin/init/decipiens_like/ragtag.scaffold.agp ;;
   *)   echo "parent must be vir or dec"; exit 1 ;;
 esac
-WORK=$BASE/07c_scaffold_correct_bin/$PARENT
+WORK=$BASE/07_scaffold_correct_bin/$PARENT
 # ------------------------------------------------------------------------------------------------
 
 for f in "$PARENT_OF_CONTIG" "$PARENT_OF_CHROM" "$TELOMERE_CHECK" "$ASM" "$REF" "$FIRST_AGP"; do
@@ -100,8 +100,8 @@ for chr in $(cut -f1 chr_bins_corrected.tsv | sort -u); do
     nq=$(grep -c '>' bins/$chr.fa); nr=$(grep -c '>' bins/$chr.ref.fa)
     log "$chr: $nq query sequences, $nr reference sequence"
     if [ "$nq" -eq 0 ] || [ "$nr" -eq 0 ]; then echo "    empty input for $chr, skipped"; continue; fi
-    ragtag.py scaffold -t $THREADS --mm2-params "-x asm20" -f 10000 -u -a 0.1 \
-        ${EXCLUDE:+-e $EXCLUDE} -o scaffolds/$chr bins/$chr.ref.fa bins/$chr.fa > scaffolds/$chr.log 2>&1
+    ragtag.py scaffold -t $THREADS --mm2-params "-x asm20" -f 25000 -u -a 0.2 \
+        ${EXCLUDE:+-j $EXCLUDE} -o scaffolds/$chr bins/$chr.ref.fa bins/$chr.fa > scaffolds/$chr.log 2>&1
     # the chromosome scaffold is named after the reference sequence; everything else in the output is unplaced
     seqkit grep    -p "${chr}_RagTag" scaffolds/$chr/ragtag.scaffold.fasta >> chromosomes.fa
     seqkit grep -v -p "${chr}_RagTag" scaffolds/$chr/ragtag.scaffold.fasta >> unplaced.fa
