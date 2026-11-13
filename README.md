@@ -35,7 +35,8 @@ conda install  -c conda-forge -c bioconda \
     merqury      mosdepth     nanoplot   ncbi-datasets-cli \
     oatk         pigz         quast \
     r-circlize   r-data.table r-optparse r-plotly  r-tidyverse \
-    racon        ragtag       seqkit     sra-tools tgsgapcloser
+    racon        ragtag       seqkit     sra-tools syri \
+    tgsgapcloser
 ```
 
 > [!NOTE]
@@ -787,5 +788,156 @@ The results look pretty good! The two assemblies have **~97%** BUSCO completenes
 ## <a id="06">Scaffolding</a>
 <i>See current progress <a href="./analyses/05_scaffolding/README.md">here</a>.</i>
 
+<details>
+<summary><i>Click here to view the full code</i></summary>
+
+```
+# update the chromosome names (decipiens-like)
+awk '
+BEGIN {
+    map["CM023402.3_RagTag"] = "Chr1";
+    map["CM023403.3_RagTag"] = "Chr2";
+    map["CM023404.3_RagTag"] = "Chr3";
+    map["CM023405.3_RagTag"] = "Chr4";
+    map["CM023406.3_RagTag"] = "Chr5";
+    map["CM023407.3_RagTag"] = "Chr6";
+    map["CM023408.3_RagTag"] = "Chr7";
+    map["CM023409.3_RagTag"] = "Chr8";
+    map["CM023410.3_RagTag"] = "Chr9";
+    map["CM023411.3_RagTag"] = "Chr10";
+    map["CM023412.3_RagTag"] = "Chr11";
+}
+/^>/ {
+    header = $1;
+    sub(/^>/, "", header);
+    if (header in map) {
+        print ">" map[header];
+    } else {
+        print $0;
+    }
+    next;
+}
+{ print }
+' 07_scaffold_correct_bin/dec/chromosomes.fa > 07_scaffold_correct_bin/syri/dec_chromosomes.fa
+
+# update the chromosome names (virginea-like)
+awk '
+BEGIN {
+    map["CM023402.3_RagTag"] = "Chr1";
+    map["CM023403.3_RagTag"] = "Chr2";
+    map["CM023404.3_RagTag"] = "Chr3";
+    map["CM023405.3_RagTag"] = "Chr4";
+    map["CM023406.3_RagTag"] = "Chr5";
+    map["CM023407.3_RagTag"] = "Chr6";
+    map["CM023408.3_RagTag"] = "Chr7";
+    map["CM023409.3_RagTag"] = "Chr8";
+    map["CM023410.3_RagTag"] = "Chr9";
+    map["CM023411.3_RagTag"] = "Chr10";
+    map["CM023412.3_RagTag"] = "Chr11";
+}
+/^>/ {
+    header = $1;
+    sub(/^>/, "", header);
+    if (header in map) {
+        print ">" map[header];
+    } else {
+        print $0;
+    }
+    next;
+}
+{ print }
+' 07_scaffold_correct_bin/vir/chromosomes.fa > 07_scaffold_correct_bin/syri/vir_chromosomes.fa
+
+# extract chromosomes 1 to 11
+samtools faidx 06_parental_assign/parents/E_virginea.fa 1 2 3 4 5 6 7 8 9 10 11  > 07_scaffold_correct_bin/syri/ref_virginea.fa
+samtools faidx 06_parental_assign/parents/E_decipiens.fa 1 2 3 4 5 6 7 8 9 10 11 > 07_scaffold_correct_bin/syri/ref_decipiens.fa
+sed -i 's/^>/>Chr/' 07_scaffold_correct_bin/syri/ref_virginea.fa 
+sed -i 's/^>/>Chr/' 07_scaffold_correct_bin/syri/ref_decipiens.fa
+
+# change working directory
+cd 07_scaffold_correct_bin/syri/
+
+# reverse-complement chromosomes (based on previous runs): dec_chromosomes.fa
+samtools faidx dec_chromosomes.fa Chr1 Chr2 Chr3 Chr5 Chr6 Chr7 Chr8 Chr10 Chr11 > dec_tmp.fa
+samtools faidx dec_chromosomes.fa Chr4 -i > dec_chr4_rc.fa
+samtools faidx dec_chromosomes.fa Chr9 -i > dec_chr9_rc.fa
+cat dec_tmp.fa dec_chr4_rc.fa dec_chr9_rc.fa > dec_chromosomes_fixed.fa
+rm  dec_tmp.fa dec_chr4_rc.fa dec_chr9_rc.fa
+sed -i 's/\/rc//' dec_chromosomes_fixed.fa
+
+# reverse-complement chromosomes: vir_chromosomes.fa
+samtools faidx vir_chromosomes.fa Chr1 Chr2 Chr3 Chr5 Chr7 Chr8 Chr10 Chr11 > vir_tmp.fa
+samtools faidx vir_chromosomes.fa Chr4 -i > vir_chr4_rc.fa
+samtools faidx vir_chromosomes.fa Chr9 -i > vir_chr9_rc.fa
+samtools faidx vir_chromosomes.fa Chr6 -i > vir_chr6_rc.fa
+cat vir_tmp.fa vir_chr4_rc.fa vir_chr9_rc.fa vir_chr6_rc.fa > vir_chromosomes_fixed.fa
+rm  vir_tmp.fa vir_chr4_rc.fa vir_chr9_rc.fa vir_chr6_rc.fa 
+sed -i 's/\/rc//' vir_chromosomes_fixed.fa
+
+# reverse-complement chromosomes: ref_virginea.fa
+samtools faidx ref_virginea.fa Chr1 Chr2 Chr3 Chr4 Chr5 Chr7 Chr8 Chr10 Chr11 > vir_tmp.fa
+samtools faidx ref_virginea.fa Chr9 -i > vir_chr9_rc.fa
+samtools faidx ref_virginea.fa Chr6 -i > vir_chr6_rc.fa
+cat vir_tmp.fa vir_chr9_rc.fa vir_chr6_rc.fa > ref_virginea_fixed.fa
+rm  vir_tmp.fa vir_chr9_rc.fa vir_chr6_rc.fa 
+sed -i 's/\/rc//' ref_virginea_fixed.fa
+
+# decipiens vs decipiens-like
+minimap2 -ax asm5 -t 64 --secondary=no --eqx \
+    ref_decipiens.fa \
+    dec_chromosomes_fixed.fa \
+    > dec_vs_declike.sam
+
+# decipiens-like vs virginea-like
+minimap2 -ax asm20 -t 64 --secondary=no --eqx \
+    dec_chromosomes_fixed.fa \
+    vir_chromosomes_fixed.fa \
+    > declike_vs_virlike.sam
+
+# virginea-like vs virginea
+minimap2 -ax asm5 -t 64 --secondary=no --eqx \
+    vir_chromosomes_fixed.fa \
+    ref_virginea_fixed.fa \
+    > virlike_vs_vir.sam
+
+# run Syri
+syri -c dec_vs_declike.sam \
+    -r ref_decipiens.fa \
+    -q dec_chromosomes_fixed.fa \
+    --prefix dec_vs_declike \
+    -F S --cigar
+
+syri -c declike_vs_virlike.sam \
+    -r dec_chromosomes_fixed.fa \
+    -q vir_chromosomes_fixed.fa \
+    --prefix declike_vs_virlike \
+    -F S --cigar
+
+syri -c virlike_vs_vir.sam \
+    -r vir_chromosomes_fixed.fa \
+    -q ref_virginea_fixed.fa \
+    --prefix virlike_vs_vir \
+    -F S --cigar
+
+# create genomes.txt
+cat > genomes.txt << 'EOF'
+#file	name	tags
+ref_decipiens.fa	E. decipiens	lw:1.5
+dec_chromosomes_fixed.fa	decipiens-like	lw:1.5
+vir_chromosomes_fixed.fa	virginea-like	lw:1.5
+ref_virginea_fixed.fa	E. virginea	lw:1.5
+EOF
+
+# plot
+plotsr \
+  --sr dec_vs_declikesyri.out \
+  --sr declike_vs_virlikesyri.out \
+  --sr virlike_vs_virsyri.out \
+  --genomes genomes.txt \
+  -o four_way_synteny.pdf
+```
+
+</summary>
+
 ---
-*Last update: 13 November 2026 by Jeremias Ivan*
+*Last update: 14 November 2026 by Jeremias Ivan*
