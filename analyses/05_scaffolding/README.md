@@ -10,6 +10,7 @@ This README is purposed to store additional details required to conduct the `Sca
     - <a href="#06d1">`-a`</a>
     - <a href="#06d2">`-f`</a>
 - <a href="#06e">Binning and removing contigs beyond telomeres</a>
+- <a href="#06f">Gap closing</a>
 
 ## <a id="06a">Scaffolding against *E. virginea* and *E. decipiens* reference genomes</a>
 
@@ -560,3 +561,112 @@ done
 
     ![Decipiens-like telomeres](./figures/fig21_dec.png)
 
+### SeqKit
+
+| Metric                       | virginea-like | decipiens-like |
+| :--------------------------- | ------------: | -------------: |
+| Chromosome scaffolds         |            11 |             11 |
+| Chromosome total (bp)        |   514,919,711 |    548,419,156 |
+| Chromosome min (bp)          |    34,632,737 |     38,016,435 |
+| Chromosome mean (bp)         |    46,810,883 |     49,856,287 |
+| Chromosome max (bp)          |    61,702,390 |     65,682,487 |
+| Unplaced sequences           |           130 |            135 |
+| Unplaced total (bp)          |    14,712,994 |     15,929,239 |
+| Unplaced max (bp)            |     1,702,289 |      1,848,943 |
+| Total sequences              |           141 |            146 |
+| Total length (bp)            |   529,632,705 |    564,348,395 |
+
+## <a id="06f">Gap closing</a>
+
+```
+# create another set of longer reads but with slightly lower quality
+pigz -dc -p 16 00_raw_data/*.fastq.gz | \
+chopper -q 7 -l 50000 | \
+bgzip -@ 128 > 01_qc/02_chopper/E_phylacis_filtered_Q750k.fastq.gz
+
+# rename individual chromosomes
+seqkit replace -p '^' -r 'vir_' 07_scaffold_correct_bin/vir/E_phylacis_virginea_like.scaffolds.fa  > 08_gapclosing/vir.fa
+seqkit replace -p '^' -r 'dec_' 07_scaffold_correct_bin/dec/E_phylacis_decipiens_like.scaffolds.fa > 08_gapclosing/dec.fa
+cat 08_gapclosing/vir.fa 08_gapclosing/dec.fa > 08_gapclosing/both_parents.fa
+
+# map filtered reads to both parents
+minimap2 -x map-ont -t 128 --secondary=no 08_gapclosing/both_parents.fa \
+    01_qc/02_chopper/E_phylacis_filtered.fastq.gz > 08_gapclosing/reads_vs_parents_Q1015k.paf
+
+minimap2 -x map-ont -t 128 --secondary=no 08_gapclosing/both_parents.fa \
+    01_qc/02_chopper/E_phylacis_filtered_Q750k.fastq.gz > 08_gapclosing/reads_vs_parents_Q750k.paf
+
+# create new directories
+mkdir -p 08_gapclosing/decipiens/
+mkdir -p 08_gapclosing/virginea/
+
+# change working directory
+cd 08_gapclosing/decipiens/
+
+# extract gap windows (±100 kb) on the decipiens scaffolds, named as in both_parents.fa
+awk -F'\t' '$5=="U" {s=$2-100000; if (s<1) s=1; print "dec_"$1"\t"s"\t"$3+100000}' \
+    ../../07_scaffold_correct_bin/dec/combined.agp > dec_gaps.bed
+
+# extract all reads that overlap a gap window
+awk '$6 ~ /^dec_/ {print $6"\t"$8"\t"$9"\t"$1}' ../reads_vs_parents_Q1015k.paf \
+    | bedtools intersect -u -a - -b dec_gaps.bed | cut -f4 | sort -u > dec_gap_reads.txt
+seqkit grep -f dec_gap_reads.txt ../../01_qc/02_chopper/E_phylacis_filtered.fastq.gz | seqkit fq2fa > dec_gap_reads.fa
+
+awk '$6 ~ /^dec_/ {print $6"\t"$8"\t"$9"\t"$1}' ../reads_vs_parents_Q750k.paf \
+    | bedtools intersect -u -a - -b dec_gaps.bed | cut -f4 | sort -u > dec_extra_gap_reads.txt
+seqkit grep -f dec_extra_gap_reads.txt ../../01_qc/02_chopper/E_phylacis_filtered_Q750k.fastq.gz | seqkit fq2fa > dec_extra_gap_reads.fa
+
+# combine two sets of reads
+cat dec_gap_reads.fa dec_extra_gap_reads.fa | seqkit rmdup -n > dec_gap_reads_all.fa
+
+# gap closing
+tgsgapcloser --scaff ../dec.fa --reads dec_gap_reads_all.fa --output dec_closed --tgstype ont \
+    --racon /home/jeremias/anaconda3/envs/btk/bin/racon --thread 64 > dec_closed.log 2>&1
+
+# change working directory
+cd ../virginea/
+
+# do the same with virginea
+awk -F'\t' '$5=="U" {s=$2-100000; if (s<1) s=1; print "vir_"$1"\t"s"\t"$3+100000}' \
+    ../../07_scaffold_correct_bin/vir/combined.agp > vir_gaps.bed
+
+awk '$6 ~ /^vir_/ {print $6"\t"$8"\t"$9"\t"$1}' ../reads_vs_parents_Q1015k.paf \
+    | bedtools intersect -u -a - -b vir_gaps.bed | cut -f4 | sort -u > vir_gap_reads.txt
+seqkit grep -f vir_gap_reads.txt ../../01_qc/02_chopper/E_phylacis_filtered.fastq.gz | seqkit fq2fa > vir_gap_reads.fa
+
+awk '$6 ~ /^vir_/ {print $6"\t"$8"\t"$9"\t"$1}' ../reads_vs_parents_Q750k.paf \
+    | bedtools intersect -u -a - -b vir_gaps.bed | cut -f4 | sort -u > vir_extra_gap_reads.txt
+seqkit grep -f vir_extra_gap_reads.txt ../../01_qc/02_chopper/E_phylacis_filtered_Q750k.fastq.gz | seqkit fq2fa > vir_extra_gap_reads.fa
+
+cat vir_gap_reads.fa vir_extra_gap_reads.fa | seqkit rmdup -n > vir_gap_reads_all.fa
+
+# gap closing
+tgsgapcloser --scaff ../vir.fa --reads vir_gap_reads_all.fa --output vir_closed --tgstype ont \
+    --racon /home/jeremias/anaconda3/envs/btk/bin/racon --thread 64 > vir_closed.log 2>&1
+
+# change working directory
+cd ../..
+
+# visualisation
+python3 scripts/plot_scaffolds.py \
+    --agp 07_scaffold_correct_bin/dec/combined.agp \
+    --detail 08_gapclosing/decipiens/dec_closed.gap_fill_detail \
+    --prefix dec_ \
+    --title "E. phylacis, decipiens-like genome" \
+    --out 08_gapclosing/decipiens/dec_scaffolds.png \
+    --fasta 07_scaffold_correct_bin/dec/E_phylacis_decipiens_like.scaffolds.fa
+
+python3 scripts/plot_scaffolds.py \
+    --agp 07_scaffold_correct_bin/vir/combined.agp \
+    --detail 08_gapclosing/virginea/vir_closed.gap_fill_detail \
+    --prefix vir_ \
+    --title "E. phylacis, virginea-like genome" \
+    --out 08_gapclosing/virginea/vir_scaffolds.png \
+    --fasta 07_scaffold_correct_bin/vir/E_phylacis_virginea_like.scaffolds.fa
+```
+
+|                    decipiens-like                    |                   virginea-like                     |
+| :--------------------------------------------------: | :-------------------------------------------------: |
+| ![Decipiens-like scaffolds](./figures/fig22_dec.png) | ![Virginea-like scaffolds](./figures/fig22_vir.png) |
+
+It seems like TGS-GapCloser filled the long, repetitive regions on chromosome 2 of both haplotype (`CM023403.3`). Unfortunately, we do not have any contig long enough to cover the whole region without gaps. As we cannot really estimate the length of the repetitive regions, we would skip the gap closing step.
