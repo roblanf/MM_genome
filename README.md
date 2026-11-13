@@ -785,6 +785,7 @@ cd ../../..
 The results look pretty good! The two assemblies have **~97%** BUSCO completeness scores, and **94-95%** of the k-mers agree to the hypothesised parents.
 
 ## <a id="06">Scaffolding</a>
+<i>See current progress <a href="./analyses/05_scaffolding/README.md">here</a>.</i>
 
 ---
-*Last update: 12 November 2026 by Jeremias Ivan*
+*Last update: 13 November 2026 by Jeremias Ivan*

@@ -3,11 +3,12 @@
 This README is purposed to store additional details required to conduct the `Scaffolding` step from the main <a href="../../README.md">`README.md`</a>.
 
 ## Table of Contents
-- <a href="#06a">Scaffolding against eucalypt reference genomes</a>
+- <a href="#06a">Scaffolding against *E. virginea* and *E. decipiens* reference genomes</a>
 - <a href="#06b">Checking telomere motif</a>
-- <a href="#06c">Excluding contigs beyond telomeres</a>
+- <a href="#06c">Scaffolding against *E. melliodora* reference genome</a>
+- <a href="#06d">Trying different RagTag parameters</a>
 
-## <a id="06a">Scaffolding against eucalypt reference genomes</a>
+## <a id="06a">Scaffolding against *E. virginea* and *E. decipiens* reference genomes</a>
 
 ```
 # change working directory
@@ -29,14 +30,13 @@ cd ..
 
 | Metric               | decipiens-like | virginea-like | 
 | :------------------- | -------------: | ------------: |
-| Input contigs        |            277 |           277 |
 | Chromosome scaffolds |             11 |            11 |
-| Contigs placed       |            193 |           159 |
-| Placed (bp)          |    534,221,985 |   530,423,308 |
-| Placed (%)           |           98.2 |          97.5 |
-| Contigs unplaced     |             84 |           118 |
-| Unplaced (bp)        |      9,686,931 |    13,485,608 |
-| Gaps (100 N)         |            182 |           147 |
+| Contigs placed       |            106 |           112 |
+| Placed (bp)          |    557,947,248 |   523,001,838 |
+| Placed (%)           |           98.9 |          98.7 |
+| Contigs unplaced     |             42 |            45 |
+| Unplaced (bp)        |      6,400,947 |     7,006,748 |
+| Gaps (100 N)         |             94 |           101 |
 
 ## <a id="06b">Checking telomere motif</a>
 
@@ -114,4 +114,153 @@ tidk plot   -t vir_tidk_split_telomeric_repeat_windows.tsv -o vir_telomeres_spli
 cd ..
 ```
 
-![Virginea-like telomeres](./figures/fig16_vir.png)
+|                virginea-like (before)                |                virginea-like (after)                |
+| :--------------------------------------------------: | :-------------------------------------------------: |
+| ![Virginea-like telomeres](./figures/fig15_vir.png)  | ![Virginea-like telomeres](./figures/fig16_vir.png) |
+
+## <a id="06c">Scaffolding against *E. melliodora* reference genome</a>
+I tried to scaffold the two haplotypes against a higher-qualitu *E. melliodora* reference genome. There might be a trade-off between the quality of the reference genome, as well as the genetic distance between the two species being compared.
+
+```
+# change working directory
+cd 07_scaffold/
+
+# virginea-like to melliodora
+ragtag.py scaffold -t 64 --mm2-params "-x asm20" -f 10000 -u -a 0.1 \
+    -o virginea_like_mel ../06_parental_assign/parents/roadies/Eucalyptus_melliodora_GCA_004368105.4.fna \
+    ../06_parental_assign/final/E_phylacis_virginea_like.dedup.split.fa
+
+# decipiens-like to melliodora
+ragtag.py scaffold -t 64 --mm2-params "-x asm20" -f 10000 -u -a 0.1 \
+    -o decipiens_like_mel ../06_parental_assign/parents/roadies/Eucalyptus_melliodora_GCA_004368105.4.fna \
+    ../06_parental_assign/final/E_phylacis_decipiens_like.dedup.fa
+
+# extract the 11 chromosomes
+seqkit grep -r -p '^CM0234' virginea_like_mel/ragtag.scaffold.fasta  > virginea_like_mel/vir_chromosomes.fa
+seqkit grep -r -p '^CM0234' decipiens_like_mel/ragtag.scaffold.fasta > decipiens_like_mel/dec_chromosomes.fa
+
+# extract telomeres
+tidk search -s AAACCCT -o vir_tidk_mel -d ./ virginea_like_mel/vir_chromosomes.fa
+tidk plot   -t vir_tidk_mel_telomeric_repeat_windows.tsv -o vir_telomeres_mel
+tidk search -s AAACCCT -o dec_tidk_mel -d ./ decipiens_like_mel/dec_chromosomes.fa
+tidk plot   -t dec_tidk_mel_telomeric_repeat_windows.tsv -o dec_telomeres_mel
+
+# change working directory
+cd ..
+```
+
+| Metric               | decipiens-like | virginea-like | 
+| :------------------- | -------------: | ------------: |
+| Contigs placed       |             94 |           102 |
+| Placed (bp)          |    553,425,857 |   522,408,916 |
+| Contigs unplaced     |             54 |            56 |
+| Unplaced (bp)        |     10,922,338 |     7,222,089 |
+| Gaps (100 N)         |             82 |            91 |
+
+|                    decipiens-like                    |                   virginea-like                     |
+| :--------------------------------------------------: | :-------------------------------------------------: |
+| ![Decipiens-like telomeres](./figures/fig17_dec.png) | ![Virginea-like telomeres](./figures/fig17_vir.png) |
+
+It seems that the results are comparable with no clear winner. Let's try another approach by first mapping *all* contigs to *E. melliodora* reference genome, and then use the collapsed haplotype as the reference for each haplotype.
+
+```
+# change working directory
+cd 07_scaffold/
+
+# combine the two contigs
+cat ../06_parental_assign/final/E_phylacis_virginea_like.dedup.split.fa \
+    ../06_parental_assign/final/E_phylacis_decipiens_like.dedup.fa \
+    > ../06_parental_assign/final/E_phylacis_union.dedup.split.fa
+
+# union to melliodora
+ragtag.py scaffold -t 64 --mm2-params "-x asm20" -f 10000 -u -a 0.1 \
+    -o union_mel ../06_parental_assign/parents/roadies/Eucalyptus_melliodora_GCA_004368105.4.fna \
+    ../06_parental_assign/final/E_phylacis_union.dedup.split.fa
+
+# extract the 11 chromosomes
+seqkit grep -r -p '^CM0234' union_mel/ragtag.scaffold.fasta  > union_mel/union_chromosomes.fa
+
+# virginea-like to union
+ragtag.py scaffold -t 64 --mm2-params "-x asm20" -f 10000 -u -a 0.1 \
+    -o virginea_like_union union_mel/union_chromosomes.fa \
+    ../06_parental_assign/final/E_phylacis_virginea_like.dedup.split.fa
+
+# decipiens-like to union
+ragtag.py scaffold -t 64 --mm2-params "-x asm20" -f 10000 -u -a 0.1 \
+    -o decipiens_like_union union_mel/union_chromosomes.fa \
+    ../06_parental_assign/final/E_phylacis_decipiens_like.dedup.fa
+
+# extract the 11 chromosomes
+seqkit grep -r -p '^CM0234' virginea_like_union/ragtag.scaffold.fasta  > virginea_like_union/vir_chromosomes.fa
+seqkit grep -r -p '^CM0234' decipiens_like_union/ragtag.scaffold.fasta > decipiens_like_union/dec_chromosomes.fa
+
+# extract telomeres
+tidk search -s AAACCCT -o vir_tidk_union -d ./ virginea_like_union/vir_chromosomes.fa
+tidk plot   -t vir_tidk_union_telomeric_repeat_windows.tsv -o vir_telomeres_union
+tidk search -s AAACCCT -o dec_tidk_union -d ./ decipiens_like_union/dec_chromosomes.fa
+tidk plot   -t dec_tidk_union_telomeric_repeat_windows.tsv -o dec_telomeres_union
+
+# change working directory
+cd ..
+```
+
+| Metric               | decipiens-like | virginea-like | 
+| :------------------- | -------------: | ------------: |
+| Contigs placed       |             71 |            84 |
+| Placed (bp)          |    554,327,408 |   521,762,818 |
+| Contigs unplaced     |             77 |            74 |
+| Unplaced (bp)        |     10,020,787 |     7,868,187 |
+| Gaps (100 N)         |             60 |            73 |
+
+|                    decipiens-like                    |                   virginea-like                     |
+| :--------------------------------------------------: | :-------------------------------------------------: |
+| ![Decipiens-like telomeres](./figures/fig18_dec.png) | ![Virginea-like telomeres](./figures/fig18_vir.png) |
+
+I think it looks much cleaner for most chromosomes, with telomere motifs found at both ends of the chromosome! Let's see if we can improve this further by changing the scaffolding parameters.
+
+## <a id="06d">Trying different RagTag parameters</a>
+As *E. melliodora* is not a direct close relative to sect. *Bisectae*, we need to be more careful on the initial scaffolding. Let's first try different `-a` values.
+
+```
+# change working directory
+cd 07_scaffold_a/
+
+# iterate over different values of -a
+for a in 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0; do
+
+    # union to melliodora
+    ragtag.py scaffold -t 64 --mm2-params "-x asm20" -f 10000 -u -a ${a} \
+        -o union_mel_a${a} ../06_parental_assign/parents/roadies/Eucalyptus_melliodora_GCA_004368105.4.fna \
+        ../06_parental_assign/final/E_phylacis_union.dedup.split.fa
+
+    # extract the 11 chromosomes
+    seqkit grep -r -p '^CM0234' union_mel_a${a}/ragtag.scaffold.fasta \
+        > union_mel_a${a}/union_chromosomes.fa
+
+    # virginea-like to union
+    ragtag.py scaffold -t 64 --mm2-params "-x asm20" -f 10000 -u -a ${a} \
+        -o virginea_like_union_a${a} union_mel_a${a}/union_chromosomes.fa \
+        ../06_parental_assign/final/E_phylacis_virginea_like.dedup.split.fa
+
+    # decipiens-like to union
+    ragtag.py scaffold -t 64 --mm2-params "-x asm20" -f 10000 -u -a ${a} \
+        -o decipiens_like_union_a${a} union_mel_a${a}/union_chromosomes.fa \
+        ../06_parental_assign/final/E_phylacis_decipiens_like.dedup.fa
+
+    # extract the 11 chromosomes
+    seqkit grep -r -p '^CM0234' virginea_like_union_a${a}/ragtag.scaffold.fasta \
+        > virginea_like_union_a${a}/vir_chromosomes.fa
+    seqkit grep -r -p '^CM0234' decipiens_like_union_a${a}/ragtag.scaffold.fasta \
+        > decipiens_like_union_a${a}/dec_chromosomes.fa
+
+    # extract telomeres
+    tidk search -s AAACCCT -o vir_tidk_union_a${a} -d ./ virginea_like_union_a${a}/vir_chromosomes.fa
+    tidk plot   -t vir_tidk_union_a${a}_telomeric_repeat_windows.tsv -o vir_telomeres_union_a${a}
+    tidk search -s AAACCCT -o dec_tidk_union_a${a} -d ./ decipiens_like_union_a${a}/dec_chromosomes.fa
+    tidk plot   -t dec_tidk_union_a${a}_telomeric_repeat_windows.tsv -o dec_telomeres_union_a${a}
+
+done
+
+# change working directory
+cd ..
+```
