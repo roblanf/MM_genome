@@ -362,6 +362,25 @@ Rscript scripts/oatk_circular_map.R \
     -o 04_organelle/c30k1001/pltd_map.png
 ```
 
+I also downloaded all eucalypt mtDNA (keyword=`txid3932[Organism:exp] AND mitochondrion[filter]`) and ptDNA (keyword=`txid3932[Organism:exp] AND (chloroplast[filter] OR plastid[filter]) AND 140000:170000[SLEN]`) from NCBI and used `tblastn` to compare them with our data.
+
+```
+# change working directory
+cd 04_organelle/
+
+makeblastdb -in euc_ptDNA.fasta -dbtype nucl -parse_seqids -out euc_pt_db -title "Eucalyptus plastomes"
+makeblastdb -in euc_mtDNA.fasta -dbtype nucl -parse_seqids -out euc_mt_db -title "Eucalyptus mitochondrion"
+
+# change working directory
+cd c30k1001/
+
+blastn -task megablast -db ../euc_pt_db -query E_phylacis.pltd.ctg.fasta -max_target_seqs 10 -max_hsps 1 -evalue 1e-25 -num_threads 64 > pltd.blastn.out
+blastn -task megablast -db ../euc_mt_db -query E_phylacis.mito.ctg.fasta -max_target_seqs 10 -max_hsps 1 -evalue 1e-25 -num_threads 64 > mito.blastn.out
+
+# change working directory
+cd ../..
+```
+
 ### <a id="04a">mtDNA</a>
 
 ```
@@ -372,6 +391,39 @@ Rscript scripts/oatk_circular_map.R \
 
 ![Figure 07. mtDNA Circular Map.](./analyses/03_organelle/figures/fig07.png)
 
+- <b><i>ctg000001l</b></i>
+
+    ```
+    Sequences                                                             Score (Bits)  E Value
+    PP920092.1 Eucalyptus rudis mitochondrion, complete genome            2.730e+05     0.0  
+    CM048836.1 Eucalyptus polybractea isolate Family37 mitochondrion,...  1.955e+05     0.0  
+    PP712904.1 Eucalyptus urophylla x Eucalyptus grandis mitochondrio...  1.605e+05     0.0  
+    OR763353.1 Eucalyptus camaldulensis mitochondrion, complete genome    1.585e+05     0.0  
+    NC_085240.1 Eucalyptus camaldulensis mitochondrion, complete genome   1.585e+05     0.0
+    ```
+
+- <b><i>ctg000002l</b></i>
+
+    ```
+    Sequences                                                             Score (Bits)  E Value
+    PP920092.1 Eucalyptus rudis mitochondrion, complete genome            41787         0.0  
+    CM048836.1 Eucalyptus polybractea isolate Family37 mitochondrion,...  41779         0.0  
+    PP712904.1 Eucalyptus urophylla x Eucalyptus grandis mitochondrio...  41644         0.0  
+    OQ947725.1 Eucalyptus urophylla x Eucalyptus grandis chromosome 1...  41644         0.0  
+    NC_040010.1 Eucalyptus grandis mitochondrion, complete genome         35259         0.0
+    ```
+
+- <b><i>ctg000003c</b></i>
+
+    ```
+    Sequences                                                             Score (Bits)  E Value
+    PP920092.1 Eucalyptus rudis mitochondrion, complete genome            1.083e+05     0.0  
+    CM048836.1 Eucalyptus polybractea isolate Family37 mitochondrion,...  1.083e+05     0.0  
+    OR763353.1 Eucalyptus camaldulensis mitochondrion, complete genome    1.083e+05     0.0  
+    NC_085240.1 Eucalyptus camaldulensis mitochondrion, complete genome   1.083e+05     0.0  
+    PP712904.1 Eucalyptus urophylla x Eucalyptus grandis mitochondrio...  1.082e+05     0.0  
+    ```
+
 ### <a id="04b">ptDNA</a>
 
 ```
@@ -379,6 +431,22 @@ Rscript scripts/oatk_circular_map.R \
 ```
 
 ![Figure 08. ptDNA Circular Map.](./analyses/03_organelle/figures/fig08.png)
+
+```
+Sequences                                                             Score (Bits)  E Value
+NC_022402.1 Eucalyptus diversicolor chloroplast, complete genome      1.474e+05     0.0  
+KC180795.1 Eucalyptus diversicolor chloroplast, complete genome       1.474e+05     0.0  
+NC_022401.1 Eucalyptus torquata chloroplast, complete genome          1.463e+05     0.0  
+KC180794.1 Eucalyptus torquata chloroplast, complete genome           1.463e+05     0.0  
+CM024525.1 Eucalyptus virginea isolate CCA4170 chloroplast, compl...  1.462e+05     0.0
+MW446402.1 Eucalyptus behriana chloroplast, complete genome           1.183e+05     0.0  
+MW446410.1 Eucalyptus behriana chloroplast, complete genome           1.183e+05     0.0  
+NC_059052.1 Eucalyptus populnea voucher MELUD122651a chloroplast,...  1.183e+05     0.0  
+MW446437.1 Eucalyptus polybractea chloroplast, complete genome        1.183e+05     0.0  
+MW446438.1 Eucalyptus polybractea chloroplast, complete genome        1.183e+05     0.0
+```
+
+Interestingly, the ptDNA is most similar to the one from *E. diversicolor*, which is phylogenetically placed between *E. virginea* and *E. decipiens*. The second closest taxon is *E. torquata* from sect. *Dumaria*, followed by *E. virginea*.
 
 ## <a id="05">Assembly of nuclear genome</a>
 
