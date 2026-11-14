@@ -11,6 +11,7 @@ This README is purposed to store additional details required to conduct the `Sca
     - <a href="#06d2">`-f`</a>
 - <a href="#06e">Binning and removing contigs beyond telomeres</a>
 - <a href="#06f">Gap closing</a>
+- <a href="#06g">Visualisation using SyRi</a>
 
 ## <a id="06a">Scaffolding against *E. virginea* and *E. decipiens* reference genomes</a>
 
@@ -670,3 +671,252 @@ python3 scripts/plot_scaffolds.py \
 | ![Decipiens-like scaffolds](./figures/fig22_dec.png) | ![Virginea-like scaffolds](./figures/fig22_vir.png) |
 
 It seems like TGS-GapCloser filled the long, repetitive regions on chromosome 2 of both haplotype (`CM023403.3`). Unfortunately, we do not have any contig long enough to cover the whole region without gaps. As we cannot really estimate the length of the repetitive regions, we would skip the gap closing step.
+
+## <a id="06g">Visualisation using SyRi</a>
+Let's check the synteny between these haplotypes to their putative parents.
+
+```
+# update the chromosome names (decipiens-like)
+awk '
+BEGIN {
+    map["CM023402.3_RagTag"] = "Chr1";
+    map["CM023403.3_RagTag"] = "Chr2";
+    map["CM023404.3_RagTag"] = "Chr3";
+    map["CM023405.3_RagTag"] = "Chr4";
+    map["CM023406.3_RagTag"] = "Chr5";
+    map["CM023407.3_RagTag"] = "Chr6";
+    map["CM023408.3_RagTag"] = "Chr7";
+    map["CM023409.3_RagTag"] = "Chr8";
+    map["CM023410.3_RagTag"] = "Chr9";
+    map["CM023411.3_RagTag"] = "Chr10";
+    map["CM023412.3_RagTag"] = "Chr11";
+}
+/^>/ {
+    header = $1;
+    sub(/^>/, "", header);
+    if (header in map) {
+        print ">" map[header];
+    } else {
+        print $0;
+    }
+    next;
+}
+{ print }
+' 07_scaffold_correct_bin/dec/chromosomes.fa > 07_scaffold_correct_bin/syri/dec_chromosomes.fa
+
+# update the chromosome names (virginea-like)
+awk '
+BEGIN {
+    map["CM023402.3_RagTag"] = "Chr1";
+    map["CM023403.3_RagTag"] = "Chr2";
+    map["CM023404.3_RagTag"] = "Chr3";
+    map["CM023405.3_RagTag"] = "Chr4";
+    map["CM023406.3_RagTag"] = "Chr5";
+    map["CM023407.3_RagTag"] = "Chr6";
+    map["CM023408.3_RagTag"] = "Chr7";
+    map["CM023409.3_RagTag"] = "Chr8";
+    map["CM023410.3_RagTag"] = "Chr9";
+    map["CM023411.3_RagTag"] = "Chr10";
+    map["CM023412.3_RagTag"] = "Chr11";
+}
+/^>/ {
+    header = $1;
+    sub(/^>/, "", header);
+    if (header in map) {
+        print ">" map[header];
+    } else {
+        print $0;
+    }
+    next;
+}
+{ print }
+' 07_scaffold_correct_bin/vir/chromosomes.fa > 07_scaffold_correct_bin/syri/vir_chromosomes.fa
+
+# extract chromosomes 1 to 11
+samtools faidx 06_parental_assign/parents/E_virginea.fa 1 2 3 4 5 6 7 8 9 10 11  > 07_scaffold_correct_bin/syri/ref_virginea.fa
+samtools faidx 06_parental_assign/parents/E_decipiens.fa 1 2 3 4 5 6 7 8 9 10 11 > 07_scaffold_correct_bin/syri/ref_decipiens.fa
+sed -i 's/^>/>Chr/' 07_scaffold_correct_bin/syri/ref_virginea.fa 
+sed -i 's/^>/>Chr/' 07_scaffold_correct_bin/syri/ref_decipiens.fa
+
+# change working directory
+cd 07_scaffold_correct_bin/syri/
+
+# reverse-complement chromosomes (based on previous runs): dec_chromosomes.fa
+samtools faidx dec_chromosomes.fa Chr1 Chr2 Chr3 Chr5 Chr6 Chr7 Chr8 Chr10 Chr11 > dec_tmp.fa
+samtools faidx dec_chromosomes.fa Chr4 -i > dec_chr4_rc.fa
+samtools faidx dec_chromosomes.fa Chr9 -i > dec_chr9_rc.fa
+cat dec_tmp.fa dec_chr4_rc.fa dec_chr9_rc.fa > dec_chromosomes_fixed.fa
+rm  dec_tmp.fa dec_chr4_rc.fa dec_chr9_rc.fa
+sed -i 's/\/rc//' dec_chromosomes_fixed.fa
+
+# reverse-complement chromosomes: vir_chromosomes.fa
+samtools faidx vir_chromosomes.fa Chr1 Chr2 Chr3 Chr5 Chr7 Chr8 Chr10 Chr11 > vir_tmp.fa
+samtools faidx vir_chromosomes.fa Chr4 -i > vir_chr4_rc.fa
+samtools faidx vir_chromosomes.fa Chr9 -i > vir_chr9_rc.fa
+samtools faidx vir_chromosomes.fa Chr6 -i > vir_chr6_rc.fa
+cat vir_tmp.fa vir_chr4_rc.fa vir_chr9_rc.fa vir_chr6_rc.fa > vir_chromosomes_fixed.fa
+rm  vir_tmp.fa vir_chr4_rc.fa vir_chr9_rc.fa vir_chr6_rc.fa 
+sed -i 's/\/rc//' vir_chromosomes_fixed.fa
+
+# reverse-complement chromosomes: ref_virginea.fa
+samtools faidx ref_virginea.fa Chr1 Chr2 Chr3 Chr4 Chr5 Chr7 Chr8 Chr10 Chr11 > vir_tmp.fa
+samtools faidx ref_virginea.fa Chr9 -i > vir_chr9_rc.fa
+samtools faidx ref_virginea.fa Chr6 -i > vir_chr6_rc.fa
+cat vir_tmp.fa vir_chr9_rc.fa vir_chr6_rc.fa > ref_virginea_fixed.fa
+rm  vir_tmp.fa vir_chr9_rc.fa vir_chr6_rc.fa 
+sed -i 's/\/rc//' ref_virginea_fixed.fa
+
+# decipiens vs decipiens-like
+minimap2 -ax asm5 -t 64 --secondary=no --eqx \
+    ref_decipiens.fa \
+    dec_chromosomes_fixed.fa \
+    > dec_vs_declike.sam
+
+# decipiens-like vs virginea-like
+minimap2 -ax asm20 -t 64 --secondary=no --eqx \
+    dec_chromosomes_fixed.fa \
+    vir_chromosomes_fixed.fa \
+    > declike_vs_virlike.sam
+
+# virginea-like vs virginea
+minimap2 -ax asm5 -t 64 --secondary=no --eqx \
+    vir_chromosomes_fixed.fa \
+    ref_virginea_fixed.fa \
+    > virlike_vs_vir.sam
+
+# run Syri
+syri -c dec_vs_declike.sam \
+    -r ref_decipiens.fa \
+    -q dec_chromosomes_fixed.fa \
+    --prefix dec_vs_declike \
+    -F S --cigar
+
+syri -c declike_vs_virlike.sam \
+    -r dec_chromosomes_fixed.fa \
+    -q vir_chromosomes_fixed.fa \
+    --prefix declike_vs_virlike \
+    -F S --cigar
+
+syri -c virlike_vs_vir.sam \
+    -r vir_chromosomes_fixed.fa \
+    -q ref_virginea_fixed.fa \
+    --prefix virlike_vs_vir \
+    -F S --cigar
+
+# create genomes.txt
+cat > genomes.txt << 'EOF'
+#file	name	tags
+ref_decipiens.fa	E. decipiens	lw:1.5
+dec_chromosomes_fixed.fa	decipiens-like	lw:1.5
+vir_chromosomes_fixed.fa	virginea-like	lw:1.5
+ref_virginea_fixed.fa	E. virginea	lw:1.5
+EOF
+
+# plot
+plotsr \
+  --sr dec_vs_declikesyri.out \
+  --sr declike_vs_virlikesyri.out \
+  --sr virlike_vs_virsyri.out \
+  --genomes genomes.txt \
+  -o four_way_synteny.pdf
+```
+
+![Figure 23. Synteny plot across four haplotypes](./figures/fig23.png)
+
+There seems to be a lot of chromosomal arrangements... Let's see if this is caused by using *E. melliodora* as the reference.
+
+```
+# update the chromosome names (E. melliodora)
+awk '
+BEGIN {
+    map["CM023402.3"] = "Chr1";
+    map["CM023403.3"] = "Chr2";
+    map["CM023404.3"] = "Chr3";
+    map["CM023405.3"] = "Chr4";
+    map["CM023406.3"] = "Chr5";
+    map["CM023407.3"] = "Chr6";
+    map["CM023408.3"] = "Chr7";
+    map["CM023409.3"] = "Chr8";
+    map["CM023410.3"] = "Chr9";
+    map["CM023411.3"] = "Chr10";
+    map["CM023412.3"] = "Chr11";
+}
+/^>/ {
+    header = $1;
+    sub(/^>/, "", header);
+    if (header in map) {
+        print ">" map[header];
+    } else {
+        print $0;
+    }
+    next;
+}
+{ print }
+' 06_parental_assign/parents/roadies/Eucalyptus_melliodora_GCA_004368105.4.fna > 07_scaffold_correct_bin/syri_mel/ref_melliodora_raw.fa
+
+# extract chromosomes 1-11
+samtools faidx 07_scaffold_correct_bin/syri_mel/ref_melliodora_raw.fa Chr1 Chr2 Chr3 Chr4 Chr5 Chr6 Chr7 Chr8 Chr9 Chr10 Chr11 \
+    > 07_scaffold_correct_bin/syri_mel/ref_melliodora.fa
+rm 07_scaffold_correct_bin/syri_mel/ref_melliodora_raw.fa
+
+# change working directory
+cd 07_scaffold_correct_bin/syri_mel/
+
+# reverse-complement chromosomes: ref_melliodora.fa
+samtools faidx ref_melliodora.fa Chr1 Chr2 Chr3 Chr4 Chr5 Chr7 Chr8 Chr9 Chr10 Chr11 > mel_tmp.fa
+samtools faidx ref_melliodora.fa Chr6 -i > mel_chr6_rc.fa
+cat mel_tmp.fa mel_chr6_rc.fa > ref_melliodora_fixed.fa
+rm  mel_tmp.fa mel_chr6_rc.fa 
+sed -i 's/\/rc//' ref_melliodora_fixed.fa
+
+# reverse-complement chromosomes: vir_chromosomes.fa
+samtools faidx ../syri/vir_chromosomes.fa Chr1 Chr2 Chr3 Chr4 Chr5 Chr7 Chr8 Chr9 Chr10 Chr11 > vir_tmp.fa
+samtools faidx ../syri/vir_chromosomes.fa Chr6 -i > vir_chr6_rc.fa
+cat vir_tmp.fa vir_chr6_rc.fa > vir_chromosomes_fixed.fa
+rm  vir_tmp.fa vir_chr6_rc.fa 
+sed -i 's/\/rc//' vir_chromosomes_fixed.fa
+
+# decipiens-like vs melliodora
+minimap2 -ax asm20 -t 64 --secondary=no --eqx \
+    ../syri/dec_chromosomes.fa \
+    ref_melliodora_fixed.fa \
+    > declike_vs_mel.sam
+
+# melliodora vs virginea-like
+minimap2 -ax asm20 -t 64 --secondary=no --eqx \
+    ref_melliodora_fixed.fa \
+    vir_chromosomes_fixed.fa \
+    > mel_vs_virlike.sam
+
+# run Syri
+syri -c declike_vs_mel.sam \
+    -r ../syri/dec_chromosomes.fa \
+    -q ref_melliodora_fixed.fa \
+    --prefix declike_vs_mel \
+    -F S --cigar
+
+syri -c mel_vs_virlike.sam \
+    -r ref_melliodora_fixed.fa \
+    -q vir_chromosomes_fixed.fa \
+    --prefix mel_vs_virlike \
+    -F S --cigar
+
+# create genomes.txt
+cat > genomes.txt << 'EOF'
+#file	name	tags
+../syri/dec_chromosomes.fa	decipiens-like	lw:1.5
+ref_melliodora_fixed.fa	E. melliodora	lw:1.5
+vir_chromosomes_fixed.fa	virginea-like	lw:1.5
+EOF
+
+# plot
+plotsr \
+  --sr declike_vs_melsyri.out \
+  --sr mel_vs_virlikesyri.out \
+  --genomes genomes.txt \
+  -o three_way_synteny.pdf
+```
+
+![Figure 24. Synteny plot across three haplotypes](./figures/fig24.png)
+
+It seems that our scaffolding was largely affected by the chromosomal architecture of *E. melliodora*. We might need to redo using *E. decipiens* and *E. virginea* as references...
