@@ -12,6 +12,7 @@ This README is purposed to store additional details required to conduct the `Sca
 - <a href="#06e">Binning and removing contigs beyond telomeres</a>
 - <a href="#06f">Gap closing</a>
 - <a href="#06g">Visualisation using SyRi</a>
+- <a href="#06h">Scaffolding against *E. virginea* and *E. decipiens* reference genomes (pt. 2)</a>
 
 ## <a id="06a">Scaffolding against *E. virginea* and *E. decipiens* reference genomes</a>
 
@@ -920,3 +921,64 @@ plotsr \
 ![Figure 24. Synteny plot across three haplotypes](./figures/fig24.png)
 
 It seems that our scaffolding was largely affected by the chromosomal architecture of *E. melliodora*. We might need to redo using *E. decipiens* and *E. virginea* as references...
+
+## <a id="06a">Scaffolding against *E. virginea* and *E. decipiens* reference genomes (pt. 2)</a>
+Let's first move the previous analyses to a new folder (who knows if we need it again later...)
+
+```
+# create a new folder to store previous results
+mkdir trial01_07_scaffold/
+mv 07_scaffold*   trial01_07_scaffold
+mv 08_gapclosing/ trial01_07_scaffold
+
+# create a new scaffold folder
+mkdir 07_scaffold/ && cd 07_scaffold/
+
+# virginea-like to virginea
+ragtag.py scaffold -t 64 --mm2-params "-x asm10" -f 25000 -u -a 0.1 \
+    -o virginea_like_a01 ../06_parental_assign/parents/roadies/Eucalyptus_virginea_GCA_014182375.1.fna \
+    ../06_parental_assign/final/E_phylacis_virginea_like.dedup.split.fa
+
+# decipiens-like to decipiens
+ragtag.py scaffold -t 64 --mm2-params "-x asm10" -f 25000 -u -a 0.1 \
+    -o decipiens_like_a01 ../06_parental_assign/parents/roadies/Eucalyptus_decipiens_GCA_014182575.1.fna \
+    ../06_parental_assign/final/E_phylacis_decipiens_like.dedup.fa
+
+# change working directory
+cd ..
+```
+
+| Metric               | decipiens-like | virginea-like | 
+| :------------------- | -------------: | ------------: |
+| Chromosome scaffolds |             11 |            11 |
+| Contigs placed       |             99 |            99 |
+| Placed (bp)          |    557,676,446 |   520,923,740 |
+| Placed (%)           |           98.8 |          98.4 |
+| Contigs unplaced     |             49 |            59 |
+| Unplaced (bp)        |      6,671,749 |     8,707,265 |
+| Gaps (100 N)         |             87 |            88 |
+
+I redid the iterative binning with the updated reference and minimap2 parameters. The results are comparable to the previous run, except for a shorter chromosome 2 on the `virginea-like` haplotype, likely due to the repetitive regions.
+
+| Metric                       | virginea-like | decipiens-like |
+| :--------------------------- | ------------: | -------------: |
+| Chromosome scaffolds         |            11 |             11 |
+| Chromosome total (bp)        |   513,700,769 |    549,424,633 |
+| Chromosome min (bp)          |    34,632,737 |     38,016,435 |
+| Chromosome mean (bp)         |    46,700,070 |     49,947,694 |
+| Chromosome max (bp)          |    61,702,390 |     65,682,487 |
+| Unplaced sequences           |           144 |            127 |
+| Unplaced total (bp)          |    15,930,536 |     14,924,562 |
+| Unplaced max (bp)            |     1,702,289 |      1,848,943 |
+| Total sequences              |           155 |            138 |
+| Total length (bp)            |   529,631,305 |    564,349,195 |
+
+|                    virginea-like                     |                    decipiens-like                    |
+| :--------------------------------------------------: | :--------------------------------------------------: |
+| ![Virginea-like telomeres](./figures/fig25_vir.png)  | ![Decipiens-like telomeres](./figures/fig25_dec.png) |
+
+I repeated the SyRi visualisation, but using `asm10` for `minimap2` between `ref_decipiens`-`decipiens-like` and `ref_virginea`-`virginea-like`. I also revere-complemented chromosomes 9 and 10 on `virginea-like`, and additionally chromosome 6 on `ref_virginea`.
+
+![Figure 26. Synteny plot across three haplotypes](./figures/fig26.png)
+
+The results are very similar with the previous ones (except for chromosome 10). This might infer that many non-syntenic blocks are recovered as a single long contig and thus unaffected by the reference.
